@@ -1,4 +1,4 @@
-classdef microMOSAIC_0_7 < matlab.apps.AppBase
+classdef microMOSAIC < matlab.apps.AppBase
 
     % Properties that correspond to app components
     properties (Access = public)
@@ -174,6 +174,7 @@ classdef microMOSAIC_0_7 < matlab.apps.AppBase
             function grabData(app,~,event)
             buf = event.Data;  
             size=int16(sqrt(length(buf(:,1))));
+            signal = zeros(size,size,app.NumberOfEnabledChannels);
             for channel=1:app.NumberOfEnabledChannels
                 if app.channelsData(channel,2)== true
                     buf2 = [buf(1,channel); diff(buf(:,channel))];                   
@@ -183,8 +184,9 @@ classdef microMOSAIC_0_7 < matlab.apps.AppBase
                 end
                  signal(:,:,channel) = image;
             end
-            app.signalData = signal;
-            drawImages2(app, app.firstDraw,signal)
+%             app.signalData = signal;
+
+            drawImages(app, app.firstDraw,signal)
             app.firstDraw=false;
 % if length(buf) >1
 %     disp('Success')
@@ -265,42 +267,15 @@ classdef microMOSAIC_0_7 < matlab.apps.AppBase
             
         end
         
-        function results = drawImages(app,firstDraw)
+
+        function drawImages(app,firstDraw,data)
             
-            tic;
-            for channel = app.NumberOfEnabledChannels:-1:1
-                if firstDraw==true
-                    im =imagesc(app.signalData(:,:,channel),'Parent',app.ax(channel));pbaspect(app.ax(channel),[1,1,1]);colorbar(app.ax(channel));
-                    app.ims = [app.ims im];
-                    if app.channelsData(channel,3) == false
-                        caxis(app.ax(channel), [app.channelsData(channel,4) app.channelsData(channel,5)]);
-                    else
-                        %caxis(app.ax(channel), [min(min(app.signalData(:,:,channel))) max(max(app.signalData(:,:,channel)))]);
-                        
-                    end
-                    
-                else
-                    if app.channelsData(channel,2)== true       % if this is a counter channel then convert to uint16 - this should speed up the graphics
-                        %                         app.ims(channel).CData = uint16(app.signalData(:,:,channel));
-                        set(app.ims(channel),'CData',uint16(app.signalData(:,:,channel)));
-                    else
-                        %                         app.ims(channel).CData = app.signalData(:,:,channel);
-                        set(app.ims(channel),'CData',app.signalData(:,:,channel));
-                    end
-                end
-            end
-            drawnow;
-            printLogWindow(app,toc);
-        end
-        function results = drawImages2(app,firstDraw,data)
-            
-            tic;
+
             if firstDraw ==true
                 app.ims=[];
             end
             for channel = app.NumberOfEnabledChannels:-1:1
                 if firstDraw==true
-                    %                     im =imagesc(data(:,:,channel),'Parent',app.ax(channel));pbaspect(app.ax(channel),[1,1,1]);colorbar(app.ax(channel));
                     minLim = min(data(:,:,channel),[],'all');
                     maxLim = max(data(:,:,channel),[],'all');
                     im =imshow(data(:,:,channel),[minLim maxLim],'Parent',app.ax(channel),'Colormap',parula(256));colorbar(app.ax(channel));%colormap(parula(256));pbaspect(app.ax(channel),[1,1,1]);                     
@@ -319,38 +294,8 @@ classdef microMOSAIC_0_7 < matlab.apps.AppBase
                 end
             end
             drawnow;
-            printLogWindow(app,toc);
-        end
-    
-    function results = drawImages3(app)
-                    
-            tic;
-            for channel = app.NumberOfEnabledChannels:-1:1
-                if app.firstDraw==true
-                    im =imagesc(app.signalData(:,:,channel),'Parent',app.ax(channel));pbaspect(app.ax(channel),[1,1,1]);colorbar(app.ax(channel));
-                    app.ims = [app.ims im];
-                    if app.channelsData(channel,3) == false
-                        caxis(app.ax(channel), [app.channelsData(channel,4) app.channelsData(channel,5)]);
-                    else
-                        %caxis(app.ax(channel), [min(min(app.signalData(:,:,channel))) max(max(app.signalData(:,:,channel)))]);
-                        
-                    end
-                    
-                else
-                    if app.channelsData(channel,2)== true       % if this is a counter channel then convert to uint16 - this should speed up the graphics
-                        %                         app.ims(channel).CData = uint16(app.signalData(:,:,channel));
-                        set(app.ims(channel),'CData',uint16(app.signalData(:,:,channel)));
-                    else
-                        %                         app.ims(channel).CData = app.signalData(:,:,channel);
-                        set(app.ims(channel),'CData',app.signalData(:,:,channel));
-                    end
-                end
-            end
-            drawnow;
-            printLogWindow(app,toc);
-        
-    end
-        
+
+        end            
         function results = updateChannelInfo(app)
             for channel = 1 : app.NumberOfEnabledChannels
                 
@@ -570,12 +515,12 @@ classdef microMOSAIC_0_7 < matlab.apps.AppBase
                 end
                 
                 app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5); 
-                addlistener(app.imSession,'DataRequired', @(src,event) src.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,1)]));               
+                addlistener(app.imSession,'DataRequired', @(src,event) src.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)]));               
                 app.imSession.IsContinuous = true; %needed to provide continuous behavior
                 app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,1)]); %queue the first frame
                 
                 % Pull in the data when the frame has been acquired
-                app.imSession.NotifyWhenDataAvailableExceeds=(length(app.coordPoints(:,1))*app.NumberOfEnabledChannels);
+                app.imSession.NotifyWhenDataAvailableExceeds=(length(app.coordPoints(:,1)))%*app.NumberOfEnabledChannels);
                 addlistener(app.imSession,'DataAvailable', @app.grabData);
                 prepare(app.imSession);
                 app.firstDraw=true;
@@ -603,8 +548,8 @@ classdef microMOSAIC_0_7 < matlab.apps.AppBase
             saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
             
             if app.SimulationmodeCheckBox.Value==false
-                
-                app.signalData =NLimagingCoords(app ,app.coordPoints, app.numberOfAccums);
+                signal = NLimagingCoords(app ,app.coordPoints, app.numberOfAccums);
+                %                 app.signalData = signal;
                 
             else
                 for channel=1: app.NumberOfEnabledChannels
@@ -616,21 +561,10 @@ classdef microMOSAIC_0_7 < matlab.apps.AppBase
             if exist('stagePIFOC','var')
                 zcoordName ='Z='+string(stagePIFOC.qPOS('A'));
             end
-            app.drawImages(true)
-            
-            %             fullnameImage =app.SavingfolderEditField.Value+string(datetime('now','TimeZone','local','Format','HH-mm'))+'NLimage X='+string(app.scanXRange)+' Y='+ string(app.scanXRange)+'_'+app.scanStep+'_'+zcoordName;
+            drawImages(app,true,signal);
             if saveTIFF == true
-                %                 for channel=1:app.NumberOfEnabledChannels
+                saveDataTiff(app,app.FilenameCommentEditField.Value,signal)
                 
-                
-                %                     printLogWindow(app,'Saving..')
-                %                     if app.channelsData(channel,2)==false
-                %                         imwrite(uint16(1000*app.signalData(:,:,channel)),fullnameImage+'chn'+string(channel-1)+'.tiff','WriteMode','append')
-                % %                     else
-                %                         imwrite(uint16(app.signalData(:,:,channel)),fullnameImage+'chn'+string(channel-1)+'.tiff','WriteMode','append')
-                %                     end
-                saveDataTiff(app,app.FilenameCommentEditField.Value,app.signalData)
-                %                 end
             elseif saveHDF5==true
                 
             end
@@ -1135,7 +1069,7 @@ classdef microMOSAIC_0_7 < matlab.apps.AppBase
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 946];
-            app.MatMicroMain.Name = 'microMOSAIC v0.7';
+            app.MatMicroMain.Name = 'microMOSAIC v0.71';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -1942,7 +1876,7 @@ classdef microMOSAIC_0_7 < matlab.apps.AppBase
     methods (Access = public)
 
         % Construct app
-        function app = microMOSAIC_0_7
+        function app = microMOSAIC
 
             % Create and configure components
             createComponents(app)
