@@ -43,6 +43,8 @@ classdef microMOSAIC < matlab.apps.AppBase
         ZoomOutButton                   matlab.ui.control.Button
         ChannelDropDownLabel            matlab.ui.control.Label
         ChannelDropDown                 matlab.ui.control.DropDown
+        PixelRepetitionEditFieldLabel   matlab.ui.control.Label
+        PixelRepetitionEditField        matlab.ui.control.NumericEditField
         LiveTab                         matlab.ui.container.Tab
         UIAxes                          matlab.ui.control.UIAxes
         FasterSliderLabel               matlab.ui.control.Label
@@ -168,6 +170,7 @@ classdef microMOSAIC < matlab.apps.AppBase
         DATA % Description
         ims % Description
         firstDraw % Description
+        pixRepetition % Description
     end
     
     methods (Access = private)
@@ -192,27 +195,29 @@ classdef microMOSAIC < matlab.apps.AppBase
 %     disp('Success')
 % end
         end
-        function [coordPoints] = GalvoCoordinatesForImage(app, scanXRange, scanYRange, scanStep, XCenter, YCenter)
+        function [coordPoints] = GalvoCoordinatesForImage(app, scanXRange, scanYRange, scanStep, XCenter, YCenter, pixRep)
             %Takes X-Y range and step and creates the array of coordinates for glvo
             %mirrors
-            %   Detailed explanation goes here
+            if ~exist('pixRep', 'var')
+                pixRep = 1;
+            end
             x = -scanXRange/2:scanStep:scanXRange/2;
             y = -scanYRange/2:scanStep:scanYRange/2;
             x = x + XCenter;
             y = y + YCenter;
             [X,Y] = meshgrid(x,y);
-            coordPoints = [X(:)*app.calibration, Y(:)*app.calibration];
+            coordPoints = [repelem(X(:)*app.calibration,pixRep), repelem(Y(:)*app.calibration, pixRep)];
             
         end
         
 
         
-        function [signal] =  NLimagingCoords(app, coordPoints,accumulation)
+        function [signal] =  NLimagingCoords(app, coordPoints,accumulation, pixRep)
             % Acquires a single image by scanning galvo mirrors at set FOV with set
             % precision
             
             app.imSession.IsContinuous = false;
-            size = int32(sqrt(length(coordPoints(:,1))));       % image size
+            size = int32(sqrt(length(coordPoints(:,1))/pixRep));       % image size
             signal = zeros(size, size,app.NumberOfEnabledChannels);       % Array where signal data is stored
             
             for images=1:accumulation
@@ -223,13 +228,21 @@ classdef microMOSAIC < matlab.apps.AppBase
                 end
                 
                 buf = app.imSession.startForeground();      % perform the scan
+                
                 for channel=1:app.NumberOfEnabledChannels
                     if app.channelsData(channel,2)== true
                         buf2 = [buf(1,channel); buf(1,channel) + diff(buf(:,channel))];                       
-                        image = reshape(buf2,[size,size]);
+                        if pixRep>1
+                            buf2 = downSampleImage(app,buf2,pixRep);
+                        end
+
                     else
-                        image = reshape(buf(:,channel),[size,size]);
+                        if pixRep>1
+                            buf2 = downSampleImage(app,buf(:,channel),pixRep);
+                        end
+                        
                     end
+                    image = reshape(buf2,[size,size]);
                     signal(:,:,channel) = signal(:,:,channel) + image;
                 end
             end
@@ -417,6 +430,10 @@ classdef microMOSAIC < matlab.apps.AppBase
         end
         
         
+        
+        function data = downSampleImage(app, rawData, pixRep)                       
+           data = arrayfun(@(i) mean(rawData(i:i+pixRep-1)),1:pixRep:length(rawData)-pixRep+1)';
+        end
     end
     methods (Access = public)
         
@@ -479,6 +496,7 @@ classdef microMOSAIC < matlab.apps.AppBase
                 app.scanYRange = app.ScanRangeYumEditField.Value; % y FoV, um
                 app.scanStep =app.ScanResolutionumEditField.Value; % resolution, um
                 app.numberOfAccums =round( app.NumberOfAccumulationsEditField.Value); % number of frame repetitions
+                app.pixRepetition = app.PixelRepetitionEditField.Value;
                 app.xFoVCenter = app.FoVcenterXumEditField.Value;
                 app.yFoVCenter = app.FoVcenterYumEditField.Value;
                 
@@ -488,7 +506,7 @@ classdef microMOSAIC < matlab.apps.AppBase
                 app.NumberOfChannelsSlider.Enable = false;
                 app.Switch.Enable = false;
                 
-                app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter);
+                app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter,app.pixRepetition);
                 
                 if app.SimulationmodeCheckBox.Value==false
                     app.imSession = daq.createSession('ni');        % session which controls galvos and acquired the signal - used to acquire raster-scan images
@@ -548,7 +566,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
             
             if app.SimulationmodeCheckBox.Value==false
-                signal = NLimagingCoords(app ,app.coordPoints, app.numberOfAccums);
+                signal = NLimagingCoords(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
                 %                 app.signalData = signal;
                 
             else
@@ -594,50 +612,15 @@ classdef microMOSAIC < matlab.apps.AppBase
 
         % Value changed function: LiveButton
         function LiveButtonValueChanged(app, event)
-         %%%OLD%%%%
-%          value = app.LiveButton.Value;
-%             first = true;
-%             if value == true
-%                 while value == true
-%                     value = app.LiveButton.Value;
-%                     if value == false
-%                         break
-%                     end
-%                     if value==false
-%                         app.signalData =NLimagingCoords(app ,app.coordPoints, app.numberOfAccums);
-%                     else
-%                         for channel=1: app.NumberOfEnabledChannels
-%                             buf =  rand(round(app.scanXRange/app.scanStep));
-%                             app.signalData(:,:,channel) =buf.*10;
-%                         end
-%                     end
-%                     zcoordName="";
-%                     if exist('stagePIFOC','var')
-%                         zcoordName ='Z='+string(stagePIFOC.qPOS('A'));
-%                     end
-%                     drawImages2(app,first,app.signalData);
-%                     first= false;
-%                 end
-%             end
-%             %%%OLD%%%%
-
-
-            %%%NEW%%%
-            value = app.LiveButton.Value;
-            
+            value = app.LiveButton.Value;            
             if value==true
-%                 app.imSession.IsContinious = true;
                 app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,1)]); %queue the first frame
                 app.firstDraw=true;
                 app.imSession.startBackground();
             else
                 app.imSession.stop();
                 app.imSession.release();
-%                 app.imSession.IsContinious = false;
-            end
-            
-            
-            %%%NEW%%%            
+            end                     
         end
 
         % Close request function: MatMicroMain
@@ -662,8 +645,9 @@ classdef microMOSAIC < matlab.apps.AppBase
         end
 
         % Value changed function: FoVcenterXumEditField, 
-        % FoVcenterYumEditField, ScanRangeXumEditField, 
-        % ScanRangeYumEditField, ScanResolutionumEditField
+        % FoVcenterYumEditField, PixelRepetitionEditField, 
+        % ScanRangeXumEditField, ScanRangeYumEditField, 
+        % ScanResolutionumEditField
         function ScanRangeXumEditFieldValueChanged(app, event)
             %             value = app.ScanRangeXumEditField.Value;
             app.scanXRange = app.ScanRangeXumEditField.Value; % um
@@ -672,7 +656,8 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.numberOfAccums = app.NumberOfAccumulationsEditField.Value;
             app.xFoVCenter = app.FoVcenterXumEditField.Value;
             app.yFoVCenter = app.FoVcenterYumEditField.Value;
-            app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter);
+            app.pixRepetition = app.PixelRepetitionEditField.Value;
+            app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter, app.pixRepetition);
         end
 
         % Value changed function: Switch
@@ -1006,7 +991,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             
             zoomFactor = app.ZoomfactorEditField.Value;
             zoomImage(app,zoomFactor);
-            app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange,app.scanYRange,app.scanStep,app.xFoVCenter,app.yFoVCenter);
+            app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange,app.scanYRange,app.scanStep,app.xFoVCenter,app.yFoVCenter,app.pixRepetition);
             drawImages(app,true)
         end
 
@@ -1017,7 +1002,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.FoVcenterYumEditField.Value = -double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
             zoomFactor =1 / app.ZoomfactorEditField.Value;
             zoomImage(app,zoomFactor);
-            app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange,app.scanYRange,app.scanStep,app.xFoVCenter,app.yFoVCenter);
+            app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange,app.scanYRange,app.scanStep,app.xFoVCenter,app.yFoVCenter,app.pixRepetition);
             drawImages(app,true)
         end
 
@@ -1069,7 +1054,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 946];
-            app.MatMicroMain.Name = 'microMOSAIC v0.71';
+            app.MatMicroMain.Name = 'microMOSAIC v0.72';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -1313,6 +1298,18 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.ChannelDropDown.ItemsData = {'0', '1', '2', '3'};
             app.ChannelDropDown.Position = [65 4 100 22];
             app.ChannelDropDown.Value = '0';
+
+            % Create PixelRepetitionEditFieldLabel
+            app.PixelRepetitionEditFieldLabel = uilabel(app.MainTab);
+            app.PixelRepetitionEditFieldLabel.HorizontalAlignment = 'right';
+            app.PixelRepetitionEditFieldLabel.Position = [793 349 89 22];
+            app.PixelRepetitionEditFieldLabel.Text = 'Pixel Repetition';
+
+            % Create PixelRepetitionEditField
+            app.PixelRepetitionEditField = uieditfield(app.MainTab, 'numeric');
+            app.PixelRepetitionEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
+            app.PixelRepetitionEditField.Position = [897 349 100 22];
+            app.PixelRepetitionEditField.Value = 1;
 
             % Create LiveTab
             app.LiveTab = uitab(app.TabGroup);
