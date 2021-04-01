@@ -239,6 +239,8 @@ classdef microMOSAIC < matlab.apps.AppBase
                     else
                         if pixRep>1
                             buf2 = downSampleImage(app,buf(:,channel),pixRep);
+                        else
+                            buf2=buf(:,channel);
                         end
                         
                     end
@@ -335,14 +337,14 @@ classdef microMOSAIC < matlab.apps.AppBase
             if ~exist(logfolder, 'dir')
                 mkdir (logfolder); cd ..;
             end
-            fullnameImage =logfolder+string(datetime('now','TimeZone','local','Format','HH-mm'))+'NLimage X='+string(app.scanXRange)+' Y='+ string(app.scanXRange)+'_'+app.scanStep+'_'+zcoordName;
+            fullnameImage =logfolder+string(datetime('now','TimeZone','local','Format','HH-mm'))+'NLimage X='+string(app.scanXRange)+' Y='+ string(app.scanXRange)+'_'+app.scanStep+'_'+"pixRep_"+string(app.pixRepetition)"_"+zcoordName;
             if (length(size(data)) == 3) | (length(size(data)) == 2)
                 for channel=1:app.NumberOfEnabledChannels
-                    printLogWindow(app,'Saving channel ' + string(channel-1))
+                    printLogWindow(app,'Saving channel '    + string(channel-1))
                     if app.channelsData(channel,2)==false
-                        imwrite(uint16(1000*data(:,:,channel)),fullnameImage+filenameComment+'_chn'+string(channel-1)+'.tiff','WriteMode','append')
+                        saveTIFF32(app,(data(:,:,channel)),fullnameImage+filenameComment+'_chn'+string(channel-1)+'.tiff','a')
                     else
-                        imwrite(uint16(data(:,:,channel)),fullnameImage+filenameComment+'_chn'+string(channel-1)+'.tiff','WriteMode','append')
+                        saveTIFF32(app,(data(:,:,channel)),fullnameImage+filenameComment+'_chn'+string(channel-1)+'.tiff','a')
                     end
                 end
             elseif length(size(data)) == 4
@@ -352,9 +354,9 @@ classdef microMOSAIC < matlab.apps.AppBase
                     printLogWindow(app,'Saving channel ' + string(channel-1))
                     for slice=1:length(data(1,1,:,1))
                         if app.channelsData(channel,2)==false
-                            imwrite(uint16(1000*data(:,:,slice,channel)),fullnameImage+filenameComment+'_chn'+string(channel-1)+'.tiff','WriteMode','append')
+                            saveTIFF32(app,(data(:,:,slice,channel)),fullnameImage+filenameComment+'_chn'+string(channel-1)+'.tiff','a')
                         else
-                            imwrite(uint16(data(:,:,slice,channel)),fullnameImage+filenameComment+'_chn'+string(channel-1)+'.tiff','WriteMode','append')
+                            saveTIFF32(app,(data(:,:,slice,channel)),fullnameImage+filenameComment+'_chn'+string(channel-1)+'.tiff','a')
                         end
                     end
                     
@@ -431,9 +433,45 @@ classdef microMOSAIC < matlab.apps.AppBase
         
         
         
-        function data = downSampleImage(app, rawData, pixRep)                       
+        function data = downSampleImage(rawData, pixRep)                       
            data = arrayfun(@(i) mean(rawData(i:i+pixRep-1)),1:pixRep:length(rawData)-pixRep+1)';
         end
+        
+        function [] = saveTIFF32(app,data,fullFileName, mode)
+%            'r'     open Tiff file for reading.
+%            'w'     open Tiff file for writing; discard existing contents.
+%            'w8'    open Tiff file for writing a BigTIFF file; discard 
+%                    existing contents.
+%            'a'     open or create Tiff file for writing; created files will 
+%                    be in 32-bit Tiff format; any existing file format will
+%                    be preserved; append image data to end of file
+%            'r+'    open (do not create) Tiff file for reading and writing.
+            if ~exist('mode','var')
+                mode = 'w';
+            end
+            t = Tiff(fullFileName,mode);
+            % Setup tags
+            % Lots of info here:
+            % http://www.mathworks.com/help/matlab/ref/tiffclass.html
+            tagstruct.ImageLength     = size(data,1);
+            tagstruct.ImageWidth      = size(data,2);
+            tagstruct.Photometric     = Tiff.Photometric.MinIsBlack;
+            tagstruct.Compression = Tiff.Compression.None;
+            tagstruct.SampleFormat = Tiff.SampleFormat.IEEEFP;
+            tagstruct.BitsPerSample   = 32;
+            tagstruct.SamplesPerPixel = 1;
+            % tagstruct.RowsPerStrip    = 16;
+            
+            tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
+            tagstruct.Software        = 'MATLAB';
+            t.setTag(tagstruct)
+            t.write(single(data));
+            t.close();
+            
+            
+        end
+
+
     end
     methods (Access = public)
         
@@ -1054,7 +1092,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 946];
-            app.MatMicroMain.Name = 'microMOSAIC v0.72';
+            app.MatMicroMain.Name = 'microMOSAIC v0.73';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
