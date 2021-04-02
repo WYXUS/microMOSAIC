@@ -43,7 +43,7 @@ f = figure();
 % while ishandle(f)
 try
     tic;
-    data = double(CIreader.ReadMultiSampleDouble(20000));
+    data = double(CIreader.ReadMultiSampleDouble(300));
     toc;
     cla;
     plot(data);
