@@ -23,37 +23,31 @@ prop.channelOrder = {[1 2]};                          % cell array of signal to 
 prop.nsamples = 10;
 
 % produce square pulses with ctr0, because PFI8 doesn't have bnc connector
-COTask = NationalInstruments.DAQmx.Task;
-COTask.COChannels.CreatePulseChannelFrequency('/Dev2/ctr0', 'COtask', COPulseFrequencyUnits.Hertz, COPulseIdleState.Low, 0, 250000, 0.9 ); %delay, freq, dutycycle
-COTask.Timing.ConfigureImplicit(SampleQuantityMode.ContinuousSamples,200000)
-COTask.Control(TaskAction.Verify)
+% COTask = NationalInstruments.DAQmx.Task;
+% COTask.COChannels.CreatePulseChannelFrequency('/Dev2/ctr0', 'COtask', COPulseFrequencyUnits.Hertz, COPulseIdleState.Low, 0, 250000, 0.9 ); %delay, freq, dutycycle
+% COTask.Timing.ConfigureImplicit(SampleQuantityMode.ContinuousSamples,200000)
+% COTask.Control(TaskAction.Verify)
 
 %meas pulse width with ctr2 @ PFI0
 CITask = NationalInstruments.DAQmx.Task;
-CIch = CITask.CIChannels.CreatePulseWidthChannel('/Dev2/ctr3', 'CItask',0,2^32-1,CIPulseWidthStartingEdge.Rising,CIPulseWidthUnits.Ticks);
+CIch = CITask.CIChannels.CreatePulseWidthChannel('/Dev2/ctr2', 'CItask',0,2^32-1,CIPulseWidthStartingEdge.Rising,CIPulseWidthUnits.Ticks);
 % CIch = CITask.CIChannels.CreateCountEdgesChannel ('/Dev2/ctr2', 'CItask',CICountEdgesActiveEdge.Rising,int64(0),CICountEdgesCountDirection.Up);
-CIch.PulseWidthTerminal = '/Dev2/PFI12';
+CIch.PulseWidthTerminal = '/Dev2/PFI8';
 CIch.CounterTimebaseSource = '/Dev2/PFI0';
-CITask.Timing.ConfigureImplicit(SampleQuantityMode.FiniteSamples, 200000);
+% CITask.Timing.ConfigureImplicit(SampleQuantityMode.FiniteSamples, 200000);
 CITask.Control(TaskAction.Verify)
 CIreader = CounterSingleChannelReader(CITask.Stream);
 
-COTask.Start()
-f = figure();
-% while ishandle(f)
+% COTask.Start()
 try
-    tic;
-    data = double(CIreader.ReadMultiSampleDouble(20000));
-    toc;
-    cla;
-    plot(data);
-    drawnow
+    data = double(CIreader.ReadMultiSampleDouble(2000));
+    plot(data)
 catch ME
     disp(ME.message)
 end
-% end
-COTask.Stop()
+    
+% COTask.Stop()
 CITask.Stop()
 
-COTask.Dispose()
+% COTask.Dispose()
 CITask.Dispose()
