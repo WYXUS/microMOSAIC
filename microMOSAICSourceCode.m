@@ -337,7 +337,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             if ~exist(logfolder, 'dir')
                 mkdir (logfolder); cd ..;
             end
-            fullnameImage =logfolder+string(datetime('now','TimeZone','local','Format','HH-mm'))+'NLimage X='+string(app.scanXRange)+' Y='+ string(app.scanXRange)+'_'+app.scanStep+'_'+"pixRep_"+string(app.pixRepetition)"_"+zcoordName;
+            fullnameImage =logfolder+string(datetime('now','TimeZone','local','Format','HH-mm'))+'NLimage X='+string(app.scanXRange)+' Y='+ string(app.scanXRange)+'_'+app.scanStep+'_'+"pixRep_"+string(app.pixRepetition)+"_"+zcoordName;
             if (length(size(data)) == 3) | (length(size(data)) == 2)
                 for channel=1:app.NumberOfEnabledChannels
                     printLogWindow(app,'Saving channel '    + string(channel-1))
@@ -565,20 +565,21 @@ classdef microMOSAIC < matlab.apps.AppBase
                         app.analogChannelsInputFields(channel).Enable = false;
                         app.counterChannelsInputFields(channel).Enable = false;
                         app.analogChannelConnectionType(channel).Enable = false;
+                        
+                        app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5);
+                        addlistener(app.imSession,'DataRequired', @(src,event) src.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)]));
+                        app.imSession.IsContinuous = true; %needed to provide continuous behavior
+                        app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,1)]); %queue the first frame
+                        
+                        % Pull in the data when the frame has been acquired
+                        app.imSession.NotifyWhenDataAvailableExceeds=(length(app.coordPoints(:,1)))%*app.NumberOfEnabledChannels);
+                        addlistener(app.imSession,'DataAvailable', @app.grabData);
+                        prepare(app.imSession);
+                        
                     end
                 else
                     printLogWindow(app,"Simulation mode")
                 end
-                
-                app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5); 
-                addlistener(app.imSession,'DataRequired', @(src,event) src.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)]));               
-                app.imSession.IsContinuous = true; %needed to provide continuous behavior
-                app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,1)]); %queue the first frame
-                
-                % Pull in the data when the frame has been acquired
-                app.imSession.NotifyWhenDataAvailableExceeds=(length(app.coordPoints(:,1)))%*app.NumberOfEnabledChannels);
-                addlistener(app.imSession,'DataAvailable', @app.grabData);
-                prepare(app.imSession);
                 app.firstDraw=true;
 %                 app.imSession.startBackground;
                 %             app.ax = uiaxes(app.MainTab,'Position',[8 52 400 400]);
@@ -610,7 +611,8 @@ classdef microMOSAIC < matlab.apps.AppBase
             else
                 for channel=1: app.NumberOfEnabledChannels
                     buf =  rand(round(app.scanXRange/app.scanStep));
-                    app.signalData(:,:,channel) =buf.*10;
+                    signal =buf.*10;
+                    app.signalData(:,:,channel)  = signal;
                 end
             end
             zcoordName="";
@@ -1099,7 +1101,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             % Create TabGroup
             app.TabGroup = uitabgroup(app.MatMicroMain);
             app.TabGroup.AutoResizeChildren = 'off';
-            app.TabGroup.Position = [1 -69 1060 801];
+            app.TabGroup.Position = [1 131 1060 801];
 
             % Create MainTab
             app.MainTab = uitab(app.TabGroup);
