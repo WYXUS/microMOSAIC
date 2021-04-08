@@ -218,7 +218,7 @@ classdef microMOSAIC < matlab.apps.AppBase
 % % % % %             end
             %             app.signalData = signal;
             
-            drawImages(app, true,signal)
+            drawImages(app, app.firstDraw,signal)
             app.firstDraw=false;
             % if length(buf) >1
             %     disp('Success')
@@ -327,13 +327,13 @@ classdef microMOSAIC < matlab.apps.AppBase
                     minLim = min(data(:,:,channel),[],'all');
                     maxLim = max(data(:,:,channel),[],'all');
                     im =imshow(data(:,:,channel),[minLim maxLim],'Parent',app.ax(channel),'Colormap',parula(256));colorbar(app.ax(channel));%colormap(parula(256));pbaspect(app.ax(channel),[1,1,1]);                     
-                    app.ims = [app.ims im];
-                    if app.channelsData(channel,3) == false
-                        caxis(app.ax(channel), [app.channelsData(channel,4) app.channelsData(channel,5)]);
-                    else
+                    app.ims = [im app.ims ];
+%                     if app.channelsData(channel,3) == false
+%                         caxis(app.ax(channel), [app.channelsData(channel,4) app.channelsData(channel,5)]);
+%                     else
                         %caxis(app.ax(channel), [min(min(app.signalData(:,:,channel))) max(max(app.signalData(:,:,channel)))]);
                         
-                    end
+%                     end
                     
                 else
                     maxLim = max(data(:,:,channel),[],'all');
