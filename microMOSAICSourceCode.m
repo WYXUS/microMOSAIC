@@ -179,13 +179,15 @@ classdef microMOSAIC < matlab.apps.AppBase
         
         function grabData(app,~,event)
             buf = event.Data;
+            
             size=int16(sqrt(length(buf(:,1)) / app.pixRepetition));
             signal = zeros(size,size,app.NumberOfEnabledChannels);
             
                 
                 for channel=1:app.NumberOfEnabledChannels
                     if app.channelsData(channel,2)== true
-                        buf2 = [buf(1,channel); buf(1,channel) + diff(buf(:,channel))];                       
+                        d = diff(buf(:,channel));
+                        buf2 = [mean(d);  d];                       
                         if app.pixRepetition>1
                             buf2 = downSampleImage(app,buf2,app.pixRepetition);
                         end
