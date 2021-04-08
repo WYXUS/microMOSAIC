@@ -171,30 +171,63 @@ classdef microMOSAIC < matlab.apps.AppBase
         ims % Description
         firstDraw % Description
         pixRepetition % Description
+        lhIN % Description
+        lhOUT
     end
     
     methods (Access = private)
-            function grabData(app,~,event)
-            buf = event.Data;  
-            size=int16(sqrt(length(buf(:,1))));
+        
+        function grabData(app,~,event)
+            buf = event.Data;
+            size=int16(sqrt(length(buf(:,1)) / app.pixRepetition));
             signal = zeros(size,size,app.NumberOfEnabledChannels);
-            for channel=1:app.NumberOfEnabledChannels
-                if app.channelsData(channel,2)== true
-                    buf2 = [buf(1,channel); diff(buf(:,channel))];                   
-                    image = reshape(buf2,[size,size]);
-                else
-                    image = reshape(buf(:,channel),[size,size]);
-                end
-                 signal(:,:,channel) = image;
-            end
-%             app.signalData = signal;
+            
+                
+                for channel=1:app.NumberOfEnabledChannels
+                    if app.channelsData(channel,2)== true
+                        buf2 = [buf(1,channel); buf(1,channel) + diff(buf(:,channel))];                       
+                        if app.pixRepetition>1
+                            buf2 = downSampleImage(app,buf2,app.pixRepetition);
+                        end
 
-            drawImages(app, app.firstDraw,signal)
+                    else
+                        if app.pixRepetition>1
+                            buf2 = downSampleImage(app,buf(:,channel),app.pixRepetition);
+                        else
+                            buf2=buf(:,channel);
+                        end
+                        
+                    end
+                    image = reshape(buf2,[size,size]);
+                    signal(:,:,channel) = image;
+                end
+
+
+            
+            
+            
+            
+% % % % %             for channel=1:app.NumberOfEnabledChannels
+% % % % %                 if app.channelsData(channel,2)== true
+% % % % %                     buf2 = [buf(1,channel); diff(buf(:,channel))];
+% % % % %                     image = reshape(buf2,[size,size]);
+% % % % %                 else
+% % % % %                     image = reshape(buf(:,channel),[size,size]);
+% % % % %                 end
+% % % % %                 signal(:,:,channel) = image;
+% % % % %             end
+            %             app.signalData = signal;
+            
+            drawImages(app, true,signal)
             app.firstDraw=false;
-% if length(buf) >1
-%     disp('Success')
-% end
+            % if length(buf) >1
+            %     disp('Success')
+            % end
         end
+    
+            function queueData(app,src,event)
+                app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)])
+            end
         function [coordPoints] = GalvoCoordinatesForImage(app, scanXRange, scanYRange, scanStep, XCenter, YCenter, pixRep)
             %Takes X-Y range and step and creates the array of coordinates for glvo
             %mirrors
@@ -433,7 +466,7 @@ classdef microMOSAIC < matlab.apps.AppBase
         
         
         
-        function data = downSampleImage(rawData, pixRep)                       
+        function data = downSampleImage(app,rawData, pixRep)                       
            data = arrayfun(@(i) mean(rawData(i:i+pixRep-1)),1:pixRep:length(rawData)-pixRep+1)';
         end
         
@@ -566,17 +599,18 @@ classdef microMOSAIC < matlab.apps.AppBase
                         app.counterChannelsInputFields(channel).Enable = false;
                         app.analogChannelConnectionType(channel).Enable = false;
                         
-                        app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5);
-                        addlistener(app.imSession,'DataRequired', @(src,event) src.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)]));
-                        app.imSession.IsContinuous = true; %needed to provide continuous behavior
-                        app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,1)]); %queue the first frame
                         
-                        % Pull in the data when the frame has been acquired
-                        app.imSession.NotifyWhenDataAvailableExceeds=(length(app.coordPoints(:,1)))%*app.NumberOfEnabledChannels);
-                        addlistener(app.imSession,'DataAvailable', @app.grabData);
-                        prepare(app.imSession);
                         
                     end
+                    app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5 * app.pixRepetition);
+                        app.lhOUT = addlistener(app.imSession,'DataRequired', @app.queueData);
+                        app.imSession.IsContinuous = true; %needed to provide continuous behavior
+%                         app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)]); %queue the first frame
+                        
+                        % Pull in the data when the frame has been acquired
+                        app.imSession.NotifyWhenDataAvailableExceeds=length(app.coordPoints(:,1)) * app.pixRepetition;
+                        app.lhIN = addlistener(app.imSession,'DataAvailable', @app.grabData);
+%                         prepare(app.imSession);
                 else
                     printLogWindow(app,"Simulation mode")
                 end
@@ -698,6 +732,8 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.yFoVCenter = app.FoVcenterYumEditField.Value;
             app.pixRepetition = app.PixelRepetitionEditField.Value;
             app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter, app.pixRepetition);
+            app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5);            
+            app.imSession.NotifyWhenDataAvailableExceeds=length(app.coordPoints(:,1));
         end
 
         % Value changed function: Switch
@@ -1143,7 +1179,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.ScanRangeXumEditField.Limits = [0 600];
             app.ScanRangeXumEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
             app.ScanRangeXumEditField.Position = [927 506 91 22];
-            app.ScanRangeXumEditField.Value = 50;
+            app.ScanRangeXumEditField.Value = 100;
 
             % Create ScanRangeYumLabel
             app.ScanRangeYumLabel = uilabel(app.MainTab);
@@ -1155,7 +1191,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.ScanRangeYumEditField = uieditfield(app.MainTab, 'numeric');
             app.ScanRangeYumEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
             app.ScanRangeYumEditField.Position = [928 479 90 22];
-            app.ScanRangeYumEditField.Value = 50;
+            app.ScanRangeYumEditField.Value = 100;
 
             % Create ScanResolutionumLabel
             app.ScanResolutionumLabel = uilabel(app.MainTab);
@@ -1461,7 +1497,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.ObjectiveDropDown.Items = {'Nikon 20X NA0.75 (room134b)', 'Nikon 40X NA1.15 (room134b)', 'Nikon 20X NA0.7 (room134b)', 'Nikon 40X NA1.15 (room 22)'};
             app.ObjectiveDropDown.ItemsData = {'0.00484', '0.00968', '0.00462', '0.0220', ''};
             app.ObjectiveDropDown.Position = [85 737 197 22];
-            app.ObjectiveDropDown.Value = '0.0220';
+            app.ObjectiveDropDown.Value = '0.00462';
 
             % Create SessionUpdateRateHzEditFieldLabel
             app.SessionUpdateRateHzEditFieldLabel = uilabel(app.SettingsTab);
@@ -1475,7 +1511,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.SessionUpdateRateHzEditField.ValueDisplayFormat = '%.0f';
             app.SessionUpdateRateHzEditField.ValueChangedFcn = createCallbackFcn(app, @SessionUpdateRateHzEditFieldValueChanged, true);
             app.SessionUpdateRateHzEditField.Position = [578 737 100 22];
-            app.SessionUpdateRateHzEditField.Value = 15000;
+            app.SessionUpdateRateHzEditField.Value = 50000;
 
             % Create DeviceNameEditFieldLabel
             app.DeviceNameEditFieldLabel = uilabel(app.SettingsTab);
@@ -1587,7 +1623,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.NumberOfChannelsSlider.ValueChangedFcn = createCallbackFcn(app, @NumberOfChannelsSliderValueChanged, true);
             app.NumberOfChannelsSlider.MinorTicks = [];
             app.NumberOfChannelsSlider.Position = [175 698 150 3];
-            app.NumberOfChannelsSlider.Value = 4;
+            app.NumberOfChannelsSlider.Value = 2;
 
             % Create SecondChannelSettingsPanel
             app.SecondChannelSettingsPanel = uipanel(app.SettingsTab);
