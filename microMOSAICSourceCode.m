@@ -974,7 +974,7 @@ classdef microMOSAIC < matlab.apps.AppBase
                     for channel =1 :app.NumberOfEnabledChannels
                         dataPolCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);                        
                     end
-                    drawImages2(app,firstDraw,app.signalData);
+                    drawImages(app,firstDraw,app.signalData);
                     firstDraw=false;
                     Angle = Angle + AngleStep;
                 end
@@ -1149,7 +1149,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             % Create InitializeButton
             app.InitializeButton = uibutton(app.MainTab, 'push');
             app.InitializeButton.ButtonPushedFcn = createCallbackFcn(app, @InitializeButtonPushed, true);
-            app.InitializeButton.Position = [852 689 185 47];
+            app.InitializeButton.Position = [580 209 185 47];
             app.InitializeButton.Text = 'Initialize';
 
             % Create ReadyLampLabel
@@ -1240,7 +1240,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             % Create SimulationmodeCheckBox
             app.SimulationmodeCheckBox = uicheckbox(app.MainTab);
             app.SimulationmodeCheckBox.Text = 'Simulation mode';
-            app.SimulationmodeCheckBox.Position = [876 744 111 22];
+            app.SimulationmodeCheckBox.Position = [604 264 111 22];
 
             % Create PolarPanel
             app.PolarPanel = uipanel(app.MainTab);
