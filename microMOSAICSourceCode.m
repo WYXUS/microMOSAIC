@@ -541,6 +541,7 @@ classdef microMOSAIC < matlab.apps.AppBase
     end
     
 
+    % Callbacks that handle component events
     methods (Access = private)
 
         % Code that executes after component creation
@@ -969,7 +970,7 @@ classdef microMOSAIC < matlab.apps.AppBase
                     localIterator = localIterator +1;
                     printLogWindow(app, "Acquiring Polar stack, please wait")
                     setPolarAngle(app,Angle);
-                    app.signalData = NLimagingCoords(app,app.coordPoints, app.numberOfAccums);
+                    app.signalData = NLimagingCoords(app,app.coordPoints, app.numberOfAccums, app.pixRepetition);
                     
                     for channel =1 :app.NumberOfEnabledChannels
                         dataPolCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);                        
@@ -1121,14 +1122,14 @@ classdef microMOSAIC < matlab.apps.AppBase
         end
     end
 
-    % App initialization and construction
+    % Component initialization
     methods (Access = private)
 
         % Create UIFigure and components
         function createComponents(app)
 
-            % Create MatMicroMain
-            app.MatMicroMain = uifigure;
+            % Create MatMicroMain and hide until all components are created
+            app.MatMicroMain = uifigure('Visible', 'off');
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 946];
@@ -1945,15 +1946,19 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.LogTextArea = uitextarea(app.MatMicroMain);
             app.LogTextArea.Editable = 'off';
             app.LogTextArea.Position = [50 14 1011 103];
+
+            % Show the figure after all components are created
+            app.MatMicroMain.Visible = 'on';
         end
     end
 
+    % App creation and deletion
     methods (Access = public)
 
         % Construct app
         function app = microMOSAIC
 
-            % Create and configure components
+            % Create UIFigure and components
             createComponents(app)
 
             % Register the app with App Designer
