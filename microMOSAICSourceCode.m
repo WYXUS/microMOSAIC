@@ -691,12 +691,20 @@ classdef microMOSAIC < matlab.apps.AppBase
         function LiveButtonValueChanged(app, event)
             value = app.LiveButton.Value;            
             if value==true
-                app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,1)]); %queue the first frame
+%                 app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,1)]); %queue the first frame
                 app.firstDraw=true;
-                app.imSession.startBackground();
+                while value == true
+                    value = app.LiveButton.Value;            
+                    
+                    signal = NLimagingCoords(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
+                    drawImages(app,app.firstDraw,signal);
+                    app.firstDraw = false;
+                    
+                end
+                
             else
-                app.imSession.stop();
-                app.imSession.release();
+%                 app.imSession.stop();
+%                 app.imSession.release();
             end                     
         end
 
@@ -1150,79 +1158,79 @@ classdef microMOSAIC < matlab.apps.AppBase
             % Create InitializeButton
             app.InitializeButton = uibutton(app.MainTab, 'push');
             app.InitializeButton.ButtonPushedFcn = createCallbackFcn(app, @InitializeButtonPushed, true);
-            app.InitializeButton.Position = [580 209 185 47];
+            app.InitializeButton.Position = [828 719 185 47];
             app.InitializeButton.Text = 'Initialize';
 
             % Create ReadyLampLabel
             app.ReadyLampLabel = uilabel(app.MainTab);
             app.ReadyLampLabel.HorizontalAlignment = 'right';
-            app.ReadyLampLabel.Position = [908 659 40 22];
+            app.ReadyLampLabel.Position = [913 691 40 22];
             app.ReadyLampLabel.Text = 'Ready';
 
             % Create ReadyLamp
             app.ReadyLamp = uilamp(app.MainTab);
-            app.ReadyLamp.Position = [963 659 20 20];
+            app.ReadyLamp.Position = [968 691 20 20];
             app.ReadyLamp.Color = [1 0 0];
 
             % Create ScanSaveButton
             app.ScanSaveButton = uibutton(app.MainTab, 'push');
             app.ScanSaveButton.ButtonPushedFcn = createCallbackFcn(app, @ScanSaveButtonPushed, true);
             app.ScanSaveButton.Enable = 'off';
-            app.ScanSaveButton.Position = [927 314 110 36];
+            app.ScanSaveButton.Position = [919 279 110 36];
             app.ScanSaveButton.Text = 'Scan&Save';
 
             % Create ScanRangeXumEditFieldLabel
             app.ScanRangeXumEditFieldLabel = uilabel(app.MainTab);
             app.ScanRangeXumEditFieldLabel.HorizontalAlignment = 'right';
-            app.ScanRangeXumEditFieldLabel.Position = [817 506 102 22];
+            app.ScanRangeXumEditFieldLabel.Position = [818 531 102 22];
             app.ScanRangeXumEditFieldLabel.Text = 'Scan Range X, um';
 
             % Create ScanRangeXumEditField
             app.ScanRangeXumEditField = uieditfield(app.MainTab, 'numeric');
             app.ScanRangeXumEditField.Limits = [0 600];
             app.ScanRangeXumEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
-            app.ScanRangeXumEditField.Position = [927 506 91 22];
+            app.ScanRangeXumEditField.Position = [928 531 91 22];
             app.ScanRangeXumEditField.Value = 100;
 
             % Create ScanRangeYumLabel
             app.ScanRangeYumLabel = uilabel(app.MainTab);
             app.ScanRangeYumLabel.HorizontalAlignment = 'right';
-            app.ScanRangeYumLabel.Position = [805 473 115 28];
+            app.ScanRangeYumLabel.Position = [805 494 115 28];
             app.ScanRangeYumLabel.Text = 'Scan Range Y, um';
 
             % Create ScanRangeYumEditField
             app.ScanRangeYumEditField = uieditfield(app.MainTab, 'numeric');
             app.ScanRangeYumEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
-            app.ScanRangeYumEditField.Position = [928 479 90 22];
+            app.ScanRangeYumEditField.Position = [928 500 90 22];
             app.ScanRangeYumEditField.Value = 100;
 
             % Create ScanResolutionumLabel
             app.ScanResolutionumLabel = uilabel(app.MainTab);
             app.ScanResolutionumLabel.HorizontalAlignment = 'right';
-            app.ScanResolutionumLabel.Position = [817 445 113 28];
+            app.ScanResolutionumLabel.Position = [817 459 113 28];
             app.ScanResolutionumLabel.Text = 'Scan Resolution,um';
 
             % Create ScanResolutionumEditField
             app.ScanResolutionumEditField = uieditfield(app.MainTab, 'numeric');
             app.ScanResolutionumEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
-            app.ScanResolutionumEditField.Position = [938 451 80 22];
+            app.ScanResolutionumEditField.Position = [938 465 80 22];
             app.ScanResolutionumEditField.Value = 0.5;
 
             % Create NumberOfAccumulationsEditFieldLabel
             app.NumberOfAccumulationsEditFieldLabel = uilabel(app.MainTab);
             app.NumberOfAccumulationsEditFieldLabel.HorizontalAlignment = 'right';
-            app.NumberOfAccumulationsEditFieldLabel.Position = [817 420 149 22];
+            app.NumberOfAccumulationsEditFieldLabel.Position = [817 433 149 22];
             app.NumberOfAccumulationsEditFieldLabel.Text = 'Number Of Accumulations';
 
             % Create NumberOfAccumulationsEditField
             app.NumberOfAccumulationsEditField = uieditfield(app.MainTab, 'numeric');
-            app.NumberOfAccumulationsEditField.Position = [972 420 46 22];
+            app.NumberOfAccumulationsEditField.Position = [972 433 46 22];
             app.NumberOfAccumulationsEditField.Value = 1;
 
             % Create TestbuttondontpressButton
             app.TestbuttondontpressButton = uibutton(app.MainTab, 'push');
             app.TestbuttondontpressButton.ButtonPushedFcn = createCallbackFcn(app, @TestbuttondontpressButtonPushed, true);
-            app.TestbuttondontpressButton.Position = [764 433 139 23];
+            app.TestbuttondontpressButton.Position = [644 709 139 23];
             app.TestbuttondontpressButton.Text = 'Test button, don''t press';
 
             % Create YourimagewillappearhereLabel
@@ -1236,18 +1244,18 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.LiveButton.ValueChangedFcn = createCallbackFcn(app, @LiveButtonValueChanged, true);
             app.LiveButton.Enable = 'off';
             app.LiveButton.Text = 'Live';
-            app.LiveButton.Position = [817 314 110 36];
+            app.LiveButton.Position = [807 279 110 36];
 
             % Create SimulationmodeCheckBox
             app.SimulationmodeCheckBox = uicheckbox(app.MainTab);
             app.SimulationmodeCheckBox.Text = 'Simulation mode';
-            app.SimulationmodeCheckBox.Position = [604 264 111 22];
+            app.SimulationmodeCheckBox.Position = [672 737 111 22];
 
             % Create PolarPanel
             app.PolarPanel = uipanel(app.MainTab);
             app.PolarPanel.AutoResizeChildren = 'off';
             app.PolarPanel.Title = 'Polar';
-            app.PolarPanel.Position = [785 45 260 257];
+            app.PolarPanel.Position = [783 16 260 257];
 
             % Create InitializePolarMotorButton
             app.InitializePolarMotorButton = uibutton(app.PolarPanel, 'push');
@@ -1315,30 +1323,30 @@ classdef microMOSAIC < matlab.apps.AppBase
             % Create FoVcenterXumEditFieldLabel
             app.FoVcenterXumEditFieldLabel = uilabel(app.MainTab);
             app.FoVcenterXumEditFieldLabel.HorizontalAlignment = 'right';
-            app.FoVcenterXumEditFieldLabel.Position = [817 389 99 22];
+            app.FoVcenterXumEditFieldLabel.Position = [817 403 99 22];
             app.FoVcenterXumEditFieldLabel.Text = 'FoV center X, um';
 
             % Create FoVcenterXumEditField
             app.FoVcenterXumEditField = uieditfield(app.MainTab, 'numeric');
             app.FoVcenterXumEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
-            app.FoVcenterXumEditField.Position = [933 389 85 22];
+            app.FoVcenterXumEditField.Position = [933 403 85 22];
 
             % Create FoVcenterYumEditFieldLabel
             app.FoVcenterYumEditFieldLabel = uilabel(app.MainTab);
             app.FoVcenterYumEditFieldLabel.HorizontalAlignment = 'right';
-            app.FoVcenterYumEditFieldLabel.Position = [817 360 97 22];
+            app.FoVcenterYumEditFieldLabel.Position = [817 377 97 22];
             app.FoVcenterYumEditFieldLabel.Text = 'FoV center Y, um';
 
             % Create FoVcenterYumEditField
             app.FoVcenterYumEditField = uieditfield(app.MainTab, 'numeric');
             app.FoVcenterYumEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
-            app.FoVcenterYumEditField.Position = [931 360 87 22];
+            app.FoVcenterYumEditField.Position = [931 377 87 22];
 
             % Create ZoomPanel
             app.ZoomPanel = uipanel(app.MainTab);
             app.ZoomPanel.AutoResizeChildren = 'off';
             app.ZoomPanel.Title = 'Zoom';
-            app.ZoomPanel.Position = [837 527 168 128];
+            app.ZoomPanel.Position = [837 561 168 128];
 
             % Create ZoomfactorEditFieldLabel
             app.ZoomfactorEditFieldLabel = uilabel(app.ZoomPanel);
@@ -1381,13 +1389,13 @@ classdef microMOSAIC < matlab.apps.AppBase
             % Create PixelRepetitionEditFieldLabel
             app.PixelRepetitionEditFieldLabel = uilabel(app.MainTab);
             app.PixelRepetitionEditFieldLabel.HorizontalAlignment = 'right';
-            app.PixelRepetitionEditFieldLabel.Position = [793 349 89 22];
+            app.PixelRepetitionEditFieldLabel.Position = [814 347 89 22];
             app.PixelRepetitionEditFieldLabel.Text = 'Pixel Repetition';
 
             % Create PixelRepetitionEditField
             app.PixelRepetitionEditField = uieditfield(app.MainTab, 'numeric');
             app.PixelRepetitionEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
-            app.PixelRepetitionEditField.Position = [897 349 100 22];
+            app.PixelRepetitionEditField.Position = [918 347 100 22];
             app.PixelRepetitionEditField.Value = 1;
 
             % Create LiveTab
@@ -1538,7 +1546,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.Switch.Items = {'Analog', 'Counter'};
             app.Switch.ValueChangedFcn = createCallbackFcn(app, @SwitchValueChanged, true);
             app.Switch.Position = [425 40 45 20];
-            app.Switch.Value = 'Analog';
+            app.Switch.Value = 'Counter';
 
             % Create AnalogChannelInputDropDownLabel
             app.AnalogChannelInputDropDownLabel = uilabel(app.FirstChannelSettingsPanel);
@@ -1626,7 +1634,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.NumberOfChannelsSlider.ValueChangedFcn = createCallbackFcn(app, @NumberOfChannelsSliderValueChanged, true);
             app.NumberOfChannelsSlider.MinorTicks = [];
             app.NumberOfChannelsSlider.Position = [175 698 150 3];
-            app.NumberOfChannelsSlider.Value = 2;
+            app.NumberOfChannelsSlider.Value = 4;
 
             % Create SecondChannelSettingsPanel
             app.SecondChannelSettingsPanel = uipanel(app.SettingsTab);
@@ -1639,7 +1647,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.Switch_2.Items = {'Analog', 'Counter'};
             app.Switch_2.ValueChangedFcn = createCallbackFcn(app, @Switch_2ValueChanged, true);
             app.Switch_2.Position = [426 40 45 20];
-            app.Switch_2.Value = 'Analog';
+            app.Switch_2.Value = 'Counter';
 
             % Create AnalogChannelInputDropDown_2Label
             app.AnalogChannelInputDropDown_2Label = uilabel(app.SecondChannelSettingsPanel);
@@ -1725,7 +1733,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.Switch_3.Items = {'Analog', 'Counter'};
             app.Switch_3.ValueChangedFcn = createCallbackFcn(app, @Switch_3ValueChanged, true);
             app.Switch_3.Position = [426 40 45 20];
-            app.Switch_3.Value = 'Analog';
+            app.Switch_3.Value = 'Counter';
 
             % Create AnalogChannelInputDropDown_3Label
             app.AnalogChannelInputDropDown_3Label = uilabel(app.ThirdChannelSettingsPanel);
@@ -1811,7 +1819,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.Switch_4.Items = {'Analog', 'Counter'};
             app.Switch_4.ValueChangedFcn = createCallbackFcn(app, @Switch_4ValueChanged, true);
             app.Switch_4.Position = [426 40 45 20];
-            app.Switch_4.Value = 'Analog';
+            app.Switch_4.Value = 'Counter';
 
             % Create AnalogChannelInputDropDown_4Label
             app.AnalogChannelInputDropDown_4Label = uilabel(app.FourthChannelSettingsPanel);
