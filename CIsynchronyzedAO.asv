@@ -1,0 +1,51 @@
+clear all
+
+
+% Load NIDAQmx .NET assembly
+fprintf('Starting up: loading DAQmx...\n')
+try
+    NET.addAssembly('NationalInstruments.DAQmx');
+    import NationalInstruments.DAQmx.*
+    fprintf('Assembly successfully loaded!\n')
+catch
+    error('Error loading .NET assembly! Check NIDAQmx .NET installation.')
+end
+
+
+% Setting some properties
+prop.AOrate = 1e4;                                  % analog output sample rate in Hz (has to be divisor of AIrate)
+prop.AOchans = {'/Dev2/ao0','/Dev2/ao1'};             % path to AO channels (primary DAQ card)                % cell array of AO channel paths. For a single AO card, this would be a 1-element cell, e.g. {'Dev1/ao0:1'}, for two cards, this could be {'Dev1/ao0:1', 'Dev2/ao0:2'}
+prop.AIchans = {'/Dev2/ai0'};
+prop.AIrange = [-10 10];
+prop.AOrange = 2*[-1 1];                            
+prop.channelOrder = {[1 2]};                          % cell array of signal to channel assignments. Assign [X,Y,Z,Blank,Phase] signals (in that order, 1-based indexing) to output channels. To assign X to the first output channel, Y to the second, blank to the first of the second card and Z to the second of the second card, use {[1 2], [4 3]}. For a single output card, this could be e.g. {[1 2]}
+prop.nsamples = 10;
+
+
+AOtask = NationalInstruments.DAQmx.Task;
+AOtask.AOChannels.CreateVoltageChannel('/Dev2/ao0:1', '',prop.AOrange(1), prop.AOrange(2), AOVoltageUnits.Volts);
+AOtask.Stream.WriteRegenerationMode = WriteRegenerationMode.AllowRegeneration;
+AOtask.Timing.ConfigureSampleClock('OnBoardClock', prop.AOrate, SampleClockActiveEdge.Rising, SampleQuantityMode.ContinuousSamples, prop.nsamples)
+AOtask.Timing.SampleClockTimebaseSource = '100MHzTimebase';
+AOtask.Timing.SampleClockTimebaseRate = 100e6;
+% AOtask.EveryNSamplesWrittenEventInterval = 10*prop.nsamples;
+% AOtask.Triggers.StartTrigger.ConfigureAnalogEdgeTrigger('APFI0', AnalogEdgeStartTriggerSlope.Rising, 0 );
+% AOtask.Triggers.AdvanceTrigger.ConfigureDigitalEdgeTrigger('/Dev2/Ctr1', DigitalEdgeAdvanceTriggerEdge.Rising );
+AOtask.Control(TaskAction.Verify);
+
+AOwriter = AnalogMultiChannelWriter(AOtask.Stream);
+
+
+
+
+fprintf('starting up: setting up DAQ...\n')
+AItask = NationalInstruments.DAQmx.Task;
+AItask.AIChannels.CreateVoltageChannel(prop.AIchans(1), '', AITerminalConfiguration.Rse, prop.AIrange(1), prop.AIrange(2), AIVoltageUnits.Volts);
+% AItask.Timing.ConfigureSampleClock('', prop.AIrate, SampleClockActiveEdge.Rising, SampleQuantityMode.ContinuousSamples, prop.buffersize)
+AItask.Timing.ConfigureSampleClock('', prop.AIrate, SampleClockActiveEdge.Rising, SampleQuantityMode.FiniteSamples, prop.nsamples)
+% AItask.EveryNSamplesReadEventInterval = prop.nsamples;
+AItask.Triggers.StartTrigger.ConfigureDigitalEdgeTrigger('ao\StartTrigger', DigitalEdgeStartTriggerEdge.Rising);
+AItask.Control(TaskAction.Verify);
+% AIreader = AnalogUnscaledReader(AItask.Stream);
+AIreader = AnalogMultiChannelReader(AItask.Stream);
+data = AIreader.ReadWaveform(prop.nsamples)
