@@ -251,7 +251,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             % Acquires a single image by scanning galvo mirrors at set FOV with set
             % precision
             
-            app.imSession.IsContinuous = false;
+            
             size = int32(sqrt(length(coordPoints(:,1))/pixRep));       % image size
             signal = zeros(size, size,app.NumberOfEnabledChannels);       % Array where signal data is stored
             
@@ -284,8 +284,8 @@ classdef microMOSAIC < matlab.apps.AppBase
                 end
             end
             signal = signal / accumulation ;        % normalize over number of accumulations
-            app.imSession.outputSingleScan([0,0]);         % return to the image center
-            app.imSession.IsContinuous = true;
+%             app.imSession.outputSingleScan([0,0]);         % return to the image center
+            
         end
         
         function  printLogWindow(app, line)
@@ -295,9 +295,9 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.LogTextArea.Value =[line; app.LogTextArea.Value];
         end
         
-        function results = setAxes(app, imSize)
+        function setAxes(app, imSize)
             app.ax = [];
-            imSize = 0.5;
+            imSize = 0.45;
             app.ax =[app.ax axes(app.displayFigure,'Position',[0 imSize imSize imSize])];
             app.ax =[app.ax axes(app.displayFigure,'Position',[imSize imSize imSize imSize])];
             app.ax =[app.ax axes(app.displayFigure,'Position',[0 0 imSize imSize])];
@@ -321,9 +321,9 @@ classdef microMOSAIC < matlab.apps.AppBase
 
         function drawImages(app,firstDraw,data)
             if ~ishandle(app.displayFigure)         % check if figure for displaying exists                                
-                app.displayFigure = figure();       % create figure if doesn't exist
+                app.displayFigure = figure('Name',app.MatMicroMain.Name,'NumberTitle','off');       % create figure if doesn't exist
                 setAxes(app,0.5)                    % create axes
-                app.firstDraw = true;               % complete redraw next time
+                firstDraw = true;               % complete redraw next time
             end
 
             if firstDraw ==true
@@ -344,7 +344,9 @@ classdef microMOSAIC < matlab.apps.AppBase
                     
                 else
                     maxLim = max(data(:,:,channel),[],'all');
-                    set(app.ims(channel),'CData',data(:,:,channel));
+                    if isvalid(app.ims(channel))
+                        set(app.ims(channel),'CData',data(:,:,channel));
+                    end
                     %set(app.ax(channel),'Clim',[0 maxLim]);
                 end
             end
@@ -427,7 +429,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             if app.SimulationmodeCheckBox.Value == true
                 image = magic(256);
             else
-                app.signalData =NLimagingCoords(app ,app.coordPoints, app.numberOfAccums);
+                app.signalData =NLimagingCoords(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
                 image = app.signalData(:,:,channelNumber);
             end
             hFigForplotting = figure;
@@ -569,7 +571,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             %             app.ax=[]
             printLogWindow(app,"Initialization..");
             try
-                app.displayFigure = figure();
+                app.displayFigure = figure('Name',app.MatMicroMain.Name,'NumberTitle','off');
                 app.calibration = str2double(app.ObjectiveDropDown.Value); %choose objective lens
                 app.scanXRange = app.ScanRangeXumEditField.Value; % x FoV, um
                 app.scanYRange = app.ScanRangeYumEditField.Value; % y FoV, um
@@ -610,14 +612,14 @@ classdef microMOSAIC < matlab.apps.AppBase
                         
                         
                     end
-                    app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5 * app.pixRepetition);
-                        app.lhOUT = addlistener(app.imSession,'DataRequired', @app.queueData);
-                        app.imSession.IsContinuous = true; %needed to provide continuous behavior
+%                     app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5 * app.pixRepetition);
+%                         app.lhOUT = addlistener(app.imSession,'DataRequired', @app.queueData);
+%                         app.imSession.IsContinuous = true; %needed to provide continuous behavior
 %                         app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)]); %queue the first frame
                         
                         % Pull in the data when the frame has been acquired
-                        app.imSession.NotifyWhenDataAvailableExceeds=length(app.coordPoints(:,1)) * app.pixRepetition;
-                        app.lhIN = addlistener(app.imSession,'DataAvailable', @app.grabData);
+%                         app.imSession.NotifyWhenDataAvailableExceeds=length(app.coordPoints(:,1)) * app.pixRepetition;
+%                         app.lhIN = addlistener(app.imSession,'DataAvailable', @app.grabData);
 %                         prepare(app.imSession);
                 else
                     printLogWindow(app,"Simulation mode")
@@ -645,7 +647,9 @@ classdef microMOSAIC < matlab.apps.AppBase
         % Button pushed function: ScanSaveButton
         function ScanSaveButtonPushed(app, event)
             saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
-            
+            if app.imSession.IsRunning
+                app.imSession.stop();
+            end
             if app.SimulationmodeCheckBox.Value==false
                 signal = NLimagingCoords(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
                 %                 app.signalData = signal;
@@ -694,13 +698,15 @@ classdef microMOSAIC < matlab.apps.AppBase
 
         % Value changed function: LiveButton
         function LiveButtonValueChanged(app, event)
-            value = app.LiveButton.Value;            
+            value = app.LiveButton.Value;
             if value==true
-%                 app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,1)]); %queue the first frame
+                %                 app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,1)]); %queue the first frame
                 app.firstDraw=true;
                 while value == true
-                    value = app.LiveButton.Value;            
-                    
+                    value = app.LiveButton.Value;
+                    if app.imSession.IsRunning
+                        app.imSession.stop();
+                    end
                     signal = NLimagingCoords(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
                     drawImages(app,app.firstDraw,signal);
                     app.firstDraw = false;
@@ -728,6 +734,9 @@ classdef microMOSAIC < matlab.apps.AppBase
                     %           end
                     if ishandle(app.displayFigure)
                         close(app.displayFigure)
+                    end
+                    if app.imSession.IsRunning
+                        app.imSession.stop();
                     end
                     delete(app)
                 case 'No'
@@ -1027,14 +1036,11 @@ classdef microMOSAIC < matlab.apps.AppBase
         function StartLiveButtonValueChanged(app, event)
             value = app.StartLiveButton.Value;
             if value ==true
-                %                 [xcoord ,ycoord] = selectGalvoPosition(app,str2num(app.ChannelForImagePixelSelectionDropDown.Value)+1);
-                %                 optimizationPoint = [-double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep*app.calibration+double(xcoord)*app.scanStep*app.calibration;-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep*app.calibration+double(ycoord)*app.scanStep*app.calibration];
-                %                 if app.SimulationmodeCheckBox.Value==false
-                %                 app.imSession.outputSingleScan([optimizationPoint(1) optimizationPoint(2)])
-                %                 queueCoordX = ones(10,1)*optimizationPoint(1);
-                %                 queueCoordY = ones(10,1)*optimizationPoint(2);
-                %
-                %                 end
+                [xcoord ,ycoord] = selectGalvoPosition(app,str2num(app.ChannelForImagePixelSelectionDropDown.Value)+1);
+                optimizationPoint = [-double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep*app.calibration+double(xcoord)*app.scanStep*app.calibration;-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep*app.calibration+double(ycoord)*app.scanStep*app.calibration];
+                if app.SimulationmodeCheckBox.Value==false
+                    app.imSession.outputSingleScan([optimizationPoint(1) optimizationPoint(2)])                    
+                end
             end
             while value == true
                 %                 app.imSession.queueOutputData([queueCoordX,queueCoordY]);
@@ -1087,7 +1093,8 @@ classdef microMOSAIC < matlab.apps.AppBase
             zoomFactor = app.ZoomfactorEditField.Value;
             zoomImage(app,zoomFactor);
             app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange,app.scanYRange,app.scanStep,app.xFoVCenter,app.yFoVCenter,app.pixRepetition);
-            drawImages(app,true)
+            signal = NLimagingCoords(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
+            drawImages(app,true,signal)
         end
 
         % Button pushed function: ZoomOutButton
@@ -1098,7 +1105,8 @@ classdef microMOSAIC < matlab.apps.AppBase
             zoomFactor =1 / app.ZoomfactorEditField.Value;
             zoomImage(app,zoomFactor);
             app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange,app.scanYRange,app.scanStep,app.xFoVCenter,app.yFoVCenter,app.pixRepetition);
-            drawImages(app,true)
+            signal = NLimagingCoords(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
+            drawImages(app,true,signal)
         end
 
         % Value changed function: SessionUpdateRateHzEditField
