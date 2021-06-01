@@ -129,6 +129,23 @@ classdef microMOSAIC < matlab.apps.AppBase
         SavingfolderEditField           matlab.ui.control.EditField
         FilenameCommentEditFieldLabel   matlab.ui.control.Label
         FilenameCommentEditField        matlab.ui.control.EditField
+        DelaylineTab                    matlab.ui.container.Tab
+        ConnectionPanel                 matlab.ui.container.Panel
+        ConnectStageButton              matlab.ui.control.Button
+        PositionEditFieldLabel          matlab.ui.control.Label
+        PositionEditField               matlab.ui.control.NumericEditField
+        MoveButton                      matlab.ui.control.Button
+        ScandelayButton                 matlab.ui.control.Button
+        UIAxes2                         matlab.ui.control.UIAxes
+        OffsetmmEditFieldLabel          matlab.ui.control.Label
+        OffsetmmEditField               matlab.ui.control.NumericEditField
+        RangemmEditFieldLabel           matlab.ui.control.Label
+        RangemmEditField                matlab.ui.control.NumericEditField
+        StepmmEditFieldLabel            matlab.ui.control.Label
+        StepmmEditField                 matlab.ui.control.NumericEditField
+        ChannelEditFieldLabel           matlab.ui.control.Label
+        ChannelEditField                matlab.ui.control.EditField
+        Button2                         matlab.ui.control.Button
         LogTextAreaLabel                matlab.ui.control.Label
         LogTextArea                     matlab.ui.control.TextArea
     end
@@ -173,6 +190,9 @@ classdef microMOSAIC < matlab.apps.AppBase
         lhIN % Description
         lhOUT
         displayFigure % Description
+        stage % delay line
+        PIaxis % Description
+        Controller % Description
     end
     
     methods (Access = private)
@@ -513,7 +533,48 @@ classdef microMOSAIC < matlab.apps.AppBase
             
         end
 
+        
+        
+        function [stage, PIaxis, stageConnected] = StartStage(app, Controller,stageConnected)
+            
+            %Start connection (if not already connected)
+            stageConnected = false; if ( exist ( 'stage', 'var' ) ), if ( stage.IsConnected ), stageConnected = true; end; end;
+            if ( ~(stageConnected ) )
+                % USB
+                stageType = 'M-415.2S';% 113013743     stageType = 'P-725.4CD'
+                controllerSerialNumber = '0125500210';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
+                %controllerSerialNumber = '';
+                stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
+                stageConnected=true;
+            end
+            
+            % Query controller identification string
+            connectedControllerName = stage.qIDN();
+            
+            % initialize PIdevice object for use in MATLAB
+            stage = stage.InitializeController ();
+            
+            %Startup Stage
+            PIaxis = '1';
+            
+            % switch servo on for axis
+            switchOn    = 1;
+            % switchOff   = 0;
+            stage.SVO ( PIaxis, switchOn );
+            
+        end
+        
+        function ReferenceStage(app,stage, PIaxis)
+            
+            stage.FRF ( PIaxis );  % find reference
 
+            % wait for referencing to finish
+            while(0 ~= stage.qFRF ( PIaxis ) == 0 )
+                pause(0.1);
+                %     fprintf('.');
+            end
+
+        end
     end
     methods (Access = public)
         
@@ -735,10 +796,21 @@ classdef microMOSAIC < matlab.apps.AppBase
                     if ishandle(app.displayFigure)
                         close(app.displayFigure)
                     end
-                    if app.imSession.IsRunning
-                        app.imSession.stop();
+                    if ~isempty(app.imSession)
+                        if app.imSession.IsRunning
+                            app.imSession.stop();
+                        end
+                    end
+                    if ~isempty(app.Controller)
+                        if ~isempty(app.stage)
+                        app.stage.CloseConnection();
+                        end
+                        app.Controller.Destroy;
+                        clear app.stage;
+                        clear app.Controller                                                                     
                     end
                     delete(app)
+                    
                 case 'No'
                     return
             end
@@ -1144,6 +1216,104 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.Button.Value = false;
             
         end
+
+        % Button pushed function: ConnectStageButton
+        function ConnectStageButtonPushed(app, event)
+            %% CONNECT PI translation stage
+            %Load PI MATLAB Driver GCS2 (if not already loaded)
+            addpath ( 'C:\Users\Public\PI\PI_MATLAB_Driver_GCS2' ); % If you are still using XP, please look at the manual for the right path to include.
+            if ( ~exist ( 'app.Controller', 'var' ) || ~isa ( app.Controller, 'PI_GCS_Controller' ) )
+                app.Controller = PI_GCS_Controller ();
+            end
+            stageConnected = false;
+            if ( exist ( 'stage', 'var' ) )
+                if ( app.stage.IsConnected )
+                    stageConnected = true;
+                end
+            else
+                [app.stage, app.PIaxis, stageConnected] = StartStage(app, app.Controller,stageConnected);
+            end
+            
+            %Set stage movement velocity
+            vel=2; %in mm/s
+            app.stage.VEL(app.PIaxis, vel);
+            
+            %Reference PI Stage
+            ReferenceStage(app,app.stage, app.PIaxis)
+            % RefPIStage(stage, PIaxis);
+            
+            % determine the allowed travel range of the stage
+            minimumPosition = app.stage.qTMN ( app.PIaxis );
+            maximumPosition = app.stage.qTMX ( app.PIaxis );
+            travelRange = ( maximumPosition - minimumPosition );
+            app.stage.MOV(app.PIaxis,45.4);
+            app.ConnectStageButton.Enable = false;
+
+
+        end
+
+        % Button pushed function: MoveButton
+        function MoveButtonPushed(app, event)
+            app.stage.MOV(app.PIaxis,app.PositionEditField.Value);
+        end
+
+        % Button pushed function: ScandelayButton
+        function ScandelayButtonPushed(app, event)
+            %% Pulse overlap for CARS signal
+            
+            Offset =45.434999999999600;%mm 20x 0.7 LWD SLM, 1:3 Telescope Oil reference
+            % Offset = 45.432499999998580; %mm 20x 0.7 LWD SLM, 1:3 Telescope, SpCOil
+            % Offset =45.602499999992550;%mm 20x 0.7 LWD NO 1:3 telescope no SLM
+            % Offset = 45.692499999999140; % Leaf fresh low
+            Range = app.RangemmEditField.Value; %mm
+            optimizationPoint = [0 0];
+            if exist('app.imSession', 'var')
+            app.imSession.outputSingleScan([optimizationPoint(1) optimizationPoint(2)]);
+            end
+            Step =app.StepmmEditField.Value;%mm
+            position = Offset-Range/2;
+            data = zeros(2, int32(Range/Step));
+            counter =1;
+            
+            sessionPulseOver = daq.createSession('ni');
+            sessionPulseOver.Rate = 1250000; sessionPulseOver.DurationInSeconds = 0.1;
+            chNo=0; %channel number for analog inpupt - PMT
+            chPMT=addAnalogInputChannel(sessionPulseOver,'Dev1',app.ChannelEditField.Value,'Voltage');
+            chPMT.TerminalConfig = 'SingleEnded'; % type of voltage measurement. CRUTIAL                  
+            while (position)<=(Offset+Range/2)
+                app.stage.MOV(app.PIaxis,position);
+                while(app.stage.IsMoving==true)
+                    pause(0.1);
+                end
+                
+                data(1,counter) = position;
+                data(2, counter) = mean(sessionPulseOver.startForeground);
+                
+%                 figure(fPulseOverlay); plot(data(1,:), data(2,:));axis([Offset-Range/2 Offset+Range/2 min(data(2, :))-0.05 max(data(2, :))+0.05]);title('Delay scan'); drawnow;
+                position = position + Step; counter = counter + 1;
+            end
+            app.UIAxes2.XTick = [Offset-Range/2:Range /9: Offset+Range/2]
+            plot(app.UIAxes2, data(1,:), data(2,:))
+            app.stage.MOV(app.PIaxis,Offset);
+%             styleDelay = '%f\t%f\n';
+            sessionPulseOver.release;
+            clear('sessionPulseOver');
+%             saveas(fPulseOverlay,"output\"+logfolder+"\delay scan"+string(datetime('now','TimeZone','local','Format','HH-mm'))+".fig");
+%             fileName = "output\"+logfolder+"\delay scan"+string(datetime('now','TimeZone','local','Format','HH-mm'));
+%             saveText(fileName, styleDelay, data'); %save total signal evolution during the optimization
+%             disp('done')
+        end
+
+        % Button pushed function: Button2
+        function Button2Pushed(app, event)
+           
+                        
+                            
+                        
+                        
+                        
+
+        end
     end
 
     % App initialization and construction
@@ -1157,7 +1327,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.731';
+            app.MatMicroMain.Name = 'microMOSAIC v0.8';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -1953,6 +2123,104 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.FilenameCommentEditField = uieditfield(app.SavingSettingsTab, 'text');
             app.FilenameCommentEditField.Position = [133 410 441 22];
             app.FilenameCommentEditField.Value = '_test_sample_';
+
+            % Create DelaylineTab
+            app.DelaylineTab = uitab(app.TabGroup);
+            app.DelaylineTab.Title = 'Delay line';
+
+            % Create ConnectionPanel
+            app.ConnectionPanel = uipanel(app.DelaylineTab);
+            app.ConnectionPanel.Title = 'Connection';
+            app.ConnectionPanel.Position = [118 225 260 221];
+
+            % Create ConnectStageButton
+            app.ConnectStageButton = uibutton(app.ConnectionPanel, 'push');
+            app.ConnectStageButton.ButtonPushedFcn = createCallbackFcn(app, @ConnectStageButtonPushed, true);
+            app.ConnectStageButton.Position = [66 23 100 22];
+            app.ConnectStageButton.Text = 'Connect Stage';
+
+            % Create PositionEditFieldLabel
+            app.PositionEditFieldLabel = uilabel(app.DelaylineTab);
+            app.PositionEditFieldLabel.HorizontalAlignment = 'right';
+            app.PositionEditFieldLabel.Position = [575 340 48 22];
+            app.PositionEditFieldLabel.Text = 'Position';
+
+            % Create PositionEditField
+            app.PositionEditField = uieditfield(app.DelaylineTab, 'numeric');
+            app.PositionEditField.ValueDisplayFormat = '%.4f';
+            app.PositionEditField.Position = [638 340 100 22];
+            app.PositionEditField.Value = 45.4349;
+
+            % Create MoveButton
+            app.MoveButton = uibutton(app.DelaylineTab, 'push');
+            app.MoveButton.ButtonPushedFcn = createCallbackFcn(app, @MoveButtonPushed, true);
+            app.MoveButton.Position = [603 291 100 22];
+            app.MoveButton.Text = 'Move';
+
+            % Create ScandelayButton
+            app.ScandelayButton = uibutton(app.DelaylineTab, 'push');
+            app.ScandelayButton.ButtonPushedFcn = createCallbackFcn(app, @ScandelayButtonPushed, true);
+            app.ScandelayButton.Position = [603 256 100 22];
+            app.ScandelayButton.Text = 'Scan delay';
+
+            % Create UIAxes2
+            app.UIAxes2 = uiaxes(app.DelaylineTab);
+            title(app.UIAxes2, 'Title')
+            xlabel(app.UIAxes2, 'X')
+            ylabel(app.UIAxes2, 'Y')
+            app.UIAxes2.XTick = [0 0.1 0.2 0.4 0.6 0.8 1];
+            app.UIAxes2.Position = [692 41 300 185];
+
+            % Create OffsetmmEditFieldLabel
+            app.OffsetmmEditFieldLabel = uilabel(app.DelaylineTab);
+            app.OffsetmmEditFieldLabel.HorizontalAlignment = 'right';
+            app.OffsetmmEditFieldLabel.Position = [393 145 64 22];
+            app.OffsetmmEditFieldLabel.Text = 'Offset, mm';
+
+            % Create OffsetmmEditField
+            app.OffsetmmEditField = uieditfield(app.DelaylineTab, 'numeric');
+            app.OffsetmmEditField.ValueDisplayFormat = '%.4f';
+            app.OffsetmmEditField.Position = [472 145 67 22];
+            app.OffsetmmEditField.Value = 45.4349;
+
+            % Create RangemmEditFieldLabel
+            app.RangemmEditFieldLabel = uilabel(app.DelaylineTab);
+            app.RangemmEditFieldLabel.HorizontalAlignment = 'right';
+            app.RangemmEditFieldLabel.Position = [393 112 68 22];
+            app.RangemmEditFieldLabel.Text = 'Range, mm';
+
+            % Create RangemmEditField
+            app.RangemmEditField = uieditfield(app.DelaylineTab, 'numeric');
+            app.RangemmEditField.Position = [476 112 63 22];
+            app.RangemmEditField.Value = 0.2;
+
+            % Create StepmmEditFieldLabel
+            app.StepmmEditFieldLabel = uilabel(app.DelaylineTab);
+            app.StepmmEditFieldLabel.HorizontalAlignment = 'right';
+            app.StepmmEditFieldLabel.Position = [393 79 57 22];
+            app.StepmmEditFieldLabel.Text = 'Step, mm';
+
+            % Create StepmmEditField
+            app.StepmmEditField = uieditfield(app.DelaylineTab, 'numeric');
+            app.StepmmEditField.Position = [465 79 74 22];
+            app.StepmmEditField.Value = 0.0025;
+
+            % Create ChannelEditFieldLabel
+            app.ChannelEditFieldLabel = uilabel(app.DelaylineTab);
+            app.ChannelEditFieldLabel.HorizontalAlignment = 'right';
+            app.ChannelEditFieldLabel.Position = [528 204 50 22];
+            app.ChannelEditFieldLabel.Text = 'Channel';
+
+            % Create ChannelEditField
+            app.ChannelEditField = uieditfield(app.DelaylineTab, 'text');
+            app.ChannelEditField.Position = [593 204 100 22];
+            app.ChannelEditField.Value = 'ai0';
+
+            % Create Button2
+            app.Button2 = uibutton(app.DelaylineTab, 'push');
+            app.Button2.ButtonPushedFcn = createCallbackFcn(app, @Button2Pushed, true);
+            app.Button2.Position = [184 112 100 22];
+            app.Button2.Text = 'Button2';
 
             % Create LogTextAreaLabel
             app.LogTextAreaLabel = uilabel(app.MatMicroMain);
