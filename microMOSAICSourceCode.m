@@ -565,15 +565,15 @@ classdef microMOSAIC < matlab.apps.AppBase
         end
         
         function ReferenceStage(app,stage, PIaxis)
-            
+            printLogWindow(app,"Referencing the stage");
             stage.FRF ( PIaxis );  % find reference
 
             % wait for referencing to finish
             while(0 ~= stage.qFRF ( PIaxis ) == 0 )
                 pause(0.1);
-                %     fprintf('.');
+                
             end
-
+            printLogWindow(app,".. done!");
         end
     end
     methods (Access = public)
@@ -1255,12 +1255,13 @@ classdef microMOSAIC < matlab.apps.AppBase
         % Button pushed function: MoveButton
         function MoveButtonPushed(app, event)
             app.stage.MOV(app.PIaxis,app.PositionEditField.Value);
+            printLogWindow(app, "Stage moved to "+app.PositionEditField.Value);
         end
 
         % Button pushed function: ScandelayButton
         function ScandelayButtonPushed(app, event)
             %% Pulse overlap for CARS signal
-            
+            printLogWindow(app, "Scanning the delay");    
             Offset =45.434999999999600;%mm 20x 0.7 LWD SLM, 1:3 Telescope Oil reference
             % Offset = 45.432499999998580; %mm 20x 0.7 LWD SLM, 1:3 Telescope, SpCOil
             % Offset =45.602499999992550;%mm 20x 0.7 LWD NO 1:3 telescope no SLM
@@ -1291,13 +1292,16 @@ classdef microMOSAIC < matlab.apps.AppBase
                 
 %                 figure(fPulseOverlay); plot(data(1,:), data(2,:));axis([Offset-Range/2 Offset+Range/2 min(data(2, :))-0.05 max(data(2, :))+0.05]);title('Delay scan'); drawnow;
                 position = position + Step; counter = counter + 1;
+                
             end
-            app.UIAxes2.XTick = [Offset-Range/2:Range /9: Offset+Range/2]
+            app.UIAxes2.XTick = [Offset-Range/2:Range /9: Offset+Range/2];
+            app.UIAxes2.XTickLabelRotation = 90;
             plot(app.UIAxes2, data(1,:), data(2,:))
             app.stage.MOV(app.PIaxis,Offset);
 %             styleDelay = '%f\t%f\n';
             sessionPulseOver.release;
             clear('sessionPulseOver');
+            printLogWindow(app, "..done!");
 %             saveas(fPulseOverlay,"output\"+logfolder+"\delay scan"+string(datetime('now','TimeZone','local','Format','HH-mm'))+".fig");
 %             fileName = "output\"+logfolder+"\delay scan"+string(datetime('now','TimeZone','local','Format','HH-mm'));
 %             saveText(fileName, styleDelay, data'); %save total signal evolution during the optimization
@@ -1327,7 +1331,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.8';
+            app.MatMicroMain.Name = 'microMOSAIC v0.801';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
