@@ -132,6 +132,14 @@ classdef microMOSAIC < matlab.apps.AppBase
         DelaylineTab                    matlab.ui.container.Tab
         ConnectionPanel                 matlab.ui.container.Panel
         ConnectStageButton              matlab.ui.control.Button
+        StagetypeEditFieldLabel         matlab.ui.control.Label
+        StagetypeEditField              matlab.ui.control.EditField
+        ControllerserialnumberEditFieldLabel  matlab.ui.control.Label
+        ControllerserialnumberEditField  matlab.ui.control.EditField
+        ConnectioninterfaceDropDownLabel  matlab.ui.control.Label
+        ConnectioninterfaceDropDown     matlab.ui.control.DropDown
+        PortEditFieldLabel              matlab.ui.control.Label
+        PortEditField                   matlab.ui.control.EditField
         PositionEditFieldLabel          matlab.ui.control.Label
         PositionEditField               matlab.ui.control.NumericEditField
         MoveButton                      matlab.ui.control.Button
@@ -535,16 +543,19 @@ classdef microMOSAIC < matlab.apps.AppBase
 
         
         
-        function [stage, PIaxis, stageConnected] = StartStage(app, Controller,stageConnected)
+        function [stage, PIaxis, stageConnected] = StartStage(app, Controller,connectionInterface, stageType,controllerSerialNumber)
             
             %Start connection (if not already connected)
-            stageConnected = false; if ( exist ( 'stage', 'var' ) ), if ( stage.IsConnected ), stageConnected = true; end; end;
-            if ( ~(stageConnected ) )
+            
+            if ( ~(app.stageConnected ) )
                 % USB
-                stageType = 'M-415.2S';% 113013743     stageType = 'P-725.4CD'
-                controllerSerialNumber = '0125500210';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
-                %controllerSerialNumber = '';
-                stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
+                %stageType = 'M-415.2S';% 113013743     stageType = 'P-725.4CD'
+                %controllerSerialNumber = '0125500210';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
+                if connectionInterface == "USB"
+                    stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
+                else
+                    stage = Controller.ConnectSerial( controllerSerialNumber ); %Or look at the label of the case of your controller
+                end
                 stageConnected=true;
             end
             
@@ -1221,34 +1232,30 @@ classdef microMOSAIC < matlab.apps.AppBase
         function ConnectStageButtonPushed(app, event)
             %% CONNECT PI translation stage
             %Load PI MATLAB Driver GCS2 (if not already loaded)
-            addpath ( 'C:\Users\Public\PI\PI_MATLAB_Driver_GCS2' ); % If you are still using XP, please look at the manual for the right path to include.
-            if ( ~exist ( 'app.Controller', 'var' ) || ~isa ( app.Controller, 'PI_GCS_Controller' ) )
-                app.Controller = PI_GCS_Controller ();
-            end
-            stageConnected = false;
-            if ( exist ( 'stage', 'var' ) )
-                if ( app.stage.IsConnected )
-                    stageConnected = true;
+            try
+                addpath ( 'C:\Users\Public\PI\PI_MATLAB_Driver_GCS2' ); % If you are still using XP, please look at the manual for the right path to include.
+                if ( ~exist ( 'app.Controller', 'var' ) || ~isa ( app.Controller, 'PI_GCS_Controller' ) )
+                    app.Controller = PI_GCS_Controller ();
                 end
-            else
-                [app.stage, app.PIaxis, stageConnected] = StartStage(app, app.Controller,stageConnected);
+                stageConnected = false;
+                if ( isempty (app.stage) ) | ( app.stage.IsConnected )
+                    [app.stage, app.PIaxis, stageConnected] = StartStage(app, app.Controller,app.ConnectioninterfaceDropDown.Value,app.StagetypeEditField.Value,app.ControllerserialnumberEditField.Value);
+                end
+                
+                %Set stage movement velocity
+                vel=2; %in mm/s
+                app.stage.VEL(app.PIaxis, vel);
+                
+                %Reference PI Stage
+                ReferenceStage(app,app.stage, app.PIaxis)
+                % RefPIStage(stage, PIaxis);                
+                app.stage.MOV(app.PIaxis,45.4);
+                app.ConnectStageButton.Enable = false;
+            catch ME
+                printLogWindow(app,"The stage is not initialized.")
+                printLogWindow(app, ME.message)
             end
             
-            %Set stage movement velocity
-            vel=2; %in mm/s
-            app.stage.VEL(app.PIaxis, vel);
-            
-            %Reference PI Stage
-            ReferenceStage(app,app.stage, app.PIaxis)
-            % RefPIStage(stage, PIaxis);
-            
-            % determine the allowed travel range of the stage
-            minimumPosition = app.stage.qTMN ( app.PIaxis );
-            maximumPosition = app.stage.qTMX ( app.PIaxis );
-            travelRange = ( maximumPosition - minimumPosition );
-            app.stage.MOV(app.PIaxis,45.4);
-            app.ConnectStageButton.Enable = false;
-
 
         end
 
@@ -2142,6 +2149,51 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.ConnectStageButton.ButtonPushedFcn = createCallbackFcn(app, @ConnectStageButtonPushed, true);
             app.ConnectStageButton.Position = [66 23 100 22];
             app.ConnectStageButton.Text = 'Connect Stage';
+
+            % Create StagetypeEditFieldLabel
+            app.StagetypeEditFieldLabel = uilabel(app.ConnectionPanel);
+            app.StagetypeEditFieldLabel.HorizontalAlignment = 'right';
+            app.StagetypeEditFieldLabel.Position = [77 162 63 22];
+            app.StagetypeEditFieldLabel.Text = 'Stage type';
+
+            % Create StagetypeEditField
+            app.StagetypeEditField = uieditfield(app.ConnectionPanel, 'text');
+            app.StagetypeEditField.Position = [155 162 100 22];
+            app.StagetypeEditField.Value = 'M-415.2S';
+
+            % Create ControllerserialnumberEditFieldLabel
+            app.ControllerserialnumberEditFieldLabel = uilabel(app.ConnectionPanel);
+            app.ControllerserialnumberEditFieldLabel.HorizontalAlignment = 'right';
+            app.ControllerserialnumberEditFieldLabel.Position = [6 124 134 22];
+            app.ControllerserialnumberEditFieldLabel.Text = 'Controller serial number';
+
+            % Create ControllerserialnumberEditField
+            app.ControllerserialnumberEditField = uieditfield(app.ConnectionPanel, 'text');
+            app.ControllerserialnumberEditField.Position = [155 124 100 22];
+            app.ControllerserialnumberEditField.Value = '0125500210';
+
+            % Create ConnectioninterfaceDropDownLabel
+            app.ConnectioninterfaceDropDownLabel = uilabel(app.ConnectionPanel);
+            app.ConnectioninterfaceDropDownLabel.HorizontalAlignment = 'right';
+            app.ConnectioninterfaceDropDownLabel.Position = [26 87 116 22];
+            app.ConnectioninterfaceDropDownLabel.Text = 'Connection interface';
+
+            % Create ConnectioninterfaceDropDown
+            app.ConnectioninterfaceDropDown = uidropdown(app.ConnectionPanel);
+            app.ConnectioninterfaceDropDown.Items = {'USB', 'Serial'};
+            app.ConnectioninterfaceDropDown.Position = [156 87 100 22];
+            app.ConnectioninterfaceDropDown.Value = 'USB';
+
+            % Create PortEditFieldLabel
+            app.PortEditFieldLabel = uilabel(app.ConnectionPanel);
+            app.PortEditFieldLabel.HorizontalAlignment = 'right';
+            app.PortEditFieldLabel.Position = [108 52 28 22];
+            app.PortEditFieldLabel.Text = 'Port';
+
+            % Create PortEditField
+            app.PortEditField = uieditfield(app.ConnectionPanel, 'text');
+            app.PortEditField.Position = [151 52 100 22];
+            app.PortEditField.Value = 'COM';
 
             % Create PositionEditFieldLabel
             app.PositionEditFieldLabel = uilabel(app.DelaylineTab);
