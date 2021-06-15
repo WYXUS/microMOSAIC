@@ -44,6 +44,16 @@ classdef microMOSAIC < matlab.apps.AppBase
         ChannelDropDown                 matlab.ui.control.DropDown
         PixelRepetitionEditFieldLabel   matlab.ui.control.Label
         PixelRepetitionEditField        matlab.ui.control.NumericEditField
+        ZstackPanel                     matlab.ui.container.Panel
+        StartingZumEditFieldLabel       matlab.ui.control.Label
+        StartingZumEditField            matlab.ui.control.NumericEditField
+        EndingZumEditFieldLabel         matlab.ui.control.Label
+        EndingZumEditField              matlab.ui.control.NumericEditField
+        ZStepEditFieldLabel             matlab.ui.control.Label
+        ZStepEditField                  matlab.ui.control.NumericEditField
+        ZGaugeLabel                     matlab.ui.control.Label
+        ZGauge                          matlab.ui.control.LinearGauge
+        AcquireZstackButton             matlab.ui.control.Button
         LiveTab                         matlab.ui.container.Tab
         UIAxes                          matlab.ui.control.UIAxes
         FasterSliderLabel               matlab.ui.control.Label
@@ -130,8 +140,8 @@ classdef microMOSAIC < matlab.apps.AppBase
         FilenameCommentEditFieldLabel   matlab.ui.control.Label
         FilenameCommentEditField        matlab.ui.control.EditField
         DelaylineTab                    matlab.ui.container.Tab
-        ConnectionPanel                 matlab.ui.container.Panel
-        ConnectStageButton              matlab.ui.control.Button
+        DelayLineConnectionPanel        matlab.ui.container.Panel
+        ConnectDelayLineButton          matlab.ui.control.Button
         StagetypeEditFieldLabel         matlab.ui.control.Label
         StagetypeEditField              matlab.ui.control.EditField
         ControllerserialnumberEditFieldLabel  matlab.ui.control.Label
@@ -154,6 +164,20 @@ classdef microMOSAIC < matlab.apps.AppBase
         ChannelEditFieldLabel           matlab.ui.control.Label
         ChannelEditField                matlab.ui.control.EditField
         Button2                         matlab.ui.control.Button
+        PIFOCTab                        matlab.ui.container.Tab
+        PIFOCConnectionPanel            matlab.ui.container.Panel
+        ConnectPIFOCButton              matlab.ui.control.Button
+        PIFOCStageTypeEditFieldLabel    matlab.ui.control.Label
+        PIFOCStageTypeEditField         matlab.ui.control.EditField
+        PIFOCControllerSerialNumberEditFieldLabel  matlab.ui.control.Label
+        PIFOCControllerSerialNumberEditField  matlab.ui.control.EditField
+        PIFOCConnectionInterfaceDropDownLabel  matlab.ui.control.Label
+        PIFOCConnectionInterfaceDropDown  matlab.ui.control.DropDown
+        PortEditField_2Label            matlab.ui.control.Label
+        PortEditField_2                 matlab.ui.control.EditField
+        MoveZButton                     matlab.ui.control.Button
+        SetZPositionEditFieldLabel      matlab.ui.control.Label
+        SetZPositionEditField           matlab.ui.control.NumericEditField
         LogTextAreaLabel                matlab.ui.control.Label
         LogTextArea                     matlab.ui.control.TextArea
     end
@@ -201,6 +225,10 @@ classdef microMOSAIC < matlab.apps.AppBase
         stage % delay line
         PIaxis % Description
         Controller % Description
+        ControllerPIFOC % Description
+        stagePIFOC;
+        
+        PIFOCaxis % Description
     end
     
     methods (Access = private)
@@ -586,6 +614,110 @@ classdef microMOSAIC < matlab.apps.AppBase
             end
             printLogWindow(app,".. done!");
         end
+
+function [stage, PIaxis, stageConnected] = StartPIStage(Controller,stageConnected)
+
+%Start connection (if not already connected)
+stageConnected = false; if ( exist ( 'stage', 'var' ) ), if ( stage.IsConnected ), stageConnected = true; end; end;
+if ( ~(stageConnected ) )
+    % USB
+    stageType ='P-725.4CA';% 113013743     '
+    controllerSerialNumber = '0116034575';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
+   %controllerSerialNumber = '';
+    stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
+    stageConnected=true;
+end
+
+% Query controller identification string
+connectedControllerName = stage.qIDN();
+
+% initialize PIdevice object for use in MATLAB
+stage = stage.InitializeController ();
+
+%Startup Stage
+PIaxis = 'Z';
+
+% switch servo on for axis
+switchOn    = 1;
+% switchOff   = 0;
+stage.SVO ( PIaxis, switchOn );
+
+end
+        
+function [stage, PIaxis, stageConnected] = ConnectPIFOC(app,Controller,connectionType,PIFOCStageType,controllerSerialNumber)%(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,app.PIFOCControllerSerialNumberEditField.Value);
+
+%Start connection (if not already connected)
+stageConnected = false; if ( exist ( 'stage', 'var' ) ), if ( stage.IsConnected ), stageConnected = true; end; end;
+if ( ~(stageConnected ) )
+    % USB
+%     stageType = 'P-725.4CD';% 113013743     stageType = 'P-725.4CD'
+%     controllerSerialNumber = '12220';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
+   %controllerSerialNumber = '';
+    stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
+    stageConnected=true;
+end
+
+% Query controller identification string
+connectedControllerName = stage.qIDN();
+
+% initialize PIdevice object for use in MATLAB
+stage = stage.InitializeController ();
+
+%Startup Stage
+PIaxis = 'Z';
+
+% switch servo on for axis
+switchOn    = 1;
+% switchOff   = 0;
+stage.SVO ( PIaxis, switchOn );
+
+        end
+        
+        function results = acquireZStack(app)
+                        printLogWindow(app,'Acquiring Z stack, please wait')
+            app.AcquireZstackButton.Enable = false;
+            app.LiveButton.Enable = false;
+            app.ScanSaveButton.Enable = false;
+            firstDraw = true;
+            try
+                ZStart = app.StartingZumEditField.Value; ZStop = app.EndingZumEditField.Value; ZStep = app.ZStepEditField.Value;
+                Z= ZStart;
+                
+                saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
+                dataZCUBE = zeros(int16(app.scanXRange /  (app.scanStep))+1,int16(app.scanYRange /  app.scanStep)+1, int8((ZStop-ZStart)/ZStep)+1, app.NumberOfEnabledChannels);       % the data cube with the complete Polar stack
+                app.stagePIFOC.MOV(app.PIFOCaxis,Z)
+                
+                printLogWindow(app, 'Acquiring Z stack, please wait');
+                pause(0.1);
+                localIterator = 0;
+                while Z<=ZStop
+                    localIterator = localIterator +1;
+                    printLogWindow(app, 'Acquiring Z stack, please wait')
+                    app.stagePIFOC.MOV(app.PIFOCaxis,Z)
+                    app.signalData = NLimagingCoords(app,app.coordPoints, app.numberOfAccums, app.pixRepetition);
+                    
+                    for channel =1 :app.NumberOfEnabledChannels
+                        dataZCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);                        
+                    end
+                    drawImages(app,firstDraw,app.signalData);
+                    firstDraw=false;
+                    Z = Z+ ZStep;
+                end
+                %FilenameComment='_Anlge'+num2str(AngleStart,'%03.f')+'-'+num2str(AngleStop,'%03.f')+'-'+num2str(AngleStep,'%03.f')+'-'+app.FilenameCommentEditField.Value;
+                FilenameComment= '_ZStack_'+string(ZStart)+'-'+string(ZStop)+'-'+string(ZStep)+'-'+app.FilenameCommentEditField.Value;
+                saveDataTiff(app,FilenameComment, dataZCUBE)
+                
+            catch ME
+                printLogWindow(app,'Error, aborting..')
+                printLogWindow(app, ME.message)
+            end
+            
+            app.stagePIFOC.MOV(app.PIFOCaxis,ZStart)
+            app.AcquireZstackButton.Enable = true;
+            app.ScanSaveButton.Enable = true;
+            app.LiveButton.Enable = true;
+            printLogWindow(app, "Z stack - DONE!")
+        end
     end
     methods (Access = public)
         
@@ -825,12 +957,21 @@ classdef microMOSAIC < matlab.apps.AppBase
                     end
                     if ~isempty(app.Controller)
                         if ~isempty(app.stage)
-                        app.stage.CloseConnection();
+                            app.stage.CloseConnection();
                         end
                         app.Controller.Destroy;
                         clear app.stage;
-                        clear app.Controller                                                                     
+                        clear app.Controller
                     end
+                    if ~isempty(app.ControllerPIFOC)
+                        if ~isempty(app.stagePIFOC)
+                            app.stagePIFOC.CloseConnection();
+                        end
+                        app.ControllerPIFOC.Destroy;
+                        clear ControllerPIFOC;
+                        clear stagePIFOC;
+                    end
+
                     delete(app)
                     
                 case 'No'
@@ -1239,8 +1380,8 @@ classdef microMOSAIC < matlab.apps.AppBase
             
         end
 
-        % Button pushed function: ConnectStageButton
-        function ConnectStageButtonPushed(app, event)
+        % Button pushed function: ConnectDelayLineButton
+        function ConnectDelayLineButtonPushed(app, event)
             %% CONNECT PI translation stage
             %Load PI MATLAB Driver GCS2 (if not already loaded)
             try
@@ -1261,7 +1402,7 @@ classdef microMOSAIC < matlab.apps.AppBase
                 ReferenceStage(app,app.stage, app.PIaxis)
                 % RefPIStage(stage, PIaxis);                
                 app.stage.MOV(app.PIaxis,45.4);
-                app.ConnectStageButton.Enable = false;
+                app.ConnectDelayLineButton.Enable = false;
             catch ME
                 printLogWindow(app,"The stage is not initialized.")
                 printLogWindow(app, ME.message)
@@ -1335,6 +1476,50 @@ classdef microMOSAIC < matlab.apps.AppBase
                         
                         
 
+        end
+
+        % Callback function
+        function InitializePIFOCButtonPushed(app, event)
+
+        end
+
+        % Button pushed function: ConnectPIFOCButton
+        function ConnectPIFOCButtonPushed(app, event)
+            try 
+                printLogWindow(app, 'Connecting to the PIFOC');
+        addpath ( 'C:\Users\Public\PI\PI_MATLAB_Driver_GCS2' ); % If you are still using XP, please look at the manual for the right path to include.
+        if ( ~exist ( 'app.ControllerPIFOC', 'var' ) || ~isa ( app.ControllerPIFOC, 'PI_GCS_Controller' ) )
+            app.ControllerPIFOC = PI_GCS_Controller ();
+        end
+        
+        stagePIFOCConnected = false;
+        if ( isempty (app.stagePIFOC) ) | ( app.stagePIFOC.IsConnected )
+            [app.stagePIFOC, app.PIFOCaxis, stagePIFOCConnected] = ConnectPIFOC(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,app.PIFOCControllerSerialNumberEditField.Value);
+        end
+        catch ME
+                    printLogWindow('Could not connect to the PIFOC');
+                printLogWindow(app, ME.message);
+            end
+        end
+
+        % Button pushed function: MoveZButton
+        function MoveZButtonPushed(app, event)
+            try 
+                app.stagePIFOC.MOV(app.PIFOCaxis,app.SetZPositionEditField.Value); 
+            catch ME
+                printLogWindow(app, ME.message);
+            end
+        end
+
+        % Button pushed function: AcquireZstackButton
+        function AcquireZstackButtonPushed(app, event)
+            try
+               
+                 acquireZStack(app)
+            catch ME
+                printLogWindow(app, 'Could not take a Z stack..');
+                 printLogWindow(app, ME.message);
+            end
         end
     end
 
@@ -1599,6 +1784,61 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.PixelRepetitionEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
             app.PixelRepetitionEditField.Position = [122 252 100 22];
             app.PixelRepetitionEditField.Value = 1;
+
+            % Create ZstackPanel
+            app.ZstackPanel = uipanel(app.MainTab);
+            app.ZstackPanel.AutoResizeChildren = 'off';
+            app.ZstackPanel.Title = 'Z stack';
+            app.ZstackPanel.Position = [603 75 260 221];
+
+            % Create StartingZumEditFieldLabel
+            app.StartingZumEditFieldLabel = uilabel(app.ZstackPanel);
+            app.StartingZumEditFieldLabel.HorizontalAlignment = 'right';
+            app.StartingZumEditFieldLabel.Position = [0 164 81 22];
+            app.StartingZumEditFieldLabel.Text = 'Starting Z, um';
+
+            % Create StartingZumEditField
+            app.StartingZumEditField = uieditfield(app.ZstackPanel, 'numeric');
+            app.StartingZumEditField.Position = [96 164 100 22];
+            app.StartingZumEditField.Value = 50;
+
+            % Create EndingZumEditFieldLabel
+            app.EndingZumEditFieldLabel = uilabel(app.ZstackPanel);
+            app.EndingZumEditFieldLabel.HorizontalAlignment = 'right';
+            app.EndingZumEditFieldLabel.Position = [-2 123 77 22];
+            app.EndingZumEditFieldLabel.Text = 'Ending Z, um';
+
+            % Create EndingZumEditField
+            app.EndingZumEditField = uieditfield(app.ZstackPanel, 'numeric');
+            app.EndingZumEditField.Position = [90 123 100 22];
+            app.EndingZumEditField.Value = 60;
+
+            % Create ZStepEditFieldLabel
+            app.ZStepEditFieldLabel = uilabel(app.ZstackPanel);
+            app.ZStepEditFieldLabel.HorizontalAlignment = 'right';
+            app.ZStepEditFieldLabel.Position = [34 79 41 22];
+            app.ZStepEditFieldLabel.Text = 'Z Step';
+
+            % Create ZStepEditField
+            app.ZStepEditField = uieditfield(app.ZstackPanel, 'numeric');
+            app.ZStepEditField.Position = [90 79 100 22];
+            app.ZStepEditField.Value = 1;
+
+            % Create ZGaugeLabel
+            app.ZGaugeLabel = uilabel(app.ZstackPanel);
+            app.ZGaugeLabel.HorizontalAlignment = 'center';
+            app.ZGaugeLabel.Position = [73 1 25 22];
+            app.ZGaugeLabel.Text = 'Z';
+
+            % Create ZGauge
+            app.ZGauge = uigauge(app.ZstackPanel, 'linear');
+            app.ZGauge.Position = [24 38 119 40];
+
+            % Create AcquireZstackButton
+            app.AcquireZstackButton = uibutton(app.ZstackPanel, 'push');
+            app.AcquireZstackButton.ButtonPushedFcn = createCallbackFcn(app, @AcquireZstackButtonPushed, true);
+            app.AcquireZstackButton.Position = [150 22 100 49];
+            app.AcquireZstackButton.Text = 'Acquire Z stack';
 
             % Create LiveTab
             app.LiveTab = uitab(app.TabGroup);
@@ -2133,7 +2373,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             % Create SavingfolderEditField
             app.SavingfolderEditField = uieditfield(app.SavingSettingsTab, 'text');
             app.SavingfolderEditField.Position = [91 444 483 22];
-            app.SavingfolderEditField.Value = '\\NIMBUS\mosaic-sb\Nora\210615';
+            app.SavingfolderEditField.Value = '\\NIMBUS\mosaic-sb\Nora\210615\';
 
             % Create FilenameCommentEditFieldLabel
             app.FilenameCommentEditFieldLabel = uilabel(app.SavingSettingsTab);
@@ -2150,59 +2390,59 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.DelaylineTab = uitab(app.TabGroup);
             app.DelaylineTab.Title = 'Delay line';
 
-            % Create ConnectionPanel
-            app.ConnectionPanel = uipanel(app.DelaylineTab);
-            app.ConnectionPanel.Title = 'Connection';
-            app.ConnectionPanel.Position = [118 225 260 221];
+            % Create DelayLineConnectionPanel
+            app.DelayLineConnectionPanel = uipanel(app.DelaylineTab);
+            app.DelayLineConnectionPanel.Title = 'Delay Line Connection';
+            app.DelayLineConnectionPanel.Position = [118 225 260 221];
 
-            % Create ConnectStageButton
-            app.ConnectStageButton = uibutton(app.ConnectionPanel, 'push');
-            app.ConnectStageButton.ButtonPushedFcn = createCallbackFcn(app, @ConnectStageButtonPushed, true);
-            app.ConnectStageButton.Position = [66 23 100 22];
-            app.ConnectStageButton.Text = 'Connect Stage';
+            % Create ConnectDelayLineButton
+            app.ConnectDelayLineButton = uibutton(app.DelayLineConnectionPanel, 'push');
+            app.ConnectDelayLineButton.ButtonPushedFcn = createCallbackFcn(app, @ConnectDelayLineButtonPushed, true);
+            app.ConnectDelayLineButton.Position = [56 23 120 22];
+            app.ConnectDelayLineButton.Text = 'Connect Delay Line';
 
             % Create StagetypeEditFieldLabel
-            app.StagetypeEditFieldLabel = uilabel(app.ConnectionPanel);
+            app.StagetypeEditFieldLabel = uilabel(app.DelayLineConnectionPanel);
             app.StagetypeEditFieldLabel.HorizontalAlignment = 'right';
             app.StagetypeEditFieldLabel.Position = [77 162 63 22];
             app.StagetypeEditFieldLabel.Text = 'Stage type';
 
             % Create StagetypeEditField
-            app.StagetypeEditField = uieditfield(app.ConnectionPanel, 'text');
+            app.StagetypeEditField = uieditfield(app.DelayLineConnectionPanel, 'text');
             app.StagetypeEditField.Position = [155 162 100 22];
             app.StagetypeEditField.Value = 'M-415.2S';
 
             % Create ControllerserialnumberEditFieldLabel
-            app.ControllerserialnumberEditFieldLabel = uilabel(app.ConnectionPanel);
+            app.ControllerserialnumberEditFieldLabel = uilabel(app.DelayLineConnectionPanel);
             app.ControllerserialnumberEditFieldLabel.HorizontalAlignment = 'right';
             app.ControllerserialnumberEditFieldLabel.Position = [6 124 134 22];
             app.ControllerserialnumberEditFieldLabel.Text = 'Controller serial number';
 
             % Create ControllerserialnumberEditField
-            app.ControllerserialnumberEditField = uieditfield(app.ConnectionPanel, 'text');
+            app.ControllerserialnumberEditField = uieditfield(app.DelayLineConnectionPanel, 'text');
             app.ControllerserialnumberEditField.Position = [155 124 100 22];
             app.ControllerserialnumberEditField.Value = '0125500210';
 
             % Create ConnectioninterfaceDropDownLabel
-            app.ConnectioninterfaceDropDownLabel = uilabel(app.ConnectionPanel);
+            app.ConnectioninterfaceDropDownLabel = uilabel(app.DelayLineConnectionPanel);
             app.ConnectioninterfaceDropDownLabel.HorizontalAlignment = 'right';
             app.ConnectioninterfaceDropDownLabel.Position = [26 87 116 22];
             app.ConnectioninterfaceDropDownLabel.Text = 'Connection interface';
 
             % Create ConnectioninterfaceDropDown
-            app.ConnectioninterfaceDropDown = uidropdown(app.ConnectionPanel);
+            app.ConnectioninterfaceDropDown = uidropdown(app.DelayLineConnectionPanel);
             app.ConnectioninterfaceDropDown.Items = {'USB', 'Serial'};
             app.ConnectioninterfaceDropDown.Position = [156 87 100 22];
             app.ConnectioninterfaceDropDown.Value = 'USB';
 
             % Create PortEditFieldLabel
-            app.PortEditFieldLabel = uilabel(app.ConnectionPanel);
+            app.PortEditFieldLabel = uilabel(app.DelayLineConnectionPanel);
             app.PortEditFieldLabel.HorizontalAlignment = 'right';
             app.PortEditFieldLabel.Position = [108 52 28 22];
             app.PortEditFieldLabel.Text = 'Port';
 
             % Create PortEditField
-            app.PortEditField = uieditfield(app.ConnectionPanel, 'text');
+            app.PortEditField = uieditfield(app.DelayLineConnectionPanel, 'text');
             app.PortEditField.Position = [151 52 100 22];
             app.PortEditField.Value = 'COM';
 
@@ -2288,6 +2528,83 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.Button2.ButtonPushedFcn = createCallbackFcn(app, @Button2Pushed, true);
             app.Button2.Position = [184 112 100 22];
             app.Button2.Text = 'Button2';
+
+            % Create PIFOCTab
+            app.PIFOCTab = uitab(app.TabGroup);
+            app.PIFOCTab.Title = 'PIFOC';
+
+            % Create PIFOCConnectionPanel
+            app.PIFOCConnectionPanel = uipanel(app.PIFOCTab);
+            app.PIFOCConnectionPanel.Title = 'PIFOC Connection';
+            app.PIFOCConnectionPanel.Position = [48 237 315 221];
+
+            % Create ConnectPIFOCButton
+            app.ConnectPIFOCButton = uibutton(app.PIFOCConnectionPanel, 'push');
+            app.ConnectPIFOCButton.ButtonPushedFcn = createCallbackFcn(app, @ConnectPIFOCButtonPushed, true);
+            app.ConnectPIFOCButton.Position = [66 23 100 22];
+            app.ConnectPIFOCButton.Text = 'Connect PIFOC';
+
+            % Create PIFOCStageTypeEditFieldLabel
+            app.PIFOCStageTypeEditFieldLabel = uilabel(app.PIFOCConnectionPanel);
+            app.PIFOCStageTypeEditFieldLabel.HorizontalAlignment = 'right';
+            app.PIFOCStageTypeEditFieldLabel.Position = [81 162 106 22];
+            app.PIFOCStageTypeEditFieldLabel.Text = 'PIFOC Stage Type';
+
+            % Create PIFOCStageTypeEditField
+            app.PIFOCStageTypeEditField = uieditfield(app.PIFOCConnectionPanel, 'text');
+            app.PIFOCStageTypeEditField.Position = [202 162 100 22];
+            app.PIFOCStageTypeEditField.Value = '''''';
+
+            % Create PIFOCControllerSerialNumberEditFieldLabel
+            app.PIFOCControllerSerialNumberEditFieldLabel = uilabel(app.PIFOCConnectionPanel);
+            app.PIFOCControllerSerialNumberEditFieldLabel.HorizontalAlignment = 'right';
+            app.PIFOCControllerSerialNumberEditFieldLabel.Position = [9 124 178 22];
+            app.PIFOCControllerSerialNumberEditFieldLabel.Text = 'PIFOC Controller Serial Number';
+
+            % Create PIFOCControllerSerialNumberEditField
+            app.PIFOCControllerSerialNumberEditField = uieditfield(app.PIFOCConnectionPanel, 'text');
+            app.PIFOCControllerSerialNumberEditField.Position = [202 124 100 22];
+            app.PIFOCControllerSerialNumberEditField.Value = '120004758';
+
+            % Create PIFOCConnectionInterfaceDropDownLabel
+            app.PIFOCConnectionInterfaceDropDownLabel = uilabel(app.PIFOCConnectionPanel);
+            app.PIFOCConnectionInterfaceDropDownLabel.HorizontalAlignment = 'right';
+            app.PIFOCConnectionInterfaceDropDownLabel.Position = [33 87 156 22];
+            app.PIFOCConnectionInterfaceDropDownLabel.Text = 'PIFOC Connection Interface';
+
+            % Create PIFOCConnectionInterfaceDropDown
+            app.PIFOCConnectionInterfaceDropDown = uidropdown(app.PIFOCConnectionPanel);
+            app.PIFOCConnectionInterfaceDropDown.Items = {'USB', 'Serial'};
+            app.PIFOCConnectionInterfaceDropDown.Position = [203 87 100 22];
+            app.PIFOCConnectionInterfaceDropDown.Value = 'USB';
+
+            % Create PortEditField_2Label
+            app.PortEditField_2Label = uilabel(app.PIFOCConnectionPanel);
+            app.PortEditField_2Label.HorizontalAlignment = 'right';
+            app.PortEditField_2Label.Position = [157 52 28 22];
+            app.PortEditField_2Label.Text = 'Port';
+
+            % Create PortEditField_2
+            app.PortEditField_2 = uieditfield(app.PIFOCConnectionPanel, 'text');
+            app.PortEditField_2.Position = [200 52 100 22];
+            app.PortEditField_2.Value = 'COM';
+
+            % Create MoveZButton
+            app.MoveZButton = uibutton(app.PIFOCTab, 'push');
+            app.MoveZButton.ButtonPushedFcn = createCallbackFcn(app, @MoveZButtonPushed, true);
+            app.MoveZButton.Position = [488 289 100 22];
+            app.MoveZButton.Text = 'Move Z';
+
+            % Create SetZPositionEditFieldLabel
+            app.SetZPositionEditFieldLabel = uilabel(app.PIFOCTab);
+            app.SetZPositionEditFieldLabel.HorizontalAlignment = 'right';
+            app.SetZPositionEditFieldLabel.Position = [412 402 80 22];
+            app.SetZPositionEditFieldLabel.Text = 'Set Z Position';
+
+            % Create SetZPositionEditField
+            app.SetZPositionEditField = uieditfield(app.PIFOCTab, 'numeric');
+            app.SetZPositionEditField.Position = [507 402 100 22];
+            app.SetZPositionEditField.Value = 100;
 
             % Create LogTextAreaLabel
             app.LogTextAreaLabel = uilabel(app.MatMicroMain);
