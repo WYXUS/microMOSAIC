@@ -620,6 +620,7 @@ classdef microMOSAIC < matlab.apps.AppBase
     end
     
 
+    % Callbacks that handle component events
     methods (Access = private)
 
         % Code that executes after component creation
@@ -718,6 +719,7 @@ classdef microMOSAIC < matlab.apps.AppBase
 
         % Button pushed function: ScanSaveButton
         function ScanSaveButtonPushed(app, event)
+            try
             saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
             if app.imSession.IsRunning
                 app.imSession.stop();
@@ -745,6 +747,10 @@ classdef microMOSAIC < matlab.apps.AppBase
                 
             end
             printLogWindow(app,'NL image - Done')
+            catch ME
+                printLogWindow(app,"Could not acquire an image. Try once again or restart the software")
+                printLogWindow(app, ME.message)
+            end
         end
 
         % Button pushed function: TestbuttondontpressButton
@@ -770,7 +776,8 @@ classdef microMOSAIC < matlab.apps.AppBase
 
         % Value changed function: LiveButton
         function LiveButtonValueChanged(app, event)
-            value = app.LiveButton.Value;
+            try
+            value = app.LiveButton.Value;            
             if value==true
                 %                 app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,1)]); %queue the first frame
                 app.firstDraw=true;
@@ -789,6 +796,10 @@ classdef microMOSAIC < matlab.apps.AppBase
 %                 app.imSession.stop();
 %                 app.imSession.release();
             end                     
+            catch ME
+                printLogWindow(app,"Error while live imaging. Try once again or restart the software")
+                printLogWindow(app, ME.message)
+            end
         end
 
         % Close request function: MatMicroMain
@@ -843,8 +854,8 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.yFoVCenter = app.FoVcenterYumEditField.Value;
             app.pixRepetition = app.PixelRepetitionEditField.Value;
             app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter, app.pixRepetition);
-            app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5);            
-            app.imSession.NotifyWhenDataAvailableExceeds=length(app.coordPoints(:,1));
+%             app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5);            
+%             app.imSession.NotifyWhenDataAvailableExceeds=length(app.coordPoints(:,1));
         end
 
         % Value changed function: Switch
@@ -1327,18 +1338,18 @@ classdef microMOSAIC < matlab.apps.AppBase
         end
     end
 
-    % App initialization and construction
+    % Component initialization
     methods (Access = private)
 
         % Create UIFigure and components
         function createComponents(app)
 
-            % Create MatMicroMain
-            app.MatMicroMain = uifigure;
+            % Create MatMicroMain and hide until all components are created
+            app.MatMicroMain = uifigure('Visible', 'off');
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.801';
+            app.MatMicroMain.Name = 'microMOSAIC v0.802';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -1699,7 +1710,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.ObjectiveDropDown.Items = {'Nikon 20X NA0.75 (room134b)', 'Nikon 40X NA1.15 (room134b)', 'Nikon 20X NA0.7 (room134b)', 'Nikon 40X NA1.15 (room 22)'};
             app.ObjectiveDropDown.ItemsData = {'0.00484', '0.00968', '0.00462', '0.0220', ''};
             app.ObjectiveDropDown.Position = [85 437 197 22];
-            app.ObjectiveDropDown.Value = '0.00462';
+            app.ObjectiveDropDown.Value = '0.0220';
 
             % Create SessionUpdateRateHzEditFieldLabel
             app.SessionUpdateRateHzEditFieldLabel = uilabel(app.SettingsTab);
@@ -1709,7 +1720,7 @@ classdef microMOSAIC < matlab.apps.AppBase
 
             % Create SessionUpdateRateHzEditField
             app.SessionUpdateRateHzEditField = uieditfield(app.SettingsTab, 'numeric');
-            app.SessionUpdateRateHzEditField.Limits = [1 100000];
+            app.SessionUpdateRateHzEditField.Limits = [1 1250000];
             app.SessionUpdateRateHzEditField.ValueDisplayFormat = '%.0f';
             app.SessionUpdateRateHzEditField.ValueChangedFcn = createCallbackFcn(app, @SessionUpdateRateHzEditFieldValueChanged, true);
             app.SessionUpdateRateHzEditField.Position = [578 437 100 22];
@@ -1737,7 +1748,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.Switch.Items = {'Analog', 'Counter'};
             app.Switch.ValueChangedFcn = createCallbackFcn(app, @SwitchValueChanged, true);
             app.Switch.Position = [425 40 45 20];
-            app.Switch.Value = 'Analog';
+            app.Switch.Value = 'Counter';
 
             % Create AnalogChannelInputDropDownLabel
             app.AnalogChannelInputDropDownLabel = uilabel(app.FirstChannelSettingsPanel);
@@ -1825,7 +1836,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.NumberOfChannelsSlider.ValueChangedFcn = createCallbackFcn(app, @NumberOfChannelsSliderValueChanged, true);
             app.NumberOfChannelsSlider.MinorTicks = [];
             app.NumberOfChannelsSlider.Position = [175 398 150 3];
-            app.NumberOfChannelsSlider.Value = 4;
+            app.NumberOfChannelsSlider.Value = 2;
 
             % Create SecondChannelSettingsPanel
             app.SecondChannelSettingsPanel = uipanel(app.SettingsTab);
@@ -1838,7 +1849,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.Switch_2.Items = {'Analog', 'Counter'};
             app.Switch_2.ValueChangedFcn = createCallbackFcn(app, @Switch_2ValueChanged, true);
             app.Switch_2.Position = [426 40 45 20];
-            app.Switch_2.Value = 'Analog';
+            app.Switch_2.Value = 'Counter';
 
             % Create AnalogChannelInputDropDown_2Label
             app.AnalogChannelInputDropDown_2Label = uilabel(app.SecondChannelSettingsPanel);
@@ -1924,7 +1935,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.Switch_3.Items = {'Analog', 'Counter'};
             app.Switch_3.ValueChangedFcn = createCallbackFcn(app, @Switch_3ValueChanged, true);
             app.Switch_3.Position = [426 40 45 20];
-            app.Switch_3.Value = 'Analog';
+            app.Switch_3.Value = 'Counter';
 
             % Create AnalogChannelInputDropDown_3Label
             app.AnalogChannelInputDropDown_3Label = uilabel(app.ThirdChannelSettingsPanel);
@@ -2010,7 +2021,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.Switch_4.Items = {'Analog', 'Counter'};
             app.Switch_4.ValueChangedFcn = createCallbackFcn(app, @Switch_4ValueChanged, true);
             app.Switch_4.Position = [426 40 45 20];
-            app.Switch_4.Value = 'Analog';
+            app.Switch_4.Value = 'Counter';
 
             % Create AnalogChannelInputDropDown_4Label
             app.AnalogChannelInputDropDown_4Label = uilabel(app.FourthChannelSettingsPanel);
@@ -2122,7 +2133,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             % Create SavingfolderEditField
             app.SavingfolderEditField = uieditfield(app.SavingSettingsTab, 'text');
             app.SavingfolderEditField.Position = [91 444 483 22];
-            app.SavingfolderEditField.Value = 'C:\Users\Public\Pictures\';
+            app.SavingfolderEditField.Value = '\\NIMBUS\mosaic-sb\Nora\210615';
 
             % Create FilenameCommentEditFieldLabel
             app.FilenameCommentEditFieldLabel = uilabel(app.SavingSettingsTab);
@@ -2133,7 +2144,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             % Create FilenameCommentEditField
             app.FilenameCommentEditField = uieditfield(app.SavingSettingsTab, 'text');
             app.FilenameCommentEditField.Position = [133 410 441 22];
-            app.FilenameCommentEditField.Value = '_test_sample_';
+            app.FilenameCommentEditField.Value = '_cornstarch';
 
             % Create DelaylineTab
             app.DelaylineTab = uitab(app.TabGroup);
@@ -2288,15 +2299,19 @@ classdef microMOSAIC < matlab.apps.AppBase
             app.LogTextArea = uitextarea(app.MatMicroMain);
             app.LogTextArea.Editable = 'off';
             app.LogTextArea.Position = [50 15 1011 103];
+
+            % Show the figure after all components are created
+            app.MatMicroMain.Visible = 'on';
         end
     end
 
+    % App creation and deletion
     methods (Access = public)
 
         % Construct app
         function app = microMOSAIC
 
-            % Create and configure components
+            % Create UIFigure and components
             createComponents(app)
 
             % Register the app with App Designer
