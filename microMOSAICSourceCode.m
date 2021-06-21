@@ -169,12 +169,12 @@ classdef microMOSAIC < matlab.apps.AppBase
         ConnectPIFOCButton              matlab.ui.control.Button
         PIFOCStageTypeEditFieldLabel    matlab.ui.control.Label
         PIFOCStageTypeEditField         matlab.ui.control.EditField
-        PIFOCControllerSerialNumberEditFieldLabel  matlab.ui.control.Label
-        PIFOCControllerSerialNumberEditField  matlab.ui.control.EditField
         PIFOCConnectionInterfaceDropDownLabel  matlab.ui.control.Label
         PIFOCConnectionInterfaceDropDown  matlab.ui.control.DropDown
         PortEditField_2Label            matlab.ui.control.Label
         PortEditField_2                 matlab.ui.control.EditField
+        PIFOCControllerSerialNumberDropDownLabel  matlab.ui.control.Label
+        PIFOCControllerSerialNumberDropDown  matlab.ui.control.DropDown
         MoveZButton                     matlab.ui.control.Button
         SetZPositionEditFieldLabel      matlab.ui.control.Label
         SetZPositionEditField           matlab.ui.control.NumericEditField
@@ -354,6 +354,9 @@ classdef microMOSAIC < matlab.apps.AppBase
         function setAxes(app, imSize)
             app.ax = [];
             imSize = 0.45;
+            if ~ishandle(app.displayFigure)         % check if figure for displaying exists                                
+                app.displayFigure = figure('Name',app.MatMicroMain.Name,'NumberTitle','off');       % create figure if doesn't exist
+            end
             app.ax =[app.ax axes(app.displayFigure,'Position',[0 imSize imSize imSize])];
             app.ax =[app.ax axes(app.displayFigure,'Position',[imSize imSize imSize imSize])];
             app.ax =[app.ax axes(app.displayFigure,'Position',[0 0 imSize imSize])];
@@ -662,9 +665,13 @@ connectedControllerName = stage.qIDN();
 
 % initialize PIdevice object for use in MATLAB
 stage = stage.InitializeController ();
-
+if str2double(controllerSerialNumber) == 120004758
+    PIaxis = 'Z';
+elseif str2double(controllerSerialNumber )== 12220
+    PIaxis = 'A';
+end
 %Startup Stage
-PIaxis = 'Z';
+
 
 % switch servo on for axis
 switchOn    = 1;
@@ -776,6 +783,7 @@ stage.SVO ( PIaxis, switchOn );
             printLogWindow(app,"Initialization..");
             try
                 app.displayFigure = figure('Name',app.MatMicroMain.Name,'NumberTitle','off');
+                setAxes(app,0.5)
                 app.calibration = str2double(app.ObjectiveDropDown.Value); %choose objective lens
                 app.scanXRange = app.ScanRangeXumEditField.Value; % x FoV, um
                 app.scanYRange = app.ScanRangeYumEditField.Value; % y FoV, um
@@ -1037,7 +1045,7 @@ stage.SVO ( PIaxis, switchOn );
                 app.channelPannels(i).Visible = 1;
             end
             updateChannelInfo(app)
-            setAxes(app,350)
+%             setAxes(app,350)
         end
 
         % Value changed function: Switch_2
@@ -1492,17 +1500,32 @@ stage.SVO ( PIaxis, switchOn );
         function ConnectPIFOCButtonPushed(app, event)
             try 
                 printLogWindow(app, 'Connecting to the PIFOC');
-        addpath ( 'C:\Users\Public\PI\PI_MATLAB_Driver_GCS2' ); % If you are still using XP, please look at the manual for the right path to include.
-        if ( ~exist ( 'app.ControllerPIFOC', 'var' ) || ~isa ( app.ControllerPIFOC, 'PI_GCS_Controller' ) )
-            app.ControllerPIFOC = PI_GCS_Controller ();
-        end
+                addpath ( 'C:\Users\Public\PI\PI_MATLAB_Driver_GCS2' ); % If you are still using XP, please look at the manual for the right path to include.
+                PIFOC_SN =(app.PIFOCControllerSerialNumberDropDown.Value);
+                if str2double(PIFOC_SN) == 120004758
+                    if ( ~exist ( 'app.ControllerPIFOC', 'var' ) || ~isa ( app.ControllerPIFOC, 'PI_GCS_Controller' ) )
+                        
+                        app.ControllerPIFOC = PI_GCS_Controller ();
+                    end
+                elseif str2double(PIFOC_SN )== 12220
+                    if ( ~exist ( 'ControllerPIFOC', 'var' ) || ~isa ( ControllerPIFOC, 'E816_GCS_Controller' ) )
+                        app.ControllerPIFOC = E816_GCS_Controller ();
+                    end
+                end
+                
         
         stagePIFOCConnected = false;
         if ( isempty (app.stagePIFOC) ) | ( app.stagePIFOC.IsConnected )
-            [app.stagePIFOC, app.PIFOCaxis, stagePIFOCConnected] = ConnectPIFOC(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,app.PIFOCControllerSerialNumberEditField.Value);
+            [app.stagePIFOC, app.PIFOCaxis, stagePIFOCConnected] = ConnectPIFOC(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,PIFOC_SN );
         end
+        try
+            app.stagePIFOC.MOV(app.PIFOCaxis,0);
         catch ME
-                    printLogWindow('Could not connect to the PIFOC');
+            printLogWindow(app, ME.message);
+        end
+        printLogWindow(app, 'Sucessfully connected to PIFOC');
+        catch ME
+                    printLogWindow(app,'Could not connect to the PIFOC');
                 printLogWindow(app, ME.message);
             end
         end
@@ -1539,7 +1562,7 @@ stage.SVO ( PIaxis, switchOn );
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.803';
+            app.MatMicroMain.Name = 'microMOSAIC v0.805';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -2378,7 +2401,7 @@ stage.SVO ( PIaxis, switchOn );
             % Create SavingfolderEditField
             app.SavingfolderEditField = uieditfield(app.SavingSettingsTab, 'text');
             app.SavingfolderEditField.Position = [91 444 483 22];
-            app.SavingfolderEditField.Value = '\\NIMBUS\mosaic-sb\Nora\210615\';
+            app.SavingfolderEditField.Value = 'c:\test folder\';
 
             % Create FilenameCommentEditFieldLabel
             app.FilenameCommentEditFieldLabel = uilabel(app.SavingSettingsTab);
@@ -2541,74 +2564,78 @@ stage.SVO ( PIaxis, switchOn );
             % Create PIFOCConnectionPanel
             app.PIFOCConnectionPanel = uipanel(app.PIFOCTab);
             app.PIFOCConnectionPanel.Title = 'PIFOC Connection';
-            app.PIFOCConnectionPanel.Position = [48 237 315 221];
+            app.PIFOCConnectionPanel.Position = [60 229 452 221];
 
             % Create ConnectPIFOCButton
             app.ConnectPIFOCButton = uibutton(app.PIFOCConnectionPanel, 'push');
             app.ConnectPIFOCButton.ButtonPushedFcn = createCallbackFcn(app, @ConnectPIFOCButtonPushed, true);
-            app.ConnectPIFOCButton.Position = [66 23 100 22];
+            app.ConnectPIFOCButton.Position = [175 23 100 22];
             app.ConnectPIFOCButton.Text = 'Connect PIFOC';
 
             % Create PIFOCStageTypeEditFieldLabel
             app.PIFOCStageTypeEditFieldLabel = uilabel(app.PIFOCConnectionPanel);
             app.PIFOCStageTypeEditFieldLabel.HorizontalAlignment = 'right';
-            app.PIFOCStageTypeEditFieldLabel.Position = [81 162 106 22];
+            app.PIFOCStageTypeEditFieldLabel.Position = [190 162 106 22];
             app.PIFOCStageTypeEditFieldLabel.Text = 'PIFOC Stage Type';
 
             % Create PIFOCStageTypeEditField
             app.PIFOCStageTypeEditField = uieditfield(app.PIFOCConnectionPanel, 'text');
-            app.PIFOCStageTypeEditField.Position = [202 162 100 22];
+            app.PIFOCStageTypeEditField.Position = [311 162 100 22];
             app.PIFOCStageTypeEditField.Value = '''''';
-
-            % Create PIFOCControllerSerialNumberEditFieldLabel
-            app.PIFOCControllerSerialNumberEditFieldLabel = uilabel(app.PIFOCConnectionPanel);
-            app.PIFOCControllerSerialNumberEditFieldLabel.HorizontalAlignment = 'right';
-            app.PIFOCControllerSerialNumberEditFieldLabel.Position = [9 124 178 22];
-            app.PIFOCControllerSerialNumberEditFieldLabel.Text = 'PIFOC Controller Serial Number';
-
-            % Create PIFOCControllerSerialNumberEditField
-            app.PIFOCControllerSerialNumberEditField = uieditfield(app.PIFOCConnectionPanel, 'text');
-            app.PIFOCControllerSerialNumberEditField.Position = [202 124 100 22];
-            app.PIFOCControllerSerialNumberEditField.Value = '120004758';
 
             % Create PIFOCConnectionInterfaceDropDownLabel
             app.PIFOCConnectionInterfaceDropDownLabel = uilabel(app.PIFOCConnectionPanel);
             app.PIFOCConnectionInterfaceDropDownLabel.HorizontalAlignment = 'right';
-            app.PIFOCConnectionInterfaceDropDownLabel.Position = [33 87 156 22];
+            app.PIFOCConnectionInterfaceDropDownLabel.Position = [142 87 156 22];
             app.PIFOCConnectionInterfaceDropDownLabel.Text = 'PIFOC Connection Interface';
 
             % Create PIFOCConnectionInterfaceDropDown
             app.PIFOCConnectionInterfaceDropDown = uidropdown(app.PIFOCConnectionPanel);
             app.PIFOCConnectionInterfaceDropDown.Items = {'USB', 'Serial'};
-            app.PIFOCConnectionInterfaceDropDown.Position = [203 87 100 22];
+            app.PIFOCConnectionInterfaceDropDown.Position = [312 87 100 22];
             app.PIFOCConnectionInterfaceDropDown.Value = 'USB';
 
             % Create PortEditField_2Label
             app.PortEditField_2Label = uilabel(app.PIFOCConnectionPanel);
             app.PortEditField_2Label.HorizontalAlignment = 'right';
-            app.PortEditField_2Label.Position = [157 52 28 22];
+            app.PortEditField_2Label.Position = [266 52 28 22];
             app.PortEditField_2Label.Text = 'Port';
 
             % Create PortEditField_2
             app.PortEditField_2 = uieditfield(app.PIFOCConnectionPanel, 'text');
-            app.PortEditField_2.Position = [200 52 100 22];
+            app.PortEditField_2.Position = [309 52 100 22];
             app.PortEditField_2.Value = 'COM';
+
+            % Create PIFOCControllerSerialNumberDropDownLabel
+            app.PIFOCControllerSerialNumberDropDownLabel = uilabel(app.PIFOCConnectionPanel);
+            app.PIFOCControllerSerialNumberDropDownLabel.HorizontalAlignment = 'right';
+            app.PIFOCControllerSerialNumberDropDownLabel.Position = [46 129 178 22];
+            app.PIFOCControllerSerialNumberDropDownLabel.Text = 'PIFOC Controller Serial Number';
+
+            % Create PIFOCControllerSerialNumberDropDown
+            app.PIFOCControllerSerialNumberDropDown = uidropdown(app.PIFOCConnectionPanel);
+            app.PIFOCControllerSerialNumberDropDown.Items = {'12220(Room 134b)', '120004758 (Room 22)'};
+            app.PIFOCControllerSerialNumberDropDown.ItemsData = {'12220', '', '120004758'};
+            app.PIFOCControllerSerialNumberDropDown.Editable = 'on';
+            app.PIFOCControllerSerialNumberDropDown.BackgroundColor = [1 1 1];
+            app.PIFOCControllerSerialNumberDropDown.Position = [239 129 173 22];
+            app.PIFOCControllerSerialNumberDropDown.Value = '12220';
 
             % Create MoveZButton
             app.MoveZButton = uibutton(app.PIFOCTab, 'push');
             app.MoveZButton.ButtonPushedFcn = createCallbackFcn(app, @MoveZButtonPushed, true);
-            app.MoveZButton.Position = [488 289 100 22];
+            app.MoveZButton.Position = [816 302 100 22];
             app.MoveZButton.Text = 'Move Z';
 
             % Create SetZPositionEditFieldLabel
             app.SetZPositionEditFieldLabel = uilabel(app.PIFOCTab);
             app.SetZPositionEditFieldLabel.HorizontalAlignment = 'right';
-            app.SetZPositionEditFieldLabel.Position = [412 402 80 22];
+            app.SetZPositionEditFieldLabel.Position = [768 337 80 22];
             app.SetZPositionEditFieldLabel.Text = 'Set Z Position';
 
             % Create SetZPositionEditField
             app.SetZPositionEditField = uieditfield(app.PIFOCTab, 'numeric');
-            app.SetZPositionEditField.Position = [507 402 100 22];
+            app.SetZPositionEditField.Position = [863 337 100 22];
             app.SetZPositionEditField.Value = 100;
 
             % Create LogTextAreaLabel
@@ -2620,7 +2647,7 @@ stage.SVO ( PIaxis, switchOn );
             % Create LogTextArea
             app.LogTextArea = uitextarea(app.MatMicroMain);
             app.LogTextArea.Editable = 'off';
-            app.LogTextArea.Position = [50 15 1011 103];
+            app.LogTextArea.Position = [50 15 1001 103];
         end
     end
 
