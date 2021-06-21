@@ -575,7 +575,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             
             %Start connection (if not already connected)
             
-            if ( ~(app.stageConnected ) )
+%             if ( ~(app.stageConnected ) )
                 % USB
                 %stageType = 'M-415.2S';% 113013743     stageType = 'P-725.4CD'
                 %controllerSerialNumber = '0125500210';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
@@ -585,7 +585,7 @@ classdef microMOSAIC < matlab.apps.AppBase
                     stage = Controller.ConnectSerial( controllerSerialNumber ); %Or look at the label of the case of your controller
                 end
                 stageConnected=true;
-            end
+%             end
             
             % Query controller identification string
             connectedControllerName = stage.qIDN();
@@ -752,7 +752,6 @@ stage.SVO ( PIaxis, switchOn );
     end
     
 
-    % Callbacks that handle component events
     methods (Access = private)
 
         % Code that executes after component creation
@@ -872,17 +871,23 @@ stage.SVO ( PIaxis, switchOn );
                 zcoordName ='Z='+string(stagePIFOC.qPOS('A'));
             end
             drawImages(app,true,signal);
+            printLogWindow(app,'NL image - Done')
+            catch ME
+                printLogWindow(app,"Could not acquire an image. Try once again or restart the software")
+                printLogWindow(app, ME.message)
+            end
+            try
             if saveTIFF == true
                 saveDataTiff(app,app.FilenameCommentEditField.Value,signal)
                 
             elseif saveHDF5==true
                 
             end
-            printLogWindow(app,'NL image - Done')
             catch ME
-                printLogWindow(app,"Could not acquire an image. Try once again or restart the software")
+                printLogWindow(app,"Could not save the image.")
                 printLogWindow(app, ME.message)
             end
+            
         end
 
         % Button pushed function: TestbuttondontpressButton
@@ -1480,7 +1485,7 @@ stage.SVO ( PIaxis, switchOn );
 
         % Callback function
         function InitializePIFOCButtonPushed(app, event)
-
+            
         end
 
         % Button pushed function: ConnectPIFOCButton
@@ -1523,18 +1528,18 @@ stage.SVO ( PIaxis, switchOn );
         end
     end
 
-    % Component initialization
+    % App initialization and construction
     methods (Access = private)
 
         % Create UIFigure and components
         function createComponents(app)
 
-            % Create MatMicroMain and hide until all components are created
-            app.MatMicroMain = uifigure('Visible', 'off');
+            % Create MatMicroMain
+            app.MatMicroMain = uifigure;
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.802';
+            app.MatMicroMain.Name = 'microMOSAIC v0.803';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -2616,19 +2621,15 @@ stage.SVO ( PIaxis, switchOn );
             app.LogTextArea = uitextarea(app.MatMicroMain);
             app.LogTextArea.Editable = 'off';
             app.LogTextArea.Position = [50 15 1011 103];
-
-            % Show the figure after all components are created
-            app.MatMicroMain.Visible = 'on';
         end
     end
 
-    % App creation and deletion
     methods (Access = public)
 
         % Construct app
         function app = microMOSAIC
 
-            % Create UIFigure and components
+            % Create and configure components
             createComponents(app)
 
             % Register the app with App Designer
