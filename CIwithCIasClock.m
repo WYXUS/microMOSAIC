@@ -22,7 +22,7 @@ prop.AOrange = 2*[-1 1];
 prop.channelOrder = {[1 2]};                          % cell array of signal to channel assignments. Assign [X,Y,Z,Blank,Phase] signals (in that order, 1-based indexing) to output channels. To assign X to the first output channel, Y to the second, blank to the first of the second card and Z to the second of the second card, use {[1 2], [4 3]}. For a single output card, this could be e.g. {[1 2]}
 prop.nsamples = 10;
 
-% produce square pulses with ctr0, because PFI8 doesn't have bnc connector
+% produce square pulses with ctr0, because PFI8 doesn't have a bnc connector
 COTask = NationalInstruments.DAQmx.Task;
 COTask.COChannels.CreatePulseChannelFrequency('/Dev2/ctr0', 'COtask', COPulseFrequencyUnits.Hertz, COPulseIdleState.Low, 0, 250000, 0.9 ); %delay, freq, dutycycle
 COTask.Timing.ConfigureImplicit(SampleQuantityMode.ContinuousSamples,200000)

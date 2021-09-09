@@ -1,0 +1,47 @@
+%{
+    Acquire some signals using NIDAQ-mx's .NET assembly
+%}
+
+clear all
+
+
+% Load NIDAQmx .NET assembly
+fprintf('Starting up: loading DAQmx...\n')
+try
+    NET.addAssembly('NationalInstruments.DAQmx');
+    import NationalInstruments.DAQmx.*
+    fprintf('Assembly successfully loaded!\n')
+catch
+    error('Error loading .NET assembly! Check NIDAQmx .NET installation.')
+end
+XCenter = 0; YCenter = 0;       % image center
+
+pixDwellTime = 2;       % us
+pixFreq = 1 / (pixDwellTime / 1000000 * 2);       % pixel acquisition frequency
+pixRep = 20 ;       % pixel repetition 
+scanXRange = 100;   % scan range X, um
+scanYRange = 100;   % scan range Y, um
+scanStep = 1;       % scan step, um
+calibration = 0.00484;  % um to V conversion coefficient
+numberofPoints = scanXRange*scanYRange/ scanStep / scanStep;    % total number of points
+x = -scanXRange/2:scanStep:scanXRange/2;        % x coordinates
+y = -scanYRange/2:scanStep:scanYRange/2;        % y corrdiantes
+x = x + XCenter;    % x coordinates corrected with the image center
+y = y + YCenter;    % y coordinates corrected with the image center
+[X,Y] = meshgrid(x,y);
+coordPoints = [repelem(X(:)*calibration,pixRep), repelem(Y(:)*calibration, pixRep)];    % voltages to send to the galvos
+                           
+% Setting up device objects
+AOtask = NationalInstruments.DAQmx.Task;
+AOtask.AOChannels.CreateVoltageChannel('/Dev2/ao0:1', '',-10, 10, AOVoltageUnits.Volts);    % output channels: the galvos
+% AOtask.Stream.WriteRegenerationMode = WriteRegenerationMode.AllowRegeneration;
+AOtask.Timing.ConfigureSampleClock('',pixRep, SampleClockActiveEdge.Rising, SampleQuantityMode.FiniteSamples, pixRep*numberofPoints)    % a clock
+
+AOtask.Control(TaskAction.Verify)   % control the task
+
+AOwriter = AnalogMultiChannelWriter(AOtask.Stream);     % create a writer
+
+
+
+
+AOwriter.WriteMultiSample(true,coordPoints');   % write voltages to a galvo
