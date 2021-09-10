@@ -68,8 +68,10 @@ CItask.Start()  % start in the background
 
 AOwriter.WriteMultiSample(true,coordPoints');   % write voltages to a galvo: triggers the aquisition
 try
-data = double(CIreader.ReadMultiSampleDouble( pixRep*numberofPoints)); % get the data from the buffer
-plot(data)
+rawData = double(CIreader.ReadMultiSampleDouble( pixRep*numberofPoints)); % get the data from the buffer
+data = arrayfun(@(i) mean(rawData(i:i+pixRep-1)),1:pixRep:length(rawData)-pixRep+1)';   % average pixRep
+size = round(sqrt(length(data)));       % define size
+imagesc(reshape(data,[size,size]))      % reshape to 2D and display
 catch ME
     disp(ME.message)
 end
