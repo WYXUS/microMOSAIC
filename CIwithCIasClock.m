@@ -24,7 +24,7 @@ prop.nsamples = 10;
 
 % produce square pulses with ctr0, because PFI8 doesn't have a bnc connector
 COTask = NationalInstruments.DAQmx.Task;
-COTask.COChannels.CreatePulseChannelFrequency('/Dev2/ctr0', 'COtask', COPulseFrequencyUnits.Hertz, COPulseIdleState.Low, 0, 250000, 0.9 ); %delay, freq, dutycycle
+COTask.COChannels.CreatePulseChannelFrequency('/Dev2/ctr0', '', COPulseFrequencyUnits.Hertz, COPulseIdleState.Low, 0, 250000, 0.9 ); %delay, freq, dutycycle
 COTask.Timing.ConfigureImplicit(SampleQuantityMode.ContinuousSamples,200000)
 COTask.Control(TaskAction.Verify)
 
