@@ -14,25 +14,23 @@ try
 catch
     error('Error loading .NET assembly! Check NIDAQmx .NET installation.')
 end
-f = figure
 XCenter = 0; YCenter = 0;       % image center
-dutyCycle = 0.95;        % duty cycle of the pulse generator
+dutyCycle = 0.9;        % duty cycle of the pulse generator
 pixDwellTime = 2;       % microseconds
 pixFreq = 1 / (pixDwellTime / 1000000 * 2);       % pixel acquisition frequency
-pixRep = 20 ;       % pixel repetition 
+pixRep = 30 ;       % pixel repetition 
 scanXRange = 100;   % scan range X, um
 scanYRange = 100;   % scan range Y, um
-scanStep = 0.1;       % scan step, um
+scanStep = 0.5;       % scan step, um
 calibration = 0.0220;  % um to V conversion coefficient
-% numberofPoints = scanXRange*scanYRange/ scanStep / scanStep;    % total number of points
+numberofPoints = scanXRange*scanYRange/ scanStep / scanStep;    % total number of points
 x = -scanXRange/2:scanStep:scanXRange/2;        % x coordinates
 y = -scanYRange/2:scanStep:scanYRange/2;        % y corrdiantes
-numberofPoints = length(x)*length(y);
 x = x + XCenter;    % x coordinates corrected with the image center
 y = y + YCenter;    % y coordinates corrected with the image center
 [X,Y] = meshgrid(x,y);
 % coordPoints = [X(:)*calibration, Y(:)*calibration];    % voltages to send to the galvos
-coordPoints = [repelem(X(:)*calibration,pixRep), repelem(Y(:)*calibration, pixRep)];    % voltages to send to the galvos
+% coordPoints = [repelem(X(:)*calibration,pixRep), repelem(Y(:)*calibration, pixRep)];    % voltages to send to the galvos
                            
 % Setting up device objects
 AOtask = NationalInstruments.DAQmx.Task;        % a task to control the galvos
@@ -69,22 +67,17 @@ CIreader = CounterSingleChannelReader(CItask.Stream);       % start in the backg
 COtask.Start()      % start the square pulse production: doesn't start before AOtask
 CItask.Start()  % start in the background
 
-AOtask.Stream.Timeout=-1;
-COtask.Stream.Timeout=-1;
-CItask.Stream.Timeout=-1;
-
-
 AOwriter.WriteMultiSample(true,coordPoints');   % write voltages to a galvo: triggers the aquisition
 try
 rawData = double(CIreader.ReadMultiSampleDouble( pixRep*numberofPoints)); % get the data from the buffer
 data = arrayfun(@(i) mean(rawData(i:i+pixRep-1)),1:pixRep:length(rawData)-pixRep+1)';   % average pixRep
 size = round(sqrt(length(data)));       % define size
-imagesc(reshape(data,[size,size])) ;colorbar     % reshape to 2D and display
+imagesc(reshape(data,[size,size]))      % reshape to 2D and display
 axis image;
 catch ME
     disp(ME.message)
-
 end
+
 
 
 %%
@@ -95,4 +88,3 @@ CItask.Stop()
 CItask.Dispose()
 COtask.Stop()
 COtask.Dispose()
-clear all

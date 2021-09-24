@@ -33,7 +33,7 @@ coordPoints = [repelem(X(:)*calibration,pixRep), repelem(Y(:)*calibration, pixRe
                            
 % Setting up device objects
 AOtask = NationalInstruments.DAQmx.Task;
-AOtask.AOChannels.CreateVoltageChannel('/Dev2/ao0:1', '',-10, 10, AOVoltageUnits.Volts);    % output channels: the galvos
+AOtask.AOChannels.CreateVoltageChannel('Dev1/ao0:1', '',-10, 10, AOVoltageUnits.Volts);    % output channels: the galvos
 % AOtask.Stream.WriteRegenerationMode = WriteRegenerationMode.AllowRegeneration;
 AOtask.Timing.ConfigureSampleClock('',pixRep, SampleClockActiveEdge.Rising, SampleQuantityMode.FiniteSamples, pixRep*numberofPoints)    % a clock
 
@@ -44,15 +44,15 @@ AOwriter = AnalogMultiChannelWriter(AOtask.Stream);     % create a writer
 % Setting some properties
 
 prop.AIrange = [-10 10];                           % analog input voltage range (2-element vector)
-prop.AIchans = '/Dev2/ai0';%'/Dev2/ai0:1';                    % path to AI channels (primary DAQ card)                % cell array of AO channel paths. For a single AO card, this would be a 1-element cell, e.g. {'Dev1/ao0:1'}, for two cards, this could be {'Dev1/ao0:1', 'Dev2/ao0:2'}
+prop.AIchans = 'Dev1/ai0';%'Dev1/ai0:1';                    % path to AI channels (primary DAQ card)                % cell array of AO channel paths. For a single AO card, this would be a 1-element cell, e.g. {'Dev1/ao0:1'}, for two cards, this could be {'Dev1/ao0:1', 'Dev1/ao0:2'}
 
 AItask = NationalInstruments.DAQmx.Task;
 AItask.AIChannels.CreateVoltageChannel(prop.AIchans, '', AITerminalConfiguration.Rse, prop.AIrange(1), prop.AIrange(2), AIVoltageUnits.Volts);  % add voltage channel for analog input
-AItask.Triggers.StartTrigger.ConfigureDigitalEdgeTrigger('/Dev2/ao/StartTrigger',DigitalEdgeStartTriggerEdge.Rising);   % set a trigger. The acquisition starts when the output writer start writing
+% AItask.Triggers.StartTrigger.ConfigureDigitalEdgeTrigger('Dev1/ao/StartTrigger',DigitalEdgeStartTriggerEdge.Rising);   % set a trigger. The acquisition starts when the output writer start writing
 AItask.Timing.ConfigureSampleClock('',pixFreq, SampleClockActiveEdge.Rising, SampleQuantityMode.FiniteSamples,pixRep*numberofPoints);   % clock
 AIreader = AnalogSingleChannelReader(AItask.Stream);     % the input reader
 
-% DaqSystem.Local.ConnectTerminals('/Dev2/ao/StartTrigger', '/Dev2/PFI6')
+% DaqSystem.Local.ConnectTerminals('Dev1/ao/StartTrigger', 'Dev1/PFI6')
 
 
 AItask.Start()  % start in the background

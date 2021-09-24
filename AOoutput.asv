@@ -1,0 +1,137 @@
+
+% Load NIDAQmx .NET assembly
+fprintf('Starting up: loading DAQmx...\n')
+try
+    NET.addAssembly('NationalInstruments.DAQmx');
+    import NationalInstruments.DAQmx.*
+    fprintf('Assembly successfully loaded!\n')
+catch
+    error('Error loading .NET assembly! Check NIDAQmx .NET installation.')
+end
+
+
+% Setting up device objects
+AOtask = NationalInstruments.DAQmx.Task;
+AOtask.AOChannels.CreateVoltageChannel('Dev1/ao0', '',-10, 10, AOVoltageUnits.Volts);    % output channels: the galvos
+% AOtask.Stream.WriteRegenerationMode = WriteRegenerationMode.AllowRegeneration;
+AOtask.Timing.ConfigureSampleClock('',1e6, SampleClockActiveEdge.Rising, SampleQuantityMode.FiniteSamples)    % a clock
+
+AOtask.Control(TaskAction.Verify)   % control the task
+
+AOwriter = AnalogSingleChannelWriter(AOtask.Stream);     % create a writer
+%%
+AOwriter.WriteMultiSample(true,linspace(-10,10,1e6)');   % write voltages to a galvo
+%%
+AOtask.Stop()
+AOtask.Dispose()
+%%
+% 
+% %{
+%     Acquire some signals using NIDAQ-mx's .NET assembly
+% %}
+% 
+% clear all
+% 
+% 
+% % Load NIDAQmx .NET assembly
+% fprintf('Starting up: loading DAQmx...\n')
+% try
+%     NET.addAssembly('NationalInstruments.DAQmx');
+%     import NationalInstruments.DAQmx.*
+%     fprintf('Assembly successfully loaded!\n')
+% catch
+%     error('Error loading .NET assembly! Check NIDAQmx .NET installation.')
+% end
+% 
+% 
+% % Setting some properties
+% prop.AOrate = 1e4;                               % analog input sample rate in Hz
+% prop.AOrange = [-1 1];                           % analog input voltage range (2-element vector)
+% prop.AOchans = '/Dev1/ao0';%'/Dev2/AO0:1';                    % path to AO channels (primary DAQ card)                % cell array of AO channel paths. For a single AO card, this would be a 1-element cell, e.g. {'Dev1/ao0:1'}, for two cards, this could be {'Dev1/ao0:1', 'Dev2/ao0:2'}
+% prop.channelOrder = {[1 2]};                     % cell array of signal to channel assignments. Assign [X,Y,Z,Blank,Phase] signals (in that order, 1-based indexing) to output channels. To assign X to the first output channel, Y to the second, blank to the first of the second card and Z to the second of the second card, use {[1 2], [4 3]}. For a single output card, this could be e.g. {[1 2]}
+% prop.nsamples = 2000;
+% prop.buffersize = max([prop.nsamples*2 1000000]);
+% prop.buffersize = ceil(prop.buffersize/prop.nsamples)*prop.nsamples; % to make sure buffer size is an integer multiple of nsamples
+%            
+% 
+% % Setting up device objects
+% fprintf('starting up: setting up DAQ...\n')
+% AOtask = NationalInstruments.DAQmx.Task
+% AOtask.AOChannels.CreateVoltageChannel(prop.AOchans, '', prop.AOrange(1), prop.AOrange(2), AOVoltageUnits.Volts)
+% % AOtask.Timing.ConfigureSampleClock('/Dev2/PFI0', prop.AOrate, SampleClockActiveEdge.Rising, SampleQuantityMode.ContinuousSamples, prop.buffersize)
+% % AOtask.Timing.ConfigureSampleClock('/Dev2/PFI0', prop.AOrate, SampleClockActiveEdge.Rising, SampleQuantityMode.FiniteSamples, prop.nsamples)
+% % AOtask.Triggers.StartTrigger.ConfigureDigitalEdgeTrigger('PFI0', DigitalEdgeStartTriggerEdge.Rising)
+% % AOtask.Triggers.StartTrigger.ConfigureNone()
+% AOtask.Control(TaskAction.Verify)
+% 
+% 
+% % TriggerTask = NationalInstruments.DAQmx.Task;
+% % primaryDev = strtok(prop.AOchans, '/');
+% % TriggerTask.COChannels.CreatePulseChannelTime(['/' primaryDev '/Ctr0'], '', COPulseTimeUnits.Seconds, COPulseIdleState.Low, 0, 0.1, 0.1); % this is where you set the trigger output to PFI12
+% % TriggerTask.Control(TaskAction.Verify);
+% % 
+% % TriggerTask.Start()
+% % TriggerTask.WAOtUntilDone(-1)
+% % TriggerTask.Stop()
+% 
+% 
+% %{
+%     Acquire some signals using NIDAQ-mx's .NET assembly
+% %}
+% 
+% clear all
+% 
+% 
+% % Load NIDAQmx .NET assembly
+% fprintf('Starting up: loading DAQmx...\n')
+% try
+%     NET.addAssembly('NationalInstruments.DAQmx');
+%     import NationalInstruments.DAQmx.*
+%     fprintf('Assembly successfully loaded!\n')
+% catch
+%     error('Error loading .NET assembly! Check NIDAQmx .NET installation.')
+% end
+% 
+% 
+% % Setting some properties
+% prop.AOrate = 5e1;                               % analog input sample rate in Hz
+% prop.AOrange = [-10 10];                           % analog input voltage range (2-element vector)
+% prop.AOchans = '/Dev1/ao0';%'/Dev2/AO0:1';                    % path to AO channels (primary DAQ card)                % cell array of AO channel paths. For a single AO card, this would be a 1-element cell, e.g. {'Dev1/ao0:1'}, for two cards, this could be {'Dev1/ao0:1', 'Dev2/ao0:2'}
+% prop.channelOrder = {[1 2]};                     % cell array of signal to channel assignments. Assign [X,Y,Z,Blank,Phase] signals (in that order, 1-based indexing) to output channels. To assign X to the first output channel, Y to the second, blank to the first of the second card and Z to the second of the second card, use {[1 2], [4 3]}. For a single output card, this could be e.g. {[1 2]}
+% prop.nsamples = 2000;
+% prop.buffersize = max([prop.nsamples*2 1000000]);
+% prop.buffersize = ceil(prop.buffersize/prop.nsamples)*prop.nsamples; % to make sure buffer size is an integer multiple of nsamples
+%            
+% 
+% % Setting up device objects
+% fprintf('starting up: setting up DAQ...\n')
+% AOtask = NationalInstruments.DAQmx.Task
+% AOtask.AOChannels.CreateVoltageChannel(prop.AOchans, '', prop.AOrange(1), prop.AOrange(2), AOVoltageUnits.Volts)
+% % AOtask.Timing.ConfigureSampleClock('/Dev2/PFI0', prop.AOrate, SampleClockActiveEdge.Rising, SampleQuantityMode.ContinuousSamples, prop.buffersize)
+% AOtask.Timing.ConfigureSampleClock('', prop.AOrate, SampleClockActiveEdge.Rising, SampleQuantityMode.FiniteSamples, length(linspace(-10,10,1000)))
+% % AOtask.Triggers.StartTrigger.ConfigureDigitalEdgeTrigger('PFI0', DigitalEdgeStartTriggerEdge.Rising)
+% % AOtask.Triggers.StartTrigger.ConfigureNone()
+% AOtask.Control(TaskAction.Verify)
+% 
+% 
+% % TriggerTask = NationalInstruments.DAQmx.Task;
+% % primaryDev = strtok(prop.AOchans, '/');
+% % TriggerTask.COChannels.CreatePulseChannelTime(['/' primaryDev '/Ctr0'], '', COPulseTimeUnits.Seconds, COPulseIdleState.Low, 0, 0.1, 0.1); % this is where you set the trigger output to PFI12
+% % TriggerTask.Control(TaskAction.Verify);
+% % 
+% % TriggerTask.Start()
+% % TriggerTask.WAOtUntilDone(-1)
+% % TriggerTask.Stop()
+% 
+% 
+% %%
+% AOtask.Start()
+% 
+% AOwriter = AnalogSingleChannelWriter(AOtask.Stream)
+% % AOwriter.WriteSingleSample(true,1)
+% AOwriter.WriteMultiSample(true, linspace(-10,10,1000))
+% 
+% 
+% % Stop and clear task
+% AOtask.Stop()
+% AOtask.Dispose()
