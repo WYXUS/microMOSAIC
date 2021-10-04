@@ -1,185 +1,197 @@
-classdef microMOSAIC < matlab.apps.AppBase
+classdef microMOSAICdotNET < matlab.apps.AppBase
 
     % Properties that correspond to app components
     properties (Access = public)
         MatMicroMain                    matlab.ui.Figure
+        LogTextArea                     matlab.ui.control.TextArea
+        LogTextAreaLabel                matlab.ui.control.Label
         TabGroup                        matlab.ui.container.TabGroup
         MainTab                         matlab.ui.container.Tab
-        InitializeButton                matlab.ui.control.Button
-        ReadyLampLabel                  matlab.ui.control.Label
-        ReadyLamp                       matlab.ui.control.Lamp
-        ScanSaveButton                  matlab.ui.control.Button
-        ScanRangeXumEditFieldLabel      matlab.ui.control.Label
-        ScanRangeXumEditField           matlab.ui.control.NumericEditField
-        ScanRangeYumLabel               matlab.ui.control.Label
-        ScanRangeYumEditField           matlab.ui.control.NumericEditField
-        ScanResolutionumLabel           matlab.ui.control.Label
-        ScanResolutionumEditField       matlab.ui.control.NumericEditField
-        NumberOfAccumulationsEditFieldLabel  matlab.ui.control.Label
-        NumberOfAccumulationsEditField  matlab.ui.control.NumericEditField
-        TestbuttondontpressButton       matlab.ui.control.Button
-        LiveButton                      matlab.ui.control.StateButton
-        SimulationmodeCheckBox          matlab.ui.control.CheckBox
-        PolarPanel                      matlab.ui.container.Panel
-        InitializePolarMotorButton      matlab.ui.control.Button
-        CurrentAngledegrGaugeLabel      matlab.ui.control.Label
-        CurrentAngledegrGauge           matlab.ui.control.SemicircularGauge
-        StartingAngledegrEditFieldLabel  matlab.ui.control.Label
-        StartingAngledegrEditField      matlab.ui.control.NumericEditField
-        EndingAngledegrEditFieldLabel   matlab.ui.control.Label
-        EndingAngledegrEditField        matlab.ui.control.NumericEditField
-        TakePolarStackButton            matlab.ui.control.Button
-        StepAngledegrEditFieldLabel     matlab.ui.control.Label
-        StepAngledegrEditField          matlab.ui.control.NumericEditField
-        FoVcenterXumEditFieldLabel      matlab.ui.control.Label
-        FoVcenterXumEditField           matlab.ui.control.NumericEditField
-        FoVcenterYumEditFieldLabel      matlab.ui.control.Label
-        FoVcenterYumEditField           matlab.ui.control.NumericEditField
-        ZoomPanel                       matlab.ui.container.Panel
-        ZoomfactorEditFieldLabel        matlab.ui.control.Label
-        ZoomfactorEditField             matlab.ui.control.NumericEditField
-        ZoomInButton                    matlab.ui.control.Button
-        ZoomOutButton                   matlab.ui.control.Button
-        ChannelDropDownLabel            matlab.ui.control.Label
-        ChannelDropDown                 matlab.ui.control.DropDown
-        PixelRepetitionEditFieldLabel   matlab.ui.control.Label
-        PixelRepetitionEditField        matlab.ui.control.NumericEditField
         ZstackPanel                     matlab.ui.container.Panel
-        StartingZumEditFieldLabel       matlab.ui.control.Label
-        StartingZumEditField            matlab.ui.control.NumericEditField
-        EndingZumEditFieldLabel         matlab.ui.control.Label
-        EndingZumEditField              matlab.ui.control.NumericEditField
-        ZStepEditFieldLabel             matlab.ui.control.Label
-        ZStepEditField                  matlab.ui.control.NumericEditField
-        ZGaugeLabel                     matlab.ui.control.Label
-        ZGauge                          matlab.ui.control.LinearGauge
         AcquireZstackButton             matlab.ui.control.Button
+        ZGauge                          matlab.ui.control.LinearGauge
+        ZGaugeLabel                     matlab.ui.control.Label
+        ZStepEditField                  matlab.ui.control.NumericEditField
+        ZStepEditFieldLabel             matlab.ui.control.Label
+        EndingZumEditField              matlab.ui.control.NumericEditField
+        EndingZumEditFieldLabel         matlab.ui.control.Label
+        StartingZumEditField            matlab.ui.control.NumericEditField
+        StartingZumEditFieldLabel       matlab.ui.control.Label
+        PixelRepetitionEditField        matlab.ui.control.NumericEditField
+        PixelRepetitionEditFieldLabel   matlab.ui.control.Label
+        ZoomPanel                       matlab.ui.container.Panel
+        ChannelDropDown                 matlab.ui.control.DropDown
+        ChannelDropDownLabel            matlab.ui.control.Label
+        ZoomOutButton                   matlab.ui.control.Button
+        ZoomInButton                    matlab.ui.control.Button
+        ZoomfactorEditField             matlab.ui.control.NumericEditField
+        ZoomfactorEditFieldLabel        matlab.ui.control.Label
+        FoVcenterYumEditField           matlab.ui.control.NumericEditField
+        FoVcenterYumEditFieldLabel      matlab.ui.control.Label
+        FoVcenterXumEditField           matlab.ui.control.NumericEditField
+        FoVcenterXumEditFieldLabel      matlab.ui.control.Label
+        PolarPanel                      matlab.ui.container.Panel
+        StepAngledegrEditField          matlab.ui.control.NumericEditField
+        StepAngledegrEditFieldLabel     matlab.ui.control.Label
+        TakePolarStackButton            matlab.ui.control.Button
+        EndingAngledegrEditField        matlab.ui.control.NumericEditField
+        EndingAngledegrEditFieldLabel   matlab.ui.control.Label
+        StartingAngledegrEditField      matlab.ui.control.NumericEditField
+        StartingAngledegrEditFieldLabel  matlab.ui.control.Label
+        CurrentAngledegrGauge           matlab.ui.control.SemicircularGauge
+        CurrentAngledegrGaugeLabel      matlab.ui.control.Label
+        InitializePolarMotorButton      matlab.ui.control.Button
+        SimulationmodeCheckBox          matlab.ui.control.CheckBox
+        LiveButton                      matlab.ui.control.StateButton
+        TestbuttondontpressButton       matlab.ui.control.Button
+        NumberOfAccumulationsEditField  matlab.ui.control.NumericEditField
+        NumberOfAccumulationsEditFieldLabel  matlab.ui.control.Label
+        ScanResolutionumEditField       matlab.ui.control.NumericEditField
+        ScanResolutionumLabel           matlab.ui.control.Label
+        ScanRangeYumEditField           matlab.ui.control.NumericEditField
+        ScanRangeYumLabel               matlab.ui.control.Label
+        ScanRangeXumEditField           matlab.ui.control.NumericEditField
+        ScanRangeXumEditFieldLabel      matlab.ui.control.Label
+        ScanSaveButton                  matlab.ui.control.Button
+        ReadyLamp                       matlab.ui.control.Lamp
+        ReadyLampLabel                  matlab.ui.control.Label
+        InitializeButton                matlab.ui.control.Button
         LiveTab                         matlab.ui.container.Tab
-        UIAxes                          matlab.ui.control.UIAxes
-        FasterSliderLabel               matlab.ui.control.Label
-        FasterSlider                    matlab.ui.control.Slider
-        StartLiveButton                 matlab.ui.control.StateButton
-        SlowerLabel                     matlab.ui.control.Label
-        RefreshrateLabel                matlab.ui.control.Label
-        ChannelForImagePixelSelectionDropDownLabel  matlab.ui.control.Label
-        ChannelForImagePixelSelectionDropDown  matlab.ui.control.DropDown
-        AutoscaleCheckBox_5             matlab.ui.control.CheckBox
-        MaxEditFieldLabel               matlab.ui.control.Label
-        MaxEditField                    matlab.ui.control.NumericEditField
-        MinEditFieldLabel               matlab.ui.control.Label
-        MinEditField                    matlab.ui.control.NumericEditField
         Button                          matlab.ui.control.StateButton
+        MinEditField                    matlab.ui.control.NumericEditField
+        MinEditFieldLabel               matlab.ui.control.Label
+        MaxEditField                    matlab.ui.control.NumericEditField
+        MaxEditFieldLabel               matlab.ui.control.Label
+        AutoscaleCheckBox_5             matlab.ui.control.CheckBox
+        ChannelForImagePixelSelectionDropDown  matlab.ui.control.DropDown
+        ChannelForImagePixelSelectionDropDownLabel  matlab.ui.control.Label
+        RefreshrateLabel                matlab.ui.control.Label
+        SlowerLabel                     matlab.ui.control.Label
+        StartLiveButton                 matlab.ui.control.StateButton
+        FasterSlider                    matlab.ui.control.Slider
+        FasterSliderLabel               matlab.ui.control.Label
+        UIAxes                          matlab.ui.control.UIAxes
         SettingsTab                     matlab.ui.container.Tab
-        ObjectiveDropDownLabel          matlab.ui.control.Label
-        ObjectiveDropDown               matlab.ui.control.DropDown
-        SessionUpdateRateHzEditFieldLabel  matlab.ui.control.Label
-        SessionUpdateRateHzEditField    matlab.ui.control.NumericEditField
-        DeviceNameEditFieldLabel        matlab.ui.control.Label
-        DeviceNameEditField             matlab.ui.control.EditField
-        FirstChannelSettingsPanel       matlab.ui.container.Panel
-        Switch                          matlab.ui.control.Switch
-        AnalogChannelInputDropDownLabel  matlab.ui.control.Label
-        AnalogChannelInputDropDown      matlab.ui.control.DropDown
-        ConnectiontypeDropDownLabel     matlab.ui.control.Label
-        ConnectiontypeDropDown          matlab.ui.control.DropDown
-        CounterChannelInputDropDownLabel  matlab.ui.control.Label
-        CounterChannelInputDropDown     matlab.ui.control.DropDown
-        minauEditFieldLabel             matlab.ui.control.Label
-        minauEditField                  matlab.ui.control.NumericEditField
-        maxauEditFieldLabel             matlab.ui.control.Label
-        maxauEditField                  matlab.ui.control.NumericEditField
-        AutoscaleCheckBox               matlab.ui.control.CheckBox
-        NumberOfChannelsSliderLabel     matlab.ui.control.Label
-        NumberOfChannelsSlider          matlab.ui.control.Slider
-        SecondChannelSettingsPanel      matlab.ui.container.Panel
-        Switch_2                        matlab.ui.control.Switch
-        AnalogChannelInputDropDown_2Label  matlab.ui.control.Label
-        AnalogChannelInputDropDown_2    matlab.ui.control.DropDown
-        ConnectiontypeDropDown_2Label   matlab.ui.control.Label
-        ConnectiontypeDropDown_2        matlab.ui.control.DropDown
-        CounterChannelInputDropDown_2Label  matlab.ui.control.Label
-        CounterChannelInputDropDown_2   matlab.ui.control.DropDown
-        maxauEditField_2Label           matlab.ui.control.Label
-        maxauEditField_2                matlab.ui.control.NumericEditField
-        minauEditField_2Label           matlab.ui.control.Label
-        minauEditField_2                matlab.ui.control.NumericEditField
-        AutoscaleCheckBox_2             matlab.ui.control.CheckBox
-        ThirdChannelSettingsPanel       matlab.ui.container.Panel
-        Switch_3                        matlab.ui.control.Switch
-        AnalogChannelInputDropDown_3Label  matlab.ui.control.Label
-        AnalogChannelInputDropDown_3    matlab.ui.control.DropDown
-        ConnectiontypeDropDown_3Label   matlab.ui.control.Label
-        ConnectiontypeDropDown_3        matlab.ui.control.DropDown
-        CounterChannelInputDropDown_3Label  matlab.ui.control.Label
-        CounterChannelInputDropDown_3   matlab.ui.control.DropDown
-        maxauEditField_3Label           matlab.ui.control.Label
-        maxauEditField_3                matlab.ui.control.NumericEditField
-        minauEditField_3Label           matlab.ui.control.Label
-        minauEditField_3                matlab.ui.control.NumericEditField
-        AutoscaleCheckBox_3             matlab.ui.control.CheckBox
-        FourthChannelSettingsPanel      matlab.ui.container.Panel
-        Switch_4                        matlab.ui.control.Switch
-        AnalogChannelInputDropDown_4Label  matlab.ui.control.Label
-        AnalogChannelInputDropDown_4    matlab.ui.control.DropDown
-        ConnectiontypeDropDown_4Label   matlab.ui.control.Label
-        ConnectiontypeDropDown_4        matlab.ui.control.DropDown
-        CounterChannelInputDropDown_4Label  matlab.ui.control.Label
-        CounterChannelInputDropDown_4   matlab.ui.control.DropDown
-        maxauEditField_4Label           matlab.ui.control.Label
-        maxauEditField_4                matlab.ui.control.NumericEditField
-        minauEditField_4Label           matlab.ui.control.Label
-        minauEditField_4                matlab.ui.control.NumericEditField
-        AutoscaleCheckBox_4             matlab.ui.control.CheckBox
-        PolarMotorPortEditFieldLabel    matlab.ui.control.Label
-        PolarMotorPortEditField         matlab.ui.control.EditField
-        TimeLagForPolarMotorsecEditFieldLabel  matlab.ui.control.Label
+        PixelRepetitionEditField_2      matlab.ui.control.NumericEditField
+        PixelRepetitionEditField_2Label  matlab.ui.control.Label
+        PixelDwellTimeusEditField       matlab.ui.control.NumericEditField
+        PixelDwellTimeusEditFieldLabel  matlab.ui.control.Label
+        CounterGenerationChannelEditField  matlab.ui.control.EditField
+        CounterGenerationChannelEditFieldLabel  matlab.ui.control.Label
+        DutyCycleEditField              matlab.ui.control.NumericEditField
+        DutyCycleEditFieldLabel         matlab.ui.control.Label
+        CounterTerminalForSquarePulseGenerationEditField  matlab.ui.control.EditField
+        CounterTerminalForSquarePulseGenerationLabel  matlab.ui.control.Label
+        CounterBaseSwitch               matlab.ui.control.Switch
+        CounterBaseSwitchLabel          matlab.ui.control.Label
         TimeLagForPolarMotorsecEditField  matlab.ui.control.NumericEditField
+        TimeLagForPolarMotorsecEditFieldLabel  matlab.ui.control.Label
+        PolarMotorPortEditField         matlab.ui.control.EditField
+        PolarMotorPortEditFieldLabel    matlab.ui.control.Label
+        FourthChannelSettingsPanel      matlab.ui.container.Panel
+        AutoscaleCheckBox_4             matlab.ui.control.CheckBox
+        minauEditField_4                matlab.ui.control.NumericEditField
+        minauEditField_4Label           matlab.ui.control.Label
+        maxauEditField_4                matlab.ui.control.NumericEditField
+        maxauEditField_4Label           matlab.ui.control.Label
+        CounterChannelInputDropDown_4   matlab.ui.control.DropDown
+        CounterChannelInputDropDown_4Label  matlab.ui.control.Label
+        ConnectiontypeDropDown_4        matlab.ui.control.DropDown
+        ConnectiontypeDropDown_4Label   matlab.ui.control.Label
+        AnalogChannelInputDropDown_4    matlab.ui.control.DropDown
+        AnalogChannelInputDropDown_4Label  matlab.ui.control.Label
+        Switch_4                        matlab.ui.control.Switch
+        ThirdChannelSettingsPanel       matlab.ui.container.Panel
+        AutoscaleCheckBox_3             matlab.ui.control.CheckBox
+        minauEditField_3                matlab.ui.control.NumericEditField
+        minauEditField_3Label           matlab.ui.control.Label
+        maxauEditField_3                matlab.ui.control.NumericEditField
+        maxauEditField_3Label           matlab.ui.control.Label
+        CounterChannelInputDropDown_3   matlab.ui.control.DropDown
+        CounterChannelInputDropDown_3Label  matlab.ui.control.Label
+        ConnectiontypeDropDown_3        matlab.ui.control.DropDown
+        ConnectiontypeDropDown_3Label   matlab.ui.control.Label
+        AnalogChannelInputDropDown_3    matlab.ui.control.DropDown
+        AnalogChannelInputDropDown_3Label  matlab.ui.control.Label
+        Switch_3                        matlab.ui.control.Switch
+        SecondChannelSettingsPanel      matlab.ui.container.Panel
+        AutoscaleCheckBox_2             matlab.ui.control.CheckBox
+        minauEditField_2                matlab.ui.control.NumericEditField
+        minauEditField_2Label           matlab.ui.control.Label
+        maxauEditField_2                matlab.ui.control.NumericEditField
+        maxauEditField_2Label           matlab.ui.control.Label
+        CounterChannelInputDropDown_2   matlab.ui.control.DropDown
+        CounterChannelInputDropDown_2Label  matlab.ui.control.Label
+        ConnectiontypeDropDown_2        matlab.ui.control.DropDown
+        ConnectiontypeDropDown_2Label   matlab.ui.control.Label
+        AnalogChannelInputDropDown_2    matlab.ui.control.DropDown
+        AnalogChannelInputDropDown_2Label  matlab.ui.control.Label
+        Switch_2                        matlab.ui.control.Switch
+        NumberOfChannelsSlider          matlab.ui.control.Slider
+        NumberOfChannelsSliderLabel     matlab.ui.control.Label
+        FirstChannelSettingsPanel       matlab.ui.container.Panel
+        AutoscaleCheckBox               matlab.ui.control.CheckBox
+        maxauEditField                  matlab.ui.control.NumericEditField
+        maxauEditFieldLabel             matlab.ui.control.Label
+        minauEditField                  matlab.ui.control.NumericEditField
+        minauEditFieldLabel             matlab.ui.control.Label
+        CounterChannelInputDropDown     matlab.ui.control.DropDown
+        CounterChannelInputDropDownLabel  matlab.ui.control.Label
+        ConnectiontypeDropDown          matlab.ui.control.DropDown
+        ConnectiontypeDropDownLabel     matlab.ui.control.Label
+        AnalogChannelInputDropDown      matlab.ui.control.DropDown
+        AnalogChannelInputDropDownLabel  matlab.ui.control.Label
+        Switch                          matlab.ui.control.Switch
+        DeviceNameEditField             matlab.ui.control.EditField
+        DeviceNameEditFieldLabel        matlab.ui.control.Label
+        SessionUpdateRateHzEditField    matlab.ui.control.NumericEditField
+        SessionUpdateRateHzEditFieldLabel  matlab.ui.control.Label
+        ObjectiveDropDown               matlab.ui.control.DropDown
+        ObjectiveDropDownLabel          matlab.ui.control.Label
         SavingSettingsTab               matlab.ui.container.Tab
-        SavingfolderEditFieldLabel      matlab.ui.control.Label
-        SavingfolderEditField           matlab.ui.control.EditField
-        FilenameCommentEditFieldLabel   matlab.ui.control.Label
         FilenameCommentEditField        matlab.ui.control.EditField
+        FilenameCommentEditFieldLabel   matlab.ui.control.Label
+        SavingfolderEditField           matlab.ui.control.EditField
+        SavingfolderEditFieldLabel      matlab.ui.control.Label
         DelaylineTab                    matlab.ui.container.Tab
-        DelayLineConnectionPanel        matlab.ui.container.Panel
-        ConnectDelayLineButton          matlab.ui.control.Button
-        StagetypeEditFieldLabel         matlab.ui.control.Label
-        StagetypeEditField              matlab.ui.control.EditField
-        ControllerserialnumberEditFieldLabel  matlab.ui.control.Label
-        ControllerserialnumberEditField  matlab.ui.control.EditField
-        ConnectioninterfaceDropDownLabel  matlab.ui.control.Label
-        ConnectioninterfaceDropDown     matlab.ui.control.DropDown
-        PortEditFieldLabel              matlab.ui.control.Label
-        PortEditField                   matlab.ui.control.EditField
-        PositionEditFieldLabel          matlab.ui.control.Label
-        PositionEditField               matlab.ui.control.NumericEditField
-        MoveButton                      matlab.ui.control.Button
-        ScandelayButton                 matlab.ui.control.Button
-        UIAxes2                         matlab.ui.control.UIAxes
-        OffsetmmEditFieldLabel          matlab.ui.control.Label
-        OffsetmmEditField               matlab.ui.control.NumericEditField
-        RangemmEditFieldLabel           matlab.ui.control.Label
-        RangemmEditField                matlab.ui.control.NumericEditField
-        StepmmEditFieldLabel            matlab.ui.control.Label
-        StepmmEditField                 matlab.ui.control.NumericEditField
-        ChannelEditFieldLabel           matlab.ui.control.Label
-        ChannelEditField                matlab.ui.control.EditField
         Button2                         matlab.ui.control.Button
+        ChannelEditField                matlab.ui.control.EditField
+        ChannelEditFieldLabel           matlab.ui.control.Label
+        StepmmEditField                 matlab.ui.control.NumericEditField
+        StepmmEditFieldLabel            matlab.ui.control.Label
+        RangemmEditField                matlab.ui.control.NumericEditField
+        RangemmEditFieldLabel           matlab.ui.control.Label
+        OffsetmmEditField               matlab.ui.control.NumericEditField
+        OffsetmmEditFieldLabel          matlab.ui.control.Label
+        ScandelayButton                 matlab.ui.control.Button
+        MoveButton                      matlab.ui.control.Button
+        PositionEditField               matlab.ui.control.NumericEditField
+        PositionEditFieldLabel          matlab.ui.control.Label
+        DelayLineConnectionPanel        matlab.ui.container.Panel
+        PortEditField                   matlab.ui.control.EditField
+        PortEditFieldLabel              matlab.ui.control.Label
+        ConnectioninterfaceDropDown     matlab.ui.control.DropDown
+        ConnectioninterfaceDropDownLabel  matlab.ui.control.Label
+        ControllerserialnumberEditField  matlab.ui.control.EditField
+        ControllerserialnumberEditFieldLabel  matlab.ui.control.Label
+        StagetypeEditField              matlab.ui.control.EditField
+        StagetypeEditFieldLabel         matlab.ui.control.Label
+        ConnectDelayLineButton          matlab.ui.control.Button
+        UIAxes2                         matlab.ui.control.UIAxes
         PIFOCTab                        matlab.ui.container.Tab
-        PIFOCConnectionPanel            matlab.ui.container.Panel
-        ConnectPIFOCButton              matlab.ui.control.Button
-        PIFOCStageTypeEditFieldLabel    matlab.ui.control.Label
-        PIFOCStageTypeEditField         matlab.ui.control.EditField
-        PIFOCConnectionInterfaceDropDownLabel  matlab.ui.control.Label
-        PIFOCConnectionInterfaceDropDown  matlab.ui.control.DropDown
-        PortEditField_2Label            matlab.ui.control.Label
-        PortEditField_2                 matlab.ui.control.EditField
-        PIFOCControllerSerialNumberDropDownLabel  matlab.ui.control.Label
-        PIFOCControllerSerialNumberDropDown  matlab.ui.control.DropDown
-        MoveZButton                     matlab.ui.control.Button
-        SetZPositionEditFieldLabel      matlab.ui.control.Label
         SetZPositionEditField           matlab.ui.control.NumericEditField
-        LogTextAreaLabel                matlab.ui.control.Label
-        LogTextArea                     matlab.ui.control.TextArea
+        SetZPositionEditFieldLabel      matlab.ui.control.Label
+        MoveZButton                     matlab.ui.control.Button
+        PIFOCConnectionPanel            matlab.ui.container.Panel
+        PIFOCControllerSerialNumberDropDown  matlab.ui.control.DropDown
+        PIFOCControllerSerialNumberDropDownLabel  matlab.ui.control.Label
+        PortEditField_2                 matlab.ui.control.EditField
+        PortEditField_2Label            matlab.ui.control.Label
+        PIFOCConnectionInterfaceDropDown  matlab.ui.control.DropDown
+        PIFOCConnectionInterfaceDropDownLabel  matlab.ui.control.Label
+        PIFOCStageTypeEditField         matlab.ui.control.EditField
+        PIFOCStageTypeEditFieldLabel    matlab.ui.control.Label
+        ConnectPIFOCButton              matlab.ui.control.Button
     end
 
     
@@ -229,6 +241,14 @@ classdef microMOSAIC < matlab.apps.AppBase
         stagePIFOC;
         
         PIFOCaxis % Description
+        Dev % daq card adress
+        I % daq namespace
+        pixRep % pixel repetition for counter gated acquisition
+        dwellTime % pixel dwell time for counter gated aquisition
+        pixFreq % pixel acquisition frequency
+        numberOfPoints % number of points in a scan
+        dutyCycle % counter gate duty cycle
+        counterGateTerminal% terminal where square pulses are produced
     end
     
     methods (Access = private)
@@ -313,7 +333,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             
             for images=1:accumulation
                 app.imSession.outputSingleScan([coordPoints(1,1) coordPoints(1,2)])     % if there is a time lag, this should account for it
-                app.imSession.queueOutputData([coordPoints(:,1) coordPoints(:,2)]);         % send data to the DAQ card
+                app.imSession.queueOutputData([coordPoints(:,2) coordPoints(:,1)]);         % send data to the DAQ card
                 if sum(app.channelsData(1:app.NumberOfEnabledChannels,2))>0
                     resetCounters(app.imSession)
                 end
@@ -645,6 +665,8 @@ switchOn    = 1;
 % switchOff   = 0;
 stage.SVO ( PIaxis, switchOn );
 
+        
+
 end
         
 function [stage, PIaxis, stageConnected] = ConnectPIFOC(app,Controller,connectionType,PIFOCStageType,controllerSerialNumber)%(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,app.PIFOCControllerSerialNumberEditField.Value);
@@ -725,6 +747,101 @@ stage.SVO ( PIaxis, switchOn );
             app.LiveButton.Enable = true;
             printLogWindow(app, "Z stack - DONE!")
         end
+        
+        function results = addCounterChannels(app,ctrs)         % to be finished
+            %meas pulse width with ctr2 @ PFI0
+            CItask = NationalInstruments.DAQmx.Task;        % task for width measurement of the square pulses generated by COtask
+            CIch = CItask.CIChannels.CreatePulseWidthChannel([app.DeviceNameEditField.Value, '/',ctr], 'CItask',0,2^32-1,CIPulseWidthStartingEdge.Rising,CIPulseWidthUnits.Ticks);
+            % CIch = CItask.CIChannels.CreateCountEdgesChannel ('/Dev2/ctr2', 'CItask',CICountEdgesActiveEdge.Rising,int64(0),CICountEdgesCountDirection.Up);
+            CIch.PulseWidthTerminal = [app.DeviceNameEditField.Value, '/',app.CounterTerminalForSquarePulseGenerationEditField.Value];        % a terminal, where square pulses are produced by COtask
+            switch ctr
+                case 'ctr0'
+                    CIch.CounterTimebaseSource = '/Dev2/PFI0';      % a terminal, where a detector is connected
+            end
+        end
+        
+        function [aotask,aowriter, cotask, cowriter, aitask,aireader,citask,cireader]= initChannels(app)
+            aotask = NationalInstruments.DAQmx.Task;        % a task to control the galvos
+            aotask.AOChannels.CreateVoltageChannel(strcat(app.Dev, "ao0:1"), '',-10, 10,  NationalInstruments.DAQmx.AOVoltageUnits.Volts);    % output channels: the galvos
+            % AOtask.Stream.WriteRegenerationMode = WriteRegenerationMode.AllowRegeneration;
+            aotask.Timing.ConfigureSampleClock('',app.pixFreq,  NationalInstruments.DAQmx.SampleClockActiveEdge.Rising,  NationalInstruments.DAQmx.SampleQuantityMode.FiniteSamples, app.pixRep*app.numberOfPoints)    % a clock
+            %             aotask.Control(TaskAction.Verify)   % check for task errors
+            aowriter = NationalInstruments.DAQmx.AnalogMultiChannelWriter(aotask.Stream);     % create a writer
+            aotask.Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;     % set a timeout that is lager than a writing time
+            if sum(app.channelsData(:,2)) > 0
+                if app.CounterBaseSwitch.Value == 'Internal'
+                    % produce square pulses with ctr0, because PFI8 doesn't have a bnc connector
+                    cotask = NationalInstruments.DAQmx.Task;        % a task to generate quare pulses with 'pixFreq' and 'dutyCycle'
+                    counterClockChannelNumber = app.CounterGenerationChannelEditField.Value;
+                    cotask.COChannels.CreatePulseChannelFrequency(strcat(app.Dev, counterClockChannelNumber), '', NationalInstruments.DAQmx.COPulseFrequencyUnits.Hertz, NationalInstruments.DAQmx.COPulseIdleState.Low, 0, app.pixFreq, app.dutyCycle ); %delay, freq, dutycycle
+                    cotask.Timing.ConfigureImplicit(NationalInstruments.DAQmx.SampleQuantityMode.FiniteSamples,app.pixRep * app.numberOfPoints)
+                    cotask.Triggers.ArmStartTrigger.ConfigureDigitalEdgeTrigger(strcat(app.Dev,"ao/StartTrigger"),NationalInstruments.DAQmx.DigitalEdgeArmStartTriggerEdge.Rising);   % set a trigger. The generation starts when the output writer(galvos) start writing
+                switch counterClockChannelNumber        % depending on which counter system is used for the square pulses generation 
+                                                        % select a source 
+                                                        % terminal for
+                                                        % detector ctr
+                                                        % channels
+                                                        % 
+                    case "ctr0"
+                    app.counterGateTerminal = strcat(app.Dev,"PFI12"); 
+                    case "ctr1"
+                    app.counterGateTerminal = strcat(app.Dev,"PFI13");
+                    case "ctr2"
+                    app.counterGateTerminal = strcat(app.Dev,"PFI14");
+                    case "ctr3"
+                    app.counterGateTerminal = strcat(app.Dev,"PFI15");
+
+                end
+                citask = NationalInstruments.DAQmx.Task;        % task for width measurement of the square pulses generated by COtask
+                for i=1:app.NumberOfEnabledChannels
+                    
+                    if app.channelsData(i,2) == true
+                        CIch = citask.CIChannels.CreatePulseWidthChannel(strcat(app.Dev,app.counterChannelsInputFields(i).Value), '',0,2^32-1,NationalInstruments.DAQmx.CIPulseWidthStartingEdge.Rising,NationalInstruments.DAQmx.CIPulseWidthUnits.Ticks);
+                        % CIch = CItask.CIChannels.CreateCountEdgesChannel ('/Dev2/ctr2', 'CItask',CICountEdgesActiveEdge.Rising,int64(0),CICountEdgesCountDirection.Up);
+                        CIch.PulseWidthTerminal = app.counterGateTerminal;        % a terminal, where square pulses are produced by COtask
+                        switch app.counterChannelsInputFields(i).Value
+                            case "ctr0"
+                                CIch.CounterTimebaseSource = strcat(app.Dev,"PFI8");      % a terminal, where a detector is connected
+                            case "ctr1"
+                                CIch.CounterTimebaseSource = strcat(app.Dev,"PFI3");
+                            case "ctr2"
+                                CIch.CounterTimebaseSource = strcat(app.Dev,"PFI0");
+                            case "ctr3"
+                                CIch.CounterTimebaseSource = strcat(app.Dev,"PFI5");
+                        end
+                        
+                    end
+                end
+                    citask.Timing.ConfigureImplicit(NationalInstruments.DAQmx.SampleQuantityMode.FiniteSamples,app.pixRep*app.numberOfPoints);   % clock
+                    cireader = NationalInstruments.DAQmx.CounterReader(citask.Stream);       % start in the background: it doesn't start before COtask and AOtask
+                
+            end
+
+            end
+        end
+        
+        function results = readSettings(app)
+            app.calibration = str2double(app.ObjectiveDropDown.Value); %choose objective lens
+                app.scanXRange = app.ScanRangeXumEditField.Value; % x FoV, um
+                app.scanYRange = app.ScanRangeYumEditField.Value; % y FoV, um
+                app.scanStep =app.ScanResolutionumEditField.Value; % resolution, um
+                app.numberOfAccums =round( app.NumberOfAccumulationsEditField.Value); % number of frame repetitions
+                app.pixRepetition = app.PixelRepetitionEditField.Value;
+                app.xFoVCenter = app.FoVcenterXumEditField.Value;
+                app.yFoVCenter = app.FoVcenterYumEditField.Value;
+                
+                app.NumberOfEnabledChannels = app.NumberOfChannelsSlider.Value;
+                %             app.NumberOfChannelsSlider.Enable = false;
+                app.NumberOfChannelsSliderValueChanged(app)
+                app.NumberOfChannelsSlider.Enable = false;
+                app.Switch.Enable = false;
+                app.Dev = app.DeviceNameEditField.Value + "/";  
+                app.pixRep = app.PixelRepetitionEditField_2.Value;                
+                app.dwellTime = app.PixelDwellTimeusEditField.Value;
+                app.pixFreq = 1 / (app.dwellTime / 1000000 * 2);
+                app.numberOfPoints = (app.scanXRange / app.scanStep + 1)^2;
+                app.dutyCycle = app.DutyCycleEditField.Value;
+        end
     end
     methods (Access = public)
         
@@ -759,6 +876,7 @@ stage.SVO ( PIaxis, switchOn );
     end
     
 
+    % Callbacks that handle component events
     methods (Access = private)
 
         % Code that executes after component creation
@@ -775,6 +893,15 @@ stage.SVO ( PIaxis, switchOn );
             app.channelsData(1,1) = 1;
             value = app.TimeLagForPolarMotorsecEditField.Value;
             app.TimeLag = value;
+            % try loading DAQmx driver
+            fprintf('Starting up: loading DAQmx...\n')
+            try
+                NET.addAssembly('NationalInstruments.DAQmx');
+                import NationalInstruments.DAQmx.*
+                fprintf('Assembly successfully loaded!\n')
+            catch
+                error('Error loading .NET assembly! Check NIDAQmx .NET installation.')
+            end
         end
 
         % Button pushed function: InitializeButton
@@ -784,36 +911,33 @@ stage.SVO ( PIaxis, switchOn );
             try
                 app.displayFigure = figure('Name',app.MatMicroMain.Name,'NumberTitle','off');
                 setAxes(app,0.5)
-                app.calibration = str2double(app.ObjectiveDropDown.Value); %choose objective lens
-                app.scanXRange = app.ScanRangeXumEditField.Value; % x FoV, um
-                app.scanYRange = app.ScanRangeYumEditField.Value; % y FoV, um
-                app.scanStep =app.ScanResolutionumEditField.Value; % resolution, um
-                app.numberOfAccums =round( app.NumberOfAccumulationsEditField.Value); % number of frame repetitions
-                app.pixRepetition = app.PixelRepetitionEditField.Value;
-                app.xFoVCenter = app.FoVcenterXumEditField.Value;
-                app.yFoVCenter = app.FoVcenterYumEditField.Value;
-                
-                app.NumberOfEnabledChannels = app.NumberOfChannelsSlider.Value;
-                %             app.NumberOfChannelsSlider.Enable = false;
-                app.NumberOfChannelsSliderValueChanged(app)
-                app.NumberOfChannelsSlider.Enable = false;
-                app.Switch.Enable = false;
-                
+                app.readSettings()
                 app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter,app.pixRepetition);
                 
                 if app.SimulationmodeCheckBox.Value==false
-                    app.imSession = daq.createSession('ni');        % session which controls galvos and acquired the signal - used to acquire raster-scan images
-                    app.imSession.addAnalogOutputChannel(app.DeviceNameEditField.Value,'ao0', 'Voltage');      % galvo x
-                    app.imSession.addAnalogOutputChannel(app.DeviceNameEditField.Value,'ao1', 'Voltage');      % galvo y
-                    app.imSession.outputSingleScan([0 0])       % center galvos
-                    app.imSession.Rate = app.SessionUpdateRateHzEditField.Value;         % rate at which galvos behave fine
+                    
+                    % Load NIDAQmx .NET assembly
+                    printLogWindow(app,'Starting up: loading DAQmx...\n')
+                    try
+                        NET.addAssembly('NationalInstruments.DAQmx');
+                        import NationalInstruments.DAQmx.*
+                        app.I =import;
+                        printLogWindow(app,'Assembly successfully loaded!\n')
+                    catch
+                        printLogWindow(app,'Error loading .NET assembly! Check NIDAQmx .NET installation.')
+                    end
+                    [app.AOtask,app.AOwriter,~,~,~,~] = app.initChannels();
+
+                    analogChannels = []; counterChannels = [];
                     for channel=1:app.NumberOfEnabledChannels
                         if app.channelsData(channel,2) == false
                             chImPMT= addAnalogInputChannel(app.imSession,app.DeviceNameEditField.Value,app.analogChannelsInputFields(channel).Value,'Voltage');
                             chImPMT.TerminalConfig = app.analogChannelConnectionType(channel).Value; % type of voltage measurement - single ended. CRUTIAL
+                            analogChannels = [analogChannels,app.DeviceNameEditField.Value + app.analogChannelsInputFields(channel).Value];
                             printLogWindow(app,"Analog channel" + string(channel-1) + " is used")
                         else
                             addCounterInputChannel (app.imSession,app.DeviceNameEditField.Value,app.counterChannelsInputFields(channel).Value,'EdgeCount');
+                            counterChannels = [counterChannels,app.DeviceNameEditField.Value + app.counterChannelsInputFields(channel).Value];
                             printLogWindow(app,"Counter channel" + string(channel-1) + " is used")
                         end
                         app.digitalSwitches(channel).Enable = false;
@@ -1549,16 +1673,24 @@ stage.SVO ( PIaxis, switchOn );
                  printLogWindow(app, ME.message);
             end
         end
+
+        % Value changed function: CounterBaseSwitch
+        function CounterBaseSwitchValueChanged(app, event)
+%             value = app.CounterBaseSwitch.Value;
+            app.CounterTerminalForSquarePulseGenerationEditField.Enable =  ~app.CounterTerminalForSquarePulseGenerationEditField.Enable;
+            app.CounterTerminalForSquarePulseGenerationEditField.Enable =  ~app.CounterTerminalForSquarePulseGenerationEditField.Enable;
+            app.CounterGenerationChannelEditField.Enable = ~ app.CounterGenerationChannelEditField.Enable;
+        end
     end
 
-    % App initialization and construction
+    % Component initialization
     methods (Access = private)
 
         % Create UIFigure and components
         function createComponents(app)
 
-            % Create MatMicroMain
-            app.MatMicroMain = uifigure;
+            % Create MatMicroMain and hide until all components are created
+            app.MatMicroMain = uifigure('Visible', 'off');
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
@@ -1874,7 +2006,6 @@ stage.SVO ( PIaxis, switchOn );
 
             % Create UIAxes
             app.UIAxes = uiaxes(app.LiveTab);
-            title(app.UIAxes, '')
             xlabel(app.UIAxes, 'Channel')
             ylabel(app.UIAxes, 'Signal')
             app.UIAxes.XTick = [0 1 2 3];
@@ -2003,19 +2134,19 @@ stage.SVO ( PIaxis, switchOn );
             % Create DeviceNameEditField
             app.DeviceNameEditField = uieditfield(app.SettingsTab, 'text');
             app.DeviceNameEditField.Position = [773 437 100 22];
-            app.DeviceNameEditField.Value = 'Dev1';
+            app.DeviceNameEditField.Value = 'Dev2';
 
             % Create FirstChannelSettingsPanel
             app.FirstChannelSettingsPanel = uipanel(app.SettingsTab);
             app.FirstChannelSettingsPanel.AutoResizeChildren = 'off';
             app.FirstChannelSettingsPanel.Title = 'First Channel Settings';
-            app.FirstChannelSettingsPanel.Position = [18 264 1022 84];
+            app.FirstChannelSettingsPanel.Position = [18 264 684 84];
 
             % Create Switch
             app.Switch = uiswitch(app.FirstChannelSettingsPanel, 'slider');
             app.Switch.Items = {'Analog', 'Counter'};
             app.Switch.ValueChangedFcn = createCallbackFcn(app, @SwitchValueChanged, true);
-            app.Switch.Position = [425 40 45 20];
+            app.Switch.Position = [324 40 45 20];
             app.Switch.Value = 'Counter';
 
             % Create AnalogChannelInputDropDownLabel
@@ -2050,45 +2181,45 @@ stage.SVO ( PIaxis, switchOn );
             % Create CounterChannelInputDropDownLabel
             app.CounterChannelInputDropDownLabel = uilabel(app.FirstChannelSettingsPanel);
             app.CounterChannelInputDropDownLabel.HorizontalAlignment = 'right';
-            app.CounterChannelInputDropDownLabel.Position = [623 39 126 22];
+            app.CounterChannelInputDropDownLabel.Position = [441 39 126 22];
             app.CounterChannelInputDropDownLabel.Text = 'Counter Channel Input';
 
             % Create CounterChannelInputDropDown
             app.CounterChannelInputDropDown = uidropdown(app.FirstChannelSettingsPanel);
             app.CounterChannelInputDropDown.Items = {'ctr0', 'ctr1', 'ctr2', 'ctr3'};
-            app.CounterChannelInputDropDown.Position = [764 39 100 22];
-            app.CounterChannelInputDropDown.Value = 'ctr3';
+            app.CounterChannelInputDropDown.Position = [582 39 100 22];
+            app.CounterChannelInputDropDown.Value = 'ctr0';
 
             % Create minauEditFieldLabel
             app.minauEditFieldLabel = uilabel(app.FirstChannelSettingsPanel);
             app.minauEditFieldLabel.HorizontalAlignment = 'right';
-            app.minauEditFieldLabel.Position = [356 5 49 22];
+            app.minauEditFieldLabel.Position = [255 5 49 22];
             app.minauEditFieldLabel.Text = 'min, a.u';
 
             % Create minauEditField
             app.minauEditField = uieditfield(app.FirstChannelSettingsPanel, 'numeric');
             app.minauEditField.ValueChangedFcn = createCallbackFcn(app, @minauEditFieldValueChanged, true);
             app.minauEditField.Enable = 'off';
-            app.minauEditField.Position = [412 5 31 22];
+            app.minauEditField.Position = [311 5 31 22];
 
             % Create maxauEditFieldLabel
             app.maxauEditFieldLabel = uilabel(app.FirstChannelSettingsPanel);
             app.maxauEditFieldLabel.HorizontalAlignment = 'right';
-            app.maxauEditFieldLabel.Position = [449 5 54 22];
+            app.maxauEditFieldLabel.Position = [348 5 54 22];
             app.maxauEditFieldLabel.Text = 'max, a.u.';
 
             % Create maxauEditField
             app.maxauEditField = uieditfield(app.FirstChannelSettingsPanel, 'numeric');
             app.maxauEditField.ValueChangedFcn = createCallbackFcn(app, @maxauEditFieldValueChanged, true);
             app.maxauEditField.Enable = 'off';
-            app.maxauEditField.Position = [508 5 31 22];
+            app.maxauEditField.Position = [407 5 31 22];
             app.maxauEditField.Value = 10;
 
             % Create AutoscaleCheckBox
             app.AutoscaleCheckBox = uicheckbox(app.FirstChannelSettingsPanel);
             app.AutoscaleCheckBox.ValueChangedFcn = createCallbackFcn(app, @AutoscaleCheckBoxValueChanged, true);
             app.AutoscaleCheckBox.Text = 'Autoscale';
-            app.AutoscaleCheckBox.Position = [645 5 75 22];
+            app.AutoscaleCheckBox.Position = [463 5 75 22];
             app.AutoscaleCheckBox.Value = true;
 
             % Create NumberOfChannelsSliderLabel
@@ -2103,20 +2234,20 @@ stage.SVO ( PIaxis, switchOn );
             app.NumberOfChannelsSlider.MajorTicks = [1 2 3 4];
             app.NumberOfChannelsSlider.ValueChangedFcn = createCallbackFcn(app, @NumberOfChannelsSliderValueChanged, true);
             app.NumberOfChannelsSlider.MinorTicks = [];
-            app.NumberOfChannelsSlider.Position = [175 398 150 3];
+            app.NumberOfChannelsSlider.Position = [169 399 57 3];
             app.NumberOfChannelsSlider.Value = 2;
 
             % Create SecondChannelSettingsPanel
             app.SecondChannelSettingsPanel = uipanel(app.SettingsTab);
             app.SecondChannelSettingsPanel.AutoResizeChildren = 'off';
             app.SecondChannelSettingsPanel.Title = 'Second Channel Settings';
-            app.SecondChannelSettingsPanel.Position = [18 181 1022 84];
+            app.SecondChannelSettingsPanel.Position = [18 181 684 84];
 
             % Create Switch_2
             app.Switch_2 = uiswitch(app.SecondChannelSettingsPanel, 'slider');
             app.Switch_2.Items = {'Analog', 'Counter'};
             app.Switch_2.ValueChangedFcn = createCallbackFcn(app, @Switch_2ValueChanged, true);
-            app.Switch_2.Position = [426 40 45 20];
+            app.Switch_2.Position = [326 40 45 20];
             app.Switch_2.Value = 'Counter';
 
             % Create AnalogChannelInputDropDown_2Label
@@ -2151,58 +2282,58 @@ stage.SVO ( PIaxis, switchOn );
             % Create CounterChannelInputDropDown_2Label
             app.CounterChannelInputDropDown_2Label = uilabel(app.SecondChannelSettingsPanel);
             app.CounterChannelInputDropDown_2Label.HorizontalAlignment = 'right';
-            app.CounterChannelInputDropDown_2Label.Position = [623 39 126 22];
+            app.CounterChannelInputDropDown_2Label.Position = [443 39 126 22];
             app.CounterChannelInputDropDown_2Label.Text = 'Counter Channel Input';
 
             % Create CounterChannelInputDropDown_2
             app.CounterChannelInputDropDown_2 = uidropdown(app.SecondChannelSettingsPanel);
             app.CounterChannelInputDropDown_2.Items = {'ctr0', 'ctr1', 'ctr2', 'ctr3'};
-            app.CounterChannelInputDropDown_2.Position = [764 39 100 22];
-            app.CounterChannelInputDropDown_2.Value = 'ctr2';
+            app.CounterChannelInputDropDown_2.Position = [584 39 100 22];
+            app.CounterChannelInputDropDown_2.Value = 'ctr1';
 
             % Create maxauEditField_2Label
             app.maxauEditField_2Label = uilabel(app.SecondChannelSettingsPanel);
             app.maxauEditField_2Label.HorizontalAlignment = 'right';
-            app.maxauEditField_2Label.Position = [449 5 54 22];
+            app.maxauEditField_2Label.Position = [349 5 54 22];
             app.maxauEditField_2Label.Text = 'max, a.u.';
 
             % Create maxauEditField_2
             app.maxauEditField_2 = uieditfield(app.SecondChannelSettingsPanel, 'numeric');
             app.maxauEditField_2.ValueChangedFcn = createCallbackFcn(app, @maxauEditField_2ValueChanged, true);
             app.maxauEditField_2.Enable = 'off';
-            app.maxauEditField_2.Position = [508 5 31 22];
+            app.maxauEditField_2.Position = [408 5 31 22];
             app.maxauEditField_2.Value = 10;
 
             % Create minauEditField_2Label
             app.minauEditField_2Label = uilabel(app.SecondChannelSettingsPanel);
             app.minauEditField_2Label.HorizontalAlignment = 'right';
-            app.minauEditField_2Label.Position = [356 5 49 22];
+            app.minauEditField_2Label.Position = [256 5 49 22];
             app.minauEditField_2Label.Text = 'min, a.u';
 
             % Create minauEditField_2
             app.minauEditField_2 = uieditfield(app.SecondChannelSettingsPanel, 'numeric');
             app.minauEditField_2.ValueChangedFcn = createCallbackFcn(app, @minauEditField_2ValueChanged, true);
             app.minauEditField_2.Enable = 'off';
-            app.minauEditField_2.Position = [412 5 31 22];
+            app.minauEditField_2.Position = [312 5 31 22];
 
             % Create AutoscaleCheckBox_2
             app.AutoscaleCheckBox_2 = uicheckbox(app.SecondChannelSettingsPanel);
             app.AutoscaleCheckBox_2.ValueChangedFcn = createCallbackFcn(app, @AutoscaleCheckBox_2ValueChanged, true);
             app.AutoscaleCheckBox_2.Text = 'Autoscale';
-            app.AutoscaleCheckBox_2.Position = [646 5 75 22];
+            app.AutoscaleCheckBox_2.Position = [466 5 75 22];
             app.AutoscaleCheckBox_2.Value = true;
 
             % Create ThirdChannelSettingsPanel
             app.ThirdChannelSettingsPanel = uipanel(app.SettingsTab);
             app.ThirdChannelSettingsPanel.AutoResizeChildren = 'off';
             app.ThirdChannelSettingsPanel.Title = 'Third Channel Settings';
-            app.ThirdChannelSettingsPanel.Position = [18 98 1022 84];
+            app.ThirdChannelSettingsPanel.Position = [18 98 684 84];
 
             % Create Switch_3
             app.Switch_3 = uiswitch(app.ThirdChannelSettingsPanel, 'slider');
             app.Switch_3.Items = {'Analog', 'Counter'};
             app.Switch_3.ValueChangedFcn = createCallbackFcn(app, @Switch_3ValueChanged, true);
-            app.Switch_3.Position = [426 40 45 20];
+            app.Switch_3.Position = [326 40 45 20];
             app.Switch_3.Value = 'Counter';
 
             % Create AnalogChannelInputDropDown_3Label
@@ -2237,58 +2368,58 @@ stage.SVO ( PIaxis, switchOn );
             % Create CounterChannelInputDropDown_3Label
             app.CounterChannelInputDropDown_3Label = uilabel(app.ThirdChannelSettingsPanel);
             app.CounterChannelInputDropDown_3Label.HorizontalAlignment = 'right';
-            app.CounterChannelInputDropDown_3Label.Position = [623 39 126 22];
+            app.CounterChannelInputDropDown_3Label.Position = [443 39 126 22];
             app.CounterChannelInputDropDown_3Label.Text = 'Counter Channel Input';
 
             % Create CounterChannelInputDropDown_3
             app.CounterChannelInputDropDown_3 = uidropdown(app.ThirdChannelSettingsPanel);
             app.CounterChannelInputDropDown_3.Items = {'ctr0', 'ctr1', 'ctr2', 'ctr3'};
-            app.CounterChannelInputDropDown_3.Position = [764 39 100 22];
-            app.CounterChannelInputDropDown_3.Value = 'ctr1';
+            app.CounterChannelInputDropDown_3.Position = [584 39 100 22];
+            app.CounterChannelInputDropDown_3.Value = 'ctr2';
 
             % Create maxauEditField_3Label
             app.maxauEditField_3Label = uilabel(app.ThirdChannelSettingsPanel);
             app.maxauEditField_3Label.HorizontalAlignment = 'right';
-            app.maxauEditField_3Label.Position = [449 5 54 22];
+            app.maxauEditField_3Label.Position = [349 5 54 22];
             app.maxauEditField_3Label.Text = 'max, a.u.';
 
             % Create maxauEditField_3
             app.maxauEditField_3 = uieditfield(app.ThirdChannelSettingsPanel, 'numeric');
             app.maxauEditField_3.ValueChangedFcn = createCallbackFcn(app, @maxauEditField_3ValueChanged, true);
             app.maxauEditField_3.Enable = 'off';
-            app.maxauEditField_3.Position = [508 5 31 22];
+            app.maxauEditField_3.Position = [408 5 31 22];
             app.maxauEditField_3.Value = 10;
 
             % Create minauEditField_3Label
             app.minauEditField_3Label = uilabel(app.ThirdChannelSettingsPanel);
             app.minauEditField_3Label.HorizontalAlignment = 'right';
-            app.minauEditField_3Label.Position = [356 5 49 22];
+            app.minauEditField_3Label.Position = [256 5 49 22];
             app.minauEditField_3Label.Text = 'min, a.u';
 
             % Create minauEditField_3
             app.minauEditField_3 = uieditfield(app.ThirdChannelSettingsPanel, 'numeric');
             app.minauEditField_3.ValueChangedFcn = createCallbackFcn(app, @minauEditField_3ValueChanged, true);
             app.minauEditField_3.Enable = 'off';
-            app.minauEditField_3.Position = [412 5 31 22];
+            app.minauEditField_3.Position = [312 5 31 22];
 
             % Create AutoscaleCheckBox_3
             app.AutoscaleCheckBox_3 = uicheckbox(app.ThirdChannelSettingsPanel);
             app.AutoscaleCheckBox_3.ValueChangedFcn = createCallbackFcn(app, @AutoscaleCheckBox_3ValueChanged, true);
             app.AutoscaleCheckBox_3.Text = 'Autoscale';
-            app.AutoscaleCheckBox_3.Position = [646 5 75 22];
+            app.AutoscaleCheckBox_3.Position = [466 5 75 22];
             app.AutoscaleCheckBox_3.Value = true;
 
             % Create FourthChannelSettingsPanel
             app.FourthChannelSettingsPanel = uipanel(app.SettingsTab);
             app.FourthChannelSettingsPanel.AutoResizeChildren = 'off';
             app.FourthChannelSettingsPanel.Title = 'Fourth Channel Settings';
-            app.FourthChannelSettingsPanel.Position = [18 16 1022 84];
+            app.FourthChannelSettingsPanel.Position = [18 16 684 84];
 
             % Create Switch_4
             app.Switch_4 = uiswitch(app.FourthChannelSettingsPanel, 'slider');
             app.Switch_4.Items = {'Analog', 'Counter'};
             app.Switch_4.ValueChangedFcn = createCallbackFcn(app, @Switch_4ValueChanged, true);
-            app.Switch_4.Position = [426 40 45 20];
+            app.Switch_4.Position = [326 40 45 20];
             app.Switch_4.Value = 'Counter';
 
             % Create AnalogChannelInputDropDown_4Label
@@ -2323,45 +2454,45 @@ stage.SVO ( PIaxis, switchOn );
             % Create CounterChannelInputDropDown_4Label
             app.CounterChannelInputDropDown_4Label = uilabel(app.FourthChannelSettingsPanel);
             app.CounterChannelInputDropDown_4Label.HorizontalAlignment = 'right';
-            app.CounterChannelInputDropDown_4Label.Position = [623 39 126 22];
+            app.CounterChannelInputDropDown_4Label.Position = [443 39 126 22];
             app.CounterChannelInputDropDown_4Label.Text = 'Counter Channel Input';
 
             % Create CounterChannelInputDropDown_4
             app.CounterChannelInputDropDown_4 = uidropdown(app.FourthChannelSettingsPanel);
             app.CounterChannelInputDropDown_4.Items = {'ctr0', 'ctr1', 'ctr2', 'ctr3'};
-            app.CounterChannelInputDropDown_4.Position = [764 39 100 22];
-            app.CounterChannelInputDropDown_4.Value = 'ctr0';
+            app.CounterChannelInputDropDown_4.Position = [584 39 100 22];
+            app.CounterChannelInputDropDown_4.Value = 'ctr3';
 
             % Create maxauEditField_4Label
             app.maxauEditField_4Label = uilabel(app.FourthChannelSettingsPanel);
             app.maxauEditField_4Label.HorizontalAlignment = 'right';
-            app.maxauEditField_4Label.Position = [449 5 54 22];
+            app.maxauEditField_4Label.Position = [349 5 54 22];
             app.maxauEditField_4Label.Text = 'max, a.u.';
 
             % Create maxauEditField_4
             app.maxauEditField_4 = uieditfield(app.FourthChannelSettingsPanel, 'numeric');
             app.maxauEditField_4.ValueChangedFcn = createCallbackFcn(app, @maxauEditField_4ValueChanged, true);
             app.maxauEditField_4.Enable = 'off';
-            app.maxauEditField_4.Position = [508 5 31 22];
+            app.maxauEditField_4.Position = [408 5 31 22];
             app.maxauEditField_4.Value = 10;
 
             % Create minauEditField_4Label
             app.minauEditField_4Label = uilabel(app.FourthChannelSettingsPanel);
             app.minauEditField_4Label.HorizontalAlignment = 'right';
-            app.minauEditField_4Label.Position = [356 5 49 22];
+            app.minauEditField_4Label.Position = [256 5 49 22];
             app.minauEditField_4Label.Text = 'min, a.u';
 
             % Create minauEditField_4
             app.minauEditField_4 = uieditfield(app.FourthChannelSettingsPanel, 'numeric');
             app.minauEditField_4.ValueChangedFcn = createCallbackFcn(app, @minauEditField_4ValueChanged, true);
             app.minauEditField_4.Enable = 'off';
-            app.minauEditField_4.Position = [412 5 31 22];
+            app.minauEditField_4.Position = [312 5 31 22];
 
             % Create AutoscaleCheckBox_4
             app.AutoscaleCheckBox_4 = uicheckbox(app.FourthChannelSettingsPanel);
             app.AutoscaleCheckBox_4.ValueChangedFcn = createCallbackFcn(app, @AutoscaleCheckBox_4ValueChanged, true);
             app.AutoscaleCheckBox_4.Text = 'Autoscale';
-            app.AutoscaleCheckBox_4.Position = [646 5 75 22];
+            app.AutoscaleCheckBox_4.Position = [466 5 75 22];
             app.AutoscaleCheckBox_4.Value = true;
 
             % Create PolarMotorPortEditFieldLabel
@@ -2387,6 +2518,81 @@ stage.SVO ( PIaxis, switchOn );
             app.TimeLagForPolarMotorsecEditField.Position = [990 399 50 22];
             app.TimeLagForPolarMotorsecEditField.Value = 3;
 
+            % Create CounterBaseSwitchLabel
+            app.CounterBaseSwitchLabel = uilabel(app.SettingsTab);
+            app.CounterBaseSwitchLabel.HorizontalAlignment = 'center';
+            app.CounterBaseSwitchLabel.Position = [713 220 79 22];
+            app.CounterBaseSwitchLabel.Text = 'Counter Base';
+
+            % Create CounterBaseSwitch
+            app.CounterBaseSwitch = uiswitch(app.SettingsTab, 'slider');
+            app.CounterBaseSwitch.Items = {'Internal', 'External'};
+            app.CounterBaseSwitch.Orientation = 'vertical';
+            app.CounterBaseSwitch.ValueChangedFcn = createCallbackFcn(app, @CounterBaseSwitchValueChanged, true);
+            app.CounterBaseSwitch.Position = [748 257 12 27];
+            app.CounterBaseSwitch.Value = 'Internal';
+
+            % Create CounterTerminalForSquarePulseGenerationLabel
+            app.CounterTerminalForSquarePulseGenerationLabel = uilabel(app.SettingsTab);
+            app.CounterTerminalForSquarePulseGenerationLabel.HorizontalAlignment = 'right';
+            app.CounterTerminalForSquarePulseGenerationLabel.Enable = 'off';
+            app.CounterTerminalForSquarePulseGenerationLabel.Position = [791 290 140 28];
+            app.CounterTerminalForSquarePulseGenerationLabel.Text = {'Counter Terminal For '; 'Square Pulse Generation'};
+
+            % Create CounterTerminalForSquarePulseGenerationEditField
+            app.CounterTerminalForSquarePulseGenerationEditField = uieditfield(app.SettingsTab, 'text');
+            app.CounterTerminalForSquarePulseGenerationEditField.Enable = 'off';
+            app.CounterTerminalForSquarePulseGenerationEditField.Position = [950 296 100 22];
+            app.CounterTerminalForSquarePulseGenerationEditField.Value = 'PFI15';
+
+            % Create DutyCycleEditFieldLabel
+            app.DutyCycleEditFieldLabel = uilabel(app.SettingsTab);
+            app.DutyCycleEditFieldLabel.HorizontalAlignment = 'right';
+            app.DutyCycleEditFieldLabel.Position = [723 326 64 22];
+            app.DutyCycleEditFieldLabel.Text = 'Duty Cycle';
+
+            % Create DutyCycleEditField
+            app.DutyCycleEditField = uieditfield(app.SettingsTab, 'numeric');
+            app.DutyCycleEditField.Position = [802 326 30 22];
+            app.DutyCycleEditField.Value = 0.9;
+
+            % Create CounterGenerationChannelEditFieldLabel
+            app.CounterGenerationChannelEditFieldLabel = uilabel(app.SettingsTab);
+            app.CounterGenerationChannelEditFieldLabel.HorizontalAlignment = 'right';
+            app.CounterGenerationChannelEditFieldLabel.Position = [800 207 65 42];
+            app.CounterGenerationChannelEditFieldLabel.Text = {'Counter '; 'Generation'; 'Channel'};
+
+            % Create CounterGenerationChannelEditField
+            app.CounterGenerationChannelEditField = uieditfield(app.SettingsTab, 'text');
+            app.CounterGenerationChannelEditField.Position = [880 227 100 22];
+            app.CounterGenerationChannelEditField.Value = 'ctr3';
+
+            % Create PixelDwellTimeusEditFieldLabel
+            app.PixelDwellTimeusEditFieldLabel = uilabel(app.SettingsTab);
+            app.PixelDwellTimeusEditFieldLabel.HorizontalAlignment = 'right';
+            app.PixelDwellTimeusEditFieldLabel.Position = [785 154 114 22];
+            app.PixelDwellTimeusEditFieldLabel.Text = 'Pixel Dwell Time, us';
+
+            % Create PixelDwellTimeusEditField
+            app.PixelDwellTimeusEditField = uieditfield(app.SettingsTab, 'numeric');
+            app.PixelDwellTimeusEditField.Limits = [0 Inf];
+            app.PixelDwellTimeusEditField.Position = [903 154 35 22];
+            app.PixelDwellTimeusEditField.Value = 20;
+
+            % Create PixelRepetitionEditField_2Label
+            app.PixelRepetitionEditField_2Label = uilabel(app.SettingsTab);
+            app.PixelRepetitionEditField_2Label.HorizontalAlignment = 'right';
+            app.PixelRepetitionEditField_2Label.Position = [831 116 89 22];
+            app.PixelRepetitionEditField_2Label.Text = 'Pixel Repetition';
+
+            % Create PixelRepetitionEditField_2
+            app.PixelRepetitionEditField_2 = uieditfield(app.SettingsTab, 'numeric');
+            app.PixelRepetitionEditField_2.Limits = [1 Inf];
+            app.PixelRepetitionEditField_2.RoundFractionalValues = 'on';
+            app.PixelRepetitionEditField_2.ValueDisplayFormat = '%.0f';
+            app.PixelRepetitionEditField_2.Position = [935 116 34 22];
+            app.PixelRepetitionEditField_2.Value = 2;
+
             % Create SavingSettingsTab
             app.SavingSettingsTab = uitab(app.TabGroup);
             app.SavingSettingsTab.AutoResizeChildren = 'off';
@@ -2401,7 +2607,7 @@ stage.SVO ( PIaxis, switchOn );
             % Create SavingfolderEditField
             app.SavingfolderEditField = uieditfield(app.SavingSettingsTab, 'text');
             app.SavingfolderEditField.Position = [91 444 483 22];
-            app.SavingfolderEditField.Value = 'c:\test folder\';
+            app.SavingfolderEditField.Value = '\\NIMBUS\mosaic-sb\Nora\';
 
             % Create FilenameCommentEditFieldLabel
             app.FilenameCommentEditFieldLabel = uilabel(app.SavingSettingsTab);
@@ -2412,11 +2618,19 @@ stage.SVO ( PIaxis, switchOn );
             % Create FilenameCommentEditField
             app.FilenameCommentEditField = uieditfield(app.SavingSettingsTab, 'text');
             app.FilenameCommentEditField.Position = [133 410 441 22];
-            app.FilenameCommentEditField.Value = '_cornstarch';
+            app.FilenameCommentEditField.Value = '_';
 
             % Create DelaylineTab
             app.DelaylineTab = uitab(app.TabGroup);
             app.DelaylineTab.Title = 'Delay line';
+
+            % Create UIAxes2
+            app.UIAxes2 = uiaxes(app.DelaylineTab);
+            title(app.UIAxes2, 'Title')
+            xlabel(app.UIAxes2, 'X')
+            ylabel(app.UIAxes2, 'Y')
+            app.UIAxes2.XTick = [0 0.1 0.2 0.4 0.6 0.8 1];
+            app.UIAxes2.Position = [692 41 300 185];
 
             % Create DelayLineConnectionPanel
             app.DelayLineConnectionPanel = uipanel(app.DelaylineTab);
@@ -2497,14 +2711,6 @@ stage.SVO ( PIaxis, switchOn );
             app.ScandelayButton.ButtonPushedFcn = createCallbackFcn(app, @ScandelayButtonPushed, true);
             app.ScandelayButton.Position = [603 256 100 22];
             app.ScandelayButton.Text = 'Scan delay';
-
-            % Create UIAxes2
-            app.UIAxes2 = uiaxes(app.DelaylineTab);
-            title(app.UIAxes2, 'Title')
-            xlabel(app.UIAxes2, 'X')
-            ylabel(app.UIAxes2, 'Y')
-            app.UIAxes2.XTick = [0 0.1 0.2 0.4 0.6 0.8 1];
-            app.UIAxes2.Position = [692 41 300 185];
 
             % Create OffsetmmEditFieldLabel
             app.OffsetmmEditFieldLabel = uilabel(app.DelaylineTab);
@@ -2648,15 +2854,19 @@ stage.SVO ( PIaxis, switchOn );
             app.LogTextArea = uitextarea(app.MatMicroMain);
             app.LogTextArea.Editable = 'off';
             app.LogTextArea.Position = [50 15 1001 103];
+
+            % Show the figure after all components are created
+            app.MatMicroMain.Visible = 'on';
         end
     end
 
+    % App creation and deletion
     methods (Access = public)
 
         % Construct app
-        function app = microMOSAIC
+        function app = microMOSAICdotNET
 
-            % Create and configure components
+            % Create UIFigure and components
             createComponents(app)
 
             % Register the app with App Designer
