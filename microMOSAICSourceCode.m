@@ -229,6 +229,8 @@ classdef microMOSAIC < matlab.apps.AppBase
         stagePIFOC;
         
         PIFOCaxis % Description
+        axxx % Description
+        liveFig % Description
     end
     
     methods (Access = private)
@@ -313,7 +315,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             
             for images=1:accumulation
                 app.imSession.outputSingleScan([coordPoints(1,1) coordPoints(1,2)])     % if there is a time lag, this should account for it
-                app.imSession.queueOutputData([coordPoints(:,1) coordPoints(:,2)]);         % send data to the DAQ card
+                app.imSession.queueOutputData([coordPoints(:,2) coordPoints(:,1)]);         % send data to the DAQ card
                 if sum(app.channelsData(1:app.NumberOfEnabledChannels,2))>0
                     resetCounters(app.imSession)
                 end
@@ -325,7 +327,7 @@ classdef microMOSAIC < matlab.apps.AppBase
                         buf2 = [buf(1,channel); buf(1,channel) + diff(buf(:,channel))];                       
                         if pixRep>1
                             buf2 = downSampleImage(app,buf2,pixRep);
-                        end
+                         end
 
                     else
                         if pixRep>1
@@ -1290,9 +1292,15 @@ stage.SVO ( PIaxis, switchOn );
                     app.imSession.outputSingleScan([optimizationPoint(1) optimizationPoint(2)])                    
                 end
             end
+            longData = [];
+            app.liveFig = figure;
+                    liveAx = axes(app.liveFig);
             while value == true
                 %                 app.imSession.queueOutputData([queueCoordX,queueCoordY]);
                 %                 app.imSession.prepare()
+%                 if (~ishandle(app.liveFig))|(~exist(app.liveFig))
+                    
+%                 end
                 
                 value = app.StartLiveButton.Value;
                 if value == false
@@ -1313,12 +1321,20 @@ stage.SVO ( PIaxis, switchOn );
                     %                         data(channel,1) = mean(buf);properties
                     %                     end
                     %                 end
+                    longData = [longData data];
                     if app.AutoscaleCheckBox_5.Value == true
                         ylim(app.UIAxes,[min(data)-0.1 max(data)+0.1]);
-                        bar(app.UIAxes, data);drawnow;
+                        bar(app.UIAxes, data);
+                        plot(liveAx,longData)
+                        drawnow;
+                        
                     else
                         ylim(app.UIAxes,[app.MinEditField.Value app.MaxEditField.Value]);
-                        bar(app.UIAxes, data);drawnow;
+                        ylim(liveAx,[app.MinEditField.Value app.MaxEditField.Value]);
+                        bar(app.UIAxes, data);
+                        
+                        plot(liveAx);
+                        drawnow;
                     end
                     
                     pause(app.FasterSlider.Value/1000);
@@ -1434,7 +1450,7 @@ stage.SVO ( PIaxis, switchOn );
         function ScandelayButtonPushed(app, event)
             %% Pulse overlap for CARS signal
             printLogWindow(app, "Scanning the delay");    
-            Offset =45.434999999999600;%mm 20x 0.7 LWD SLM, 1:3 Telescope Oil reference
+            Offset =app.OffsetmmEditField.Value;%mm 20x 0.7 LWD SLM, 1:3 Telescope Oil reference
             % Offset = 45.432499999998580; %mm 20x 0.7 LWD SLM, 1:3 Telescope, SpCOil
             % Offset =45.602499999992550;%mm 20x 0.7 LWD NO 1:3 telescope no SLM
             % Offset = 45.692499999999140; % Leaf fresh low
@@ -1452,7 +1468,8 @@ stage.SVO ( PIaxis, switchOn );
             sessionPulseOver.Rate = 1250000; sessionPulseOver.DurationInSeconds = 0.1;
             chNo=0; %channel number for analog inpupt - PMT
             chPMT=addAnalogInputChannel(sessionPulseOver,'Dev1',app.ChannelEditField.Value,'Voltage');
-            chPMT.TerminalConfig = 'SingleEnded'; % type of voltage measurement. CRUTIAL                  
+            chPMT.TerminalConfig = 'SingleEnded'; % type of voltage measurement. CRUTIAL   
+            f = figure(); app.axxx = axes(f);
             while (position)<=(Offset+Range/2)
                 app.stage.MOV(app.PIaxis,position);
                 while(app.stage.IsMoving==true)
@@ -1466,9 +1483,10 @@ stage.SVO ( PIaxis, switchOn );
                 position = position + Step; counter = counter + 1;
                 
             end
-            app.UIAxes2.XTick = [Offset-Range/2:Range /9: Offset+Range/2];
-            app.UIAxes2.XTickLabelRotation = 90;
-            plot(app.UIAxes2, data(1,:), data(2,:))
+            app.axxx.XTick = [Offset-Range/2:Range /9: Offset+Range/2];
+            app.axxx.XTickLabelRotation = 90;
+            
+            plot(app.axxx, data(1,:), data(2,:))
             app.stage.MOV(app.PIaxis,Offset);
 %             styleDelay = '%f\t%f\n';
             sessionPulseOver.release;
@@ -1549,6 +1567,12 @@ stage.SVO ( PIaxis, switchOn );
                  printLogWindow(app, ME.message);
             end
         end
+
+        % Value changed function: ObjectiveDropDown
+        function ObjectiveDropDownValueChanged(app, event)
+            value = app.ObjectiveDropDown.Value;
+            app.calibration = str2double(app.ObjectiveDropDown.Value); %choose objective lens
+        end
     end
 
     % App initialization and construction
@@ -1562,7 +1586,7 @@ stage.SVO ( PIaxis, switchOn );
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.805';
+            app.MatMicroMain.Name = 'microMOSAIC v0.806';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -1676,7 +1700,7 @@ stage.SVO ( PIaxis, switchOn );
             app.InitializePolarMotorButton = uibutton(app.PolarPanel, 'push');
             app.InitializePolarMotorButton.ButtonPushedFcn = createCallbackFcn(app, @InitializePolarMotorButtonPushed, true);
             app.InitializePolarMotorButton.Enable = 'off';
-            app.InitializePolarMotorButton.Position = [4.5 212 124 22];
+            app.InitializePolarMotorButton.Position = [5 212 124 22];
             app.InitializePolarMotorButton.Text = 'Initialize Polar Motor';
 
             % Create CurrentAngledegrGaugeLabel
@@ -1719,7 +1743,7 @@ stage.SVO ( PIaxis, switchOn );
             app.TakePolarStackButton = uibutton(app.PolarPanel, 'push');
             app.TakePolarStackButton.ButtonPushedFcn = createCallbackFcn(app, @TakePolarStackButtonPushed, true);
             app.TakePolarStackButton.Enable = 'off';
-            app.TakePolarStackButton.Position = [176.5 164 77 62];
+            app.TakePolarStackButton.Position = [177 164 77 62];
             app.TakePolarStackButton.Text = {'Take '; 'Polar Stack'};
 
             % Create StepAngledegrEditFieldLabel
@@ -1791,7 +1815,7 @@ stage.SVO ( PIaxis, switchOn );
             % Create ChannelDropDownLabel
             app.ChannelDropDownLabel = uilabel(app.ZoomPanel);
             app.ChannelDropDownLabel.HorizontalAlignment = 'right';
-            app.ChannelDropDownLabel.Position = [0 4 50 22];
+            app.ChannelDropDownLabel.Position = [1 4 50 22];
             app.ChannelDropDownLabel.Text = 'Channel';
 
             % Create ChannelDropDown
@@ -1822,7 +1846,7 @@ stage.SVO ( PIaxis, switchOn );
             % Create StartingZumEditFieldLabel
             app.StartingZumEditFieldLabel = uilabel(app.ZstackPanel);
             app.StartingZumEditFieldLabel.HorizontalAlignment = 'right';
-            app.StartingZumEditFieldLabel.Position = [0 164 81 22];
+            app.StartingZumEditFieldLabel.Position = [1 164 81 22];
             app.StartingZumEditFieldLabel.Text = 'Starting Z, um';
 
             % Create StartingZumEditField
@@ -1977,8 +2001,9 @@ stage.SVO ( PIaxis, switchOn );
             app.ObjectiveDropDown = uidropdown(app.SettingsTab);
             app.ObjectiveDropDown.Items = {'Nikon 20X NA0.75 (room134b)', 'Nikon 40X NA1.15 (room134b)', 'Nikon 20X NA0.7 (room134b)', 'Nikon 40X NA1.15 (room 22)'};
             app.ObjectiveDropDown.ItemsData = {'0.00484', '0.00968', '0.00462', '0.0220', ''};
+            app.ObjectiveDropDown.ValueChangedFcn = createCallbackFcn(app, @ObjectiveDropDownValueChanged, true);
             app.ObjectiveDropDown.Position = [85 437 197 22];
-            app.ObjectiveDropDown.Value = '0.0220';
+            app.ObjectiveDropDown.Value = '0.00484';
 
             % Create SessionUpdateRateHzEditFieldLabel
             app.SessionUpdateRateHzEditFieldLabel = uilabel(app.SettingsTab);
@@ -1992,7 +2017,7 @@ stage.SVO ( PIaxis, switchOn );
             app.SessionUpdateRateHzEditField.ValueDisplayFormat = '%.0f';
             app.SessionUpdateRateHzEditField.ValueChangedFcn = createCallbackFcn(app, @SessionUpdateRateHzEditFieldValueChanged, true);
             app.SessionUpdateRateHzEditField.Position = [578 437 100 22];
-            app.SessionUpdateRateHzEditField.Value = 50000;
+            app.SessionUpdateRateHzEditField.Value = 250000;
 
             % Create DeviceNameEditFieldLabel
             app.DeviceNameEditFieldLabel = uilabel(app.SettingsTab);
@@ -2016,7 +2041,7 @@ stage.SVO ( PIaxis, switchOn );
             app.Switch.Items = {'Analog', 'Counter'};
             app.Switch.ValueChangedFcn = createCallbackFcn(app, @SwitchValueChanged, true);
             app.Switch.Position = [425 40 45 20];
-            app.Switch.Value = 'Counter';
+            app.Switch.Value = 'Analog';
 
             % Create AnalogChannelInputDropDownLabel
             app.AnalogChannelInputDropDownLabel = uilabel(app.FirstChannelSettingsPanel);
@@ -2041,11 +2066,11 @@ stage.SVO ( PIaxis, switchOn );
 
             % Create ConnectiontypeDropDown
             app.ConnectiontypeDropDown = uidropdown(app.FirstChannelSettingsPanel);
-            app.ConnectiontypeDropDown.Items = {'Single Ended (RSE)'};
-            app.ConnectiontypeDropDown.ItemsData = {'SingleEnded'};
+            app.ConnectiontypeDropDown.Items = {'Single Ended (RSE)', 'Differential'};
+            app.ConnectiontypeDropDown.ItemsData = {'SingleEnded', 'Differential'};
             app.ConnectiontypeDropDown.Enable = 'off';
             app.ConnectiontypeDropDown.Position = [110 35 142 22];
-            app.ConnectiontypeDropDown.Value = 'SingleEnded';
+            app.ConnectiontypeDropDown.Value = 'Differential';
 
             % Create CounterChannelInputDropDownLabel
             app.CounterChannelInputDropDownLabel = uilabel(app.FirstChannelSettingsPanel);
@@ -2103,8 +2128,8 @@ stage.SVO ( PIaxis, switchOn );
             app.NumberOfChannelsSlider.MajorTicks = [1 2 3 4];
             app.NumberOfChannelsSlider.ValueChangedFcn = createCallbackFcn(app, @NumberOfChannelsSliderValueChanged, true);
             app.NumberOfChannelsSlider.MinorTicks = [];
-            app.NumberOfChannelsSlider.Position = [175 398 150 3];
-            app.NumberOfChannelsSlider.Value = 2;
+            app.NumberOfChannelsSlider.Position = [169 399 150 3];
+            app.NumberOfChannelsSlider.Value = 1;
 
             % Create SecondChannelSettingsPanel
             app.SecondChannelSettingsPanel = uipanel(app.SettingsTab);
@@ -2401,7 +2426,7 @@ stage.SVO ( PIaxis, switchOn );
             % Create SavingfolderEditField
             app.SavingfolderEditField = uieditfield(app.SavingSettingsTab, 'text');
             app.SavingfolderEditField.Position = [91 444 483 22];
-            app.SavingfolderEditField.Value = 'c:\test folder\';
+            app.SavingfolderEditField.Value = 'c:\Users\mosaic\Documents\images\';
 
             % Create FilenameCommentEditFieldLabel
             app.FilenameCommentEditFieldLabel = uilabel(app.SavingSettingsTab);
@@ -2412,7 +2437,7 @@ stage.SVO ( PIaxis, switchOn );
             % Create FilenameCommentEditField
             app.FilenameCommentEditField = uieditfield(app.SavingSettingsTab, 'text');
             app.FilenameCommentEditField.Position = [133 410 441 22];
-            app.FilenameCommentEditField.Value = '_cornstarch';
+            app.FilenameCommentEditField.Value = '_';
 
             % Create DelaylineTab
             app.DelaylineTab = uitab(app.TabGroup);
