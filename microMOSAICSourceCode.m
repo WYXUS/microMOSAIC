@@ -241,41 +241,41 @@ classdef microMOSAIC < matlab.apps.AppBase
             size=int16(sqrt(length(buf(:,1)) / app.pixRepetition));
             signal = zeros(size,size,app.NumberOfEnabledChannels);
             
-                
-                for channel=1:app.NumberOfEnabledChannels
-                    if app.channelsData(channel,2)== true
-                        d = diff(buf(:,channel));
-                        buf2 = [mean(d);  d];                       
-                        if app.pixRepetition>1
-                            buf2 = downSampleImage(app,buf2,app.pixRepetition);
-                        end
-
-                    else
-                        if app.pixRepetition>1
-                            buf2 = downSampleImage(app,buf(:,channel),app.pixRepetition);
-                        else
-                            buf2=buf(:,channel);
-                        end
-                        
+            
+            for channel=1:app.NumberOfEnabledChannels
+                if app.channelsData(channel,2)== true
+                    d = diff(buf(:,channel));
+                    buf2 = [mean(d);  d];
+                    if app.pixRepetition>1
+                        buf2 = downSampleImage(app,buf2,app.pixRepetition);
                     end
-                    image = reshape(buf2,[size,size]);
-                    signal(:,:,channel) = image;
+                    
+                else
+                    if app.pixRepetition>1
+                        buf2 = downSampleImage(app,buf(:,channel),app.pixRepetition);
+                    else
+                        buf2=buf(:,channel);
+                    end
+                    
                 end
-
-
+                image = reshape(buf2,[size,size]);
+                signal(:,:,channel) = image;
+            end
             
             
             
             
-% % % % %             for channel=1:app.NumberOfEnabledChannels
-% % % % %                 if app.channelsData(channel,2)== true
-% % % % %                     buf2 = [buf(1,channel); diff(buf(:,channel))];
-% % % % %                     image = reshape(buf2,[size,size]);
-% % % % %                 else
-% % % % %                     image = reshape(buf(:,channel),[size,size]);
-% % % % %                 end
-% % % % %                 signal(:,:,channel) = image;
-% % % % %             end
+            
+            
+            % % % % %             for channel=1:app.NumberOfEnabledChannels
+            % % % % %                 if app.channelsData(channel,2)== true
+            % % % % %                     buf2 = [buf(1,channel); diff(buf(:,channel))];
+            % % % % %                     image = reshape(buf2,[size,size]);
+            % % % % %                 else
+            % % % % %                     image = reshape(buf(:,channel),[size,size]);
+            % % % % %                 end
+            % % % % %                 signal(:,:,channel) = image;
+            % % % % %             end
             %             app.signalData = signal;
             
             drawImages(app, app.firstDraw,signal)
@@ -284,10 +284,10 @@ classdef microMOSAIC < matlab.apps.AppBase
             %     disp('Success')
             % end
         end
-    
-            function queueData(app,src,event)
-                app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)])
-            end
+        
+        function queueData(app,src,event)
+            app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)])
+        end
         function [coordPoints] = GalvoCoordinatesForImage(app, scanXRange, scanYRange, scanStep, XCenter, YCenter, pixRep)
             %Takes X-Y range and step and creates the array of coordinates for glvo
             %mirrors
@@ -303,7 +303,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             
         end
         
-
+        
         
         function [signal] =  NLimagingCoords(app, coordPoints,accumulation, pixRep)
             % Acquires a single image by scanning galvo mirrors at set FOV with set
@@ -324,11 +324,11 @@ classdef microMOSAIC < matlab.apps.AppBase
                 
                 for channel=1:app.NumberOfEnabledChannels
                     if app.channelsData(channel,2)== true
-                        buf2 = [buf(1,channel); buf(1,channel) + diff(buf(:,channel))];                       
+                        buf2 = [buf(1,channel); buf(1,channel) + diff(buf(:,channel))];
                         if pixRep>1
                             buf2 = downSampleImage(app,buf2,pixRep);
-                         end
-
+                        end
+                        
                     else
                         if pixRep>1
                             buf2 = downSampleImage(app,buf(:,channel),pixRep);
@@ -342,7 +342,7 @@ classdef microMOSAIC < matlab.apps.AppBase
                 end
             end
             signal = signal / accumulation ;        % normalize over number of accumulations
-%             app.imSession.outputSingleScan([0,0]);         % return to the image center
+            %             app.imSession.outputSingleScan([0,0]);         % return to the image center
             
         end
         
@@ -356,7 +356,7 @@ classdef microMOSAIC < matlab.apps.AppBase
         function setAxes(app, imSize)
             app.ax = [];
             imSize = 0.45;
-            if ~ishandle(app.displayFigure)         % check if figure for displaying exists                                
+            if ~ishandle(app.displayFigure)         % check if figure for displaying exists
                 app.displayFigure = figure('Name',app.MatMicroMain.Name,'NumberTitle','off');       % create figure if doesn't exist
             end
             app.ax =[app.ax axes(app.displayFigure,'Position',[0 imSize imSize imSize])];
@@ -366,7 +366,7 @@ classdef microMOSAIC < matlab.apps.AppBase
             set(app.ax,'visible','off');
             axis(app.ax,'image');
             
-            for axs=1:length(app.ax)                
+            for axs=1:length(app.ax)
                 set(app.ax(axs), 'XTick',[], 'YTick',[]) %Fill the window
             end
         end
@@ -379,14 +379,14 @@ classdef microMOSAIC < matlab.apps.AppBase
             
         end
         
-
+        
         function drawImages(app,firstDraw,data)
-            if ~ishandle(app.displayFigure)         % check if figure for displaying exists                                
+            if ~ishandle(app.displayFigure)         % check if figure for displaying exists
                 app.displayFigure = figure('Name',app.MatMicroMain.Name,'NumberTitle','off');       % create figure if doesn't exist
                 setAxes(app,0.5)                    % create axes
                 firstDraw = true;               % complete redraw next time
             end
-
+            
             if firstDraw ==true
                 app.ims=[];
             end
@@ -394,14 +394,14 @@ classdef microMOSAIC < matlab.apps.AppBase
                 if firstDraw==true
                     minLim = min(data(:,:,channel),[],'all');
                     maxLim = max(data(:,:,channel),[],'all');
-                    im =imshow(data(:,:,channel),[minLim maxLim],'Parent',app.ax(channel),'Colormap',parula(256));colorbar(app.ax(channel));%colormap(parula(256));pbaspect(app.ax(channel),[1,1,1]);                     
+                    im =imshow(data(:,:,channel),[minLim maxLim],'Parent',app.ax(channel),'Colormap',parula(256));colorbar(app.ax(channel));%colormap(parula(256));pbaspect(app.ax(channel),[1,1,1]);
                     app.ims = [im app.ims ];
-%                     if app.channelsData(channel,3) == false
-%                         caxis(app.ax(channel), [app.channelsData(channel,4) app.channelsData(channel,5)]);
-%                     else
-                        %caxis(app.ax(channel), [min(min(app.signalData(:,:,channel))) max(max(app.signalData(:,:,channel)))]);
-                        
-%                     end
+                    %                     if app.channelsData(channel,3) == false
+                    %                         caxis(app.ax(channel), [app.channelsData(channel,4) app.channelsData(channel,5)]);
+                    %                     else
+                    %caxis(app.ax(channel), [min(min(app.signalData(:,:,channel))) max(max(app.signalData(:,:,channel)))]);
+                    
+                    %                     end
                     
                 else
                     maxLim = max(data(:,:,channel),[],'all');
@@ -412,8 +412,8 @@ classdef microMOSAIC < matlab.apps.AppBase
                 end
             end
             drawnow;
-
-        end            
+            
+        end
         function results = updateChannelInfo(app)
             for channel = 1 : app.NumberOfEnabledChannels
                 
@@ -441,7 +441,7 @@ classdef microMOSAIC < matlab.apps.AppBase
                 mkdir (logfolder); cd ..;
             end
             fullnameImage =logfolder+string(datetime('now','TimeZone','local','Format','HH-mm'))+'NLimage X='+string(app.scanXRange)+' Y='+ string(app.scanXRange)+'_'+app.scanStep+'_'+"pixRep_"+string(app.pixRepetition)+"_"+zcoordName;
-            if (length(size(data)) == 3) | (length(size(data)) == 2)
+            if ((length(size(data)) == 3)&(app.NumberOfEnabledChannels~=1)) | (length(size(data)) == 2)
                 for channel=1:app.NumberOfEnabledChannels
                     printLogWindow(app,'Saving channel '    + string(channel-1))
                     if app.channelsData(channel,2)==false
@@ -450,7 +450,7 @@ classdef microMOSAIC < matlab.apps.AppBase
                         saveTIFF32(app,(data(:,:,channel)),fullnameImage+filenameComment+'_chn'+string(channel-1)+'.tiff','a')
                     end
                 end
-            elseif length(size(data)) == 4
+            else %if length(size(data)) == 4
                 
                 for channel =1 : app.NumberOfEnabledChannels
                     fullnameImage =logfolder+string(datetime('now','TimeZone','local','Format','HH-mm'))+'_ch'+string(channel-1)+'_NLimage X='+string(app.scanXRange)+' Y='+ string(app.scanXRange)+'_'+app.scanStep+'_'+string(zcoordName);
@@ -536,19 +536,19 @@ classdef microMOSAIC < matlab.apps.AppBase
         
         
         
-        function data = downSampleImage(app,rawData, pixRep)                       
-           data = arrayfun(@(i) mean(rawData(i:i+pixRep-1)),1:pixRep:length(rawData)-pixRep+1)';
+        function data = downSampleImage(app,rawData, pixRep)
+            data = arrayfun(@(i) mean(rawData(i:i+pixRep-1)),1:pixRep:length(rawData)-pixRep+1)';
         end
         
         function [] = saveTIFF32(app,data,fullFileName, mode)
-%            'r'     open Tiff file for reading.
-%            'w'     open Tiff file for writing; discard existing contents.
-%            'w8'    open Tiff file for writing a BigTIFF file; discard 
-%                    existing contents.
-%            'a'     open or create Tiff file for writing; created files will 
-%                    be in 32-bit Tiff format; any existing file format will
-%                    be preserved; append image data to end of file
-%            'r+'    open (do not create) Tiff file for reading and writing.
+            %            'r'     open Tiff file for reading.
+            %            'w'     open Tiff file for writing; discard existing contents.
+            %            'w8'    open Tiff file for writing a BigTIFF file; discard
+            %                    existing contents.
+            %            'a'     open or create Tiff file for writing; created files will
+            %                    be in 32-bit Tiff format; any existing file format will
+            %                    be preserved; append image data to end of file
+            %            'r+'    open (do not create) Tiff file for reading and writing.
             if ~exist('mode','var')
                 mode = 'w';
             end
@@ -573,24 +573,24 @@ classdef microMOSAIC < matlab.apps.AppBase
             
             
         end
-
+        
         
         
         function [stage, PIaxis, stageConnected] = StartStage(app, Controller,connectionInterface, stageType,controllerSerialNumber)
             
             %Start connection (if not already connected)
             
-%             if ( ~(app.stageConnected ) )
-                % USB
-                %stageType = 'M-415.2S';% 113013743     stageType = 'P-725.4CD'
-                %controllerSerialNumber = '0125500210';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
-                if connectionInterface == "USB"
-                    stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
-                else
-                    stage = Controller.ConnectSerial( controllerSerialNumber ); %Or look at the label of the case of your controller
-                end
-                stageConnected=true;
-%             end
+            %             if ( ~(app.stageConnected ) )
+            % USB
+            %stageType = 'M-415.2S';% 113013743     stageType = 'P-725.4CD'
+            %controllerSerialNumber = '0125500210';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
+            if connectionInterface == "USB"
+                stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
+            else
+                stage = Controller.ConnectSerial( controllerSerialNumber ); %Or look at the label of the case of your controller
+            end
+            stageConnected=true;
+            %             end
             
             % Query controller identification string
             connectedControllerName = stage.qIDN();
@@ -611,7 +611,7 @@ classdef microMOSAIC < matlab.apps.AppBase
         function ReferenceStage(app,stage, PIaxis)
             printLogWindow(app,"Referencing the stage");
             stage.FRF ( PIaxis );  % find reference
-
+            
             % wait for referencing to finish
             while(0 ~= stage.qFRF ( PIaxis ) == 0 )
                 pause(0.1);
@@ -619,71 +619,71 @@ classdef microMOSAIC < matlab.apps.AppBase
             end
             printLogWindow(app,".. done!");
         end
-
-function [stage, PIaxis, stageConnected] = StartPIStage(Controller,stageConnected)
-
-%Start connection (if not already connected)
-stageConnected = false; if ( exist ( 'stage', 'var' ) ), if ( stage.IsConnected ), stageConnected = true; end; end;
-if ( ~(stageConnected ) )
-    % USB
-    stageType ='P-725.4CA';% 113013743     '
-    controllerSerialNumber = '0116034575';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
-   %controllerSerialNumber = '';
-    stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
-    stageConnected=true;
-end
-
-% Query controller identification string
-connectedControllerName = stage.qIDN();
-
-% initialize PIdevice object for use in MATLAB
-stage = stage.InitializeController ();
-
-%Startup Stage
-PIaxis = 'Z';
-
-% switch servo on for axis
-switchOn    = 1;
-% switchOff   = 0;
-stage.SVO ( PIaxis, switchOn );
-
-end
         
-function [stage, PIaxis, stageConnected] = ConnectPIFOC(app,Controller,connectionType,PIFOCStageType,controllerSerialNumber)%(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,app.PIFOCControllerSerialNumberEditField.Value);
-
-%Start connection (if not already connected)
-stageConnected = false; if ( exist ( 'stage', 'var' ) ), if ( stage.IsConnected ), stageConnected = true; end; end;
-if ( ~(stageConnected ) )
-    % USB
-%     stageType = 'P-725.4CD';% 113013743     stageType = 'P-725.4CD'
-%     controllerSerialNumber = '12220';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
-   %controllerSerialNumber = '';
-    stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
-    stageConnected=true;
-end
-
-% Query controller identification string
-connectedControllerName = stage.qIDN();
-
-% initialize PIdevice object for use in MATLAB
-stage = stage.InitializeController ();
-if str2double(controllerSerialNumber) == 120004758
-    PIaxis = 'Z';
-elseif str2double(controllerSerialNumber )== 12220
-    PIaxis = 'A';
-end
-%Startup Stage
-
-
-% switch servo on for axis
-switchOn    = 1;
-% switchOff   = 0;
-stage.SVO ( PIaxis, switchOn );
-
+        function [stage, PIaxis, stageConnected] = StartPIStage(Controller,stageConnected)
+            
+            %Start connection (if not already connected)
+            stageConnected = false; if ( exist ( 'stage', 'var' ) ), if ( stage.IsConnected ), stageConnected = true; end; end;
+            if ( ~(stageConnected ) )
+                % USB
+                stageType ='P-725.4CA';% 113013743     '
+                controllerSerialNumber = '0116034575';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
+                %controllerSerialNumber = '';
+                stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
+                stageConnected=true;
+            end
+            
+            % Query controller identification string
+            connectedControllerName = stage.qIDN();
+            
+            % initialize PIdevice object for use in MATLAB
+            stage = stage.InitializeController ();
+            
+            %Startup Stage
+            PIaxis = 'Z';
+            
+            % switch servo on for axis
+            switchOn    = 1;
+            % switchOff   = 0;
+            stage.SVO ( PIaxis, switchOn );
+            
+        end
+        
+        function [stage, PIaxis, stageConnected] = ConnectPIFOC(app,Controller,connectionType,PIFOCStageType,controllerSerialNumber)%(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,app.PIFOCControllerSerialNumberEditField.Value);
+            
+            %Start connection (if not already connected)
+            stageConnected = false; if ( exist ( 'stage', 'var' ) ), if ( stage.IsConnected ), stageConnected = true; end; end;
+            if ( ~(stageConnected ) )
+                % USB
+                %     stageType = 'P-725.4CD';% 113013743     stageType = 'P-725.4CD'
+                %     controllerSerialNumber = '12220';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
+                %controllerSerialNumber = '';
+                stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
+                stageConnected=true;
+            end
+            
+            % Query controller identification string
+            connectedControllerName = stage.qIDN();
+            
+            % initialize PIdevice object for use in MATLAB
+            stage = stage.InitializeController ();
+            if str2double(controllerSerialNumber) == 120004758
+                PIaxis = 'Z';
+            elseif str2double(controllerSerialNumber )== 12220
+                PIaxis = 'A';
+            end
+            %Startup Stage
+            
+            
+            % switch servo on for axis
+            switchOn    = 1;
+            % switchOff   = 0;
+            stage.SVO ( PIaxis, switchOn );
+            
         end
         
         function results = acquireZStack(app)
-                        printLogWindow(app,'Acquiring Z stack, please wait')
+            printLogWindow(app,'Acquiring Z stack, please wait')
             app.AcquireZstackButton.Enable = false;
             app.LiveButton.Enable = false;
             app.ScanSaveButton.Enable = false;
@@ -706,7 +706,7 @@ stage.SVO ( PIaxis, switchOn );
                     app.signalData = NLimagingCoords(app,app.coordPoints, app.numberOfAccums, app.pixRepetition);
                     
                     for channel =1 :app.NumberOfEnabledChannels
-                        dataZCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);                        
+                        dataZCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);
                     end
                     drawImages(app,firstDraw,app.signalData);
                     firstDraw=false;
@@ -730,7 +730,7 @@ stage.SVO ( PIaxis, switchOn );
     end
     methods (Access = public)
         
-
+        
         
         function results = plotLiveChannels (app, rsc, event)
             persistent tempData;
@@ -826,20 +826,20 @@ stage.SVO ( PIaxis, switchOn );
                         
                         
                     end
-%                     app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5 * app.pixRepetition);
-%                         app.lhOUT = addlistener(app.imSession,'DataRequired', @app.queueData);
-%                         app.imSession.IsContinuous = true; %needed to provide continuous behavior
-%                         app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)]); %queue the first frame
-                        
-                        % Pull in the data when the frame has been acquired
-%                         app.imSession.NotifyWhenDataAvailableExceeds=length(app.coordPoints(:,1)) * app.pixRepetition;
-%                         app.lhIN = addlistener(app.imSession,'DataAvailable', @app.grabData);
-%                         prepare(app.imSession);
+                    %                     app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5 * app.pixRepetition);
+                    %                         app.lhOUT = addlistener(app.imSession,'DataRequired', @app.queueData);
+                    %                         app.imSession.IsContinuous = true; %needed to provide continuous behavior
+                    %                         app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)]); %queue the first frame
+                    
+                    % Pull in the data when the frame has been acquired
+                    %                         app.imSession.NotifyWhenDataAvailableExceeds=length(app.coordPoints(:,1)) * app.pixRepetition;
+                    %                         app.lhIN = addlistener(app.imSession,'DataAvailable', @app.grabData);
+                    %                         prepare(app.imSession);
                 else
                     printLogWindow(app,"Simulation mode")
                 end
                 app.firstDraw=true;
-%                 app.imSession.startBackground;
+                %                 app.imSession.startBackground;
                 %             app.ax = uiaxes(app.MainTab,'Position',[8 52 400 400]);
                 %             set(app.ax,'visible','off');
                 app.LiveButton.Enable = true;
@@ -861,38 +861,38 @@ stage.SVO ( PIaxis, switchOn );
         % Button pushed function: ScanSaveButton
         function ScanSaveButtonPushed(app, event)
             try
-            saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
-            if app.imSession.IsRunning
-                app.imSession.stop();
-            end
-            if app.SimulationmodeCheckBox.Value==false
-                signal = NLimagingCoords(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
-                %                 app.signalData = signal;
-                
-            else
-                for channel=1: app.NumberOfEnabledChannels
-                    buf =  rand(round(app.scanXRange/app.scanStep));
-                    signal =buf.*10;
-                    app.signalData(:,:,channel)  = signal;
+                saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
+                if app.imSession.IsRunning
+                    app.imSession.stop();
                 end
-            end
-            zcoordName="";
-            if exist('stagePIFOC','var')
-                zcoordName ='Z='+string(stagePIFOC.qPOS('A'));
-            end
-            drawImages(app,true,signal);
-            printLogWindow(app,'NL image - Done')
+                if app.SimulationmodeCheckBox.Value==false
+                    signal = NLimagingCoords(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
+                    %                 app.signalData = signal;
+                    
+                else
+                    for channel=1: app.NumberOfEnabledChannels
+                        buf =  rand(round(app.scanXRange/app.scanStep));
+                        signal =buf.*10;
+                        app.signalData(:,:,channel)  = signal;
+                    end
+                end
+                zcoordName="";
+                if exist('stagePIFOC','var')
+                    zcoordName ='Z='+string(stagePIFOC.qPOS('A'));
+                end
+                drawImages(app,true,signal);
+                printLogWindow(app,'NL image - Done')
             catch ME
                 printLogWindow(app,"Could not acquire an image. Try once again or restart the software")
                 printLogWindow(app, ME.message)
             end
             try
-            if saveTIFF == true
-                saveDataTiff(app,app.FilenameCommentEditField.Value,signal)
-                
-            elseif saveHDF5==true
-                
-            end
+                if saveTIFF == true
+                    saveDataTiff(app,app.FilenameCommentEditField.Value,signal)
+                    
+                elseif saveHDF5==true
+                    
+                end
             catch ME
                 printLogWindow(app,"Could not save the image.")
                 printLogWindow(app, ME.message)
@@ -905,44 +905,44 @@ stage.SVO ( PIaxis, switchOn );
             RGB = magic(50);
             imSize = 350;
             for channel=1: app.NumberOfEnabledChannels
-                    buf =  rand(round(app.scanXRange/app.scanStep));
-                    app.signalData(:,:,channel) =buf.*10;
+                buf =  rand(round(app.scanXRange/app.scanStep));
+                app.signalData(:,:,channel) =buf.*10;
             end
-                        tic;
+            tic;
             drawImages(app,true);
             printLogWindow(app,toc)
             tic;
             drawImages2(app,true, app.signalData)
             printLogWindow(app,toc)
-
-
-%             printLogWindow(app,'test')
             
-
+            
+            %             printLogWindow(app,'test')
+            
+            
         end
 
         % Value changed function: LiveButton
         function LiveButtonValueChanged(app, event)
             try
-            value = app.LiveButton.Value;            
-            if value==true
-                %                 app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,1)]); %queue the first frame
-                app.firstDraw=true;
-                while value == true
-                    value = app.LiveButton.Value;
-                    if app.imSession.IsRunning
-                        app.imSession.stop();
+                value = app.LiveButton.Value;
+                if value==true
+                    %                 app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,1)]); %queue the first frame
+                    app.firstDraw=true;
+                    while value == true
+                        value = app.LiveButton.Value;
+                        if app.imSession.IsRunning
+                            app.imSession.stop();
+                        end
+                        signal = NLimagingCoords(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
+                        drawImages(app,app.firstDraw,signal);
+                        app.firstDraw = false;
+                        
                     end
-                    signal = NLimagingCoords(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
-                    drawImages(app,app.firstDraw,signal);
-                    app.firstDraw = false;
                     
+                else
+                    %                 app.imSession.stop();
+                    %                 app.imSession.release();
                 end
-                
-            else
-%                 app.imSession.stop();
-%                 app.imSession.release();
-            end                     
             catch ME
                 printLogWindow(app,"Error while live imaging. Try once again or restart the software")
                 printLogWindow(app, ME.message)
@@ -986,7 +986,7 @@ stage.SVO ( PIaxis, switchOn );
                         clear ControllerPIFOC;
                         clear stagePIFOC;
                     end
-
+                    
                     delete(app)
                     
                 case 'No'
@@ -997,9 +997,9 @@ stage.SVO ( PIaxis, switchOn );
         end
 
         % Value changed function: FoVcenterXumEditField, 
-        % FoVcenterYumEditField, PixelRepetitionEditField, 
-        % ScanRangeXumEditField, ScanRangeYumEditField, 
-        % ScanResolutionumEditField
+        % FoVcenterYumEditField, NumberOfAccumulationsEditField, 
+        % PixelRepetitionEditField, ScanRangeXumEditField, 
+        % ScanRangeYumEditField, ScanResolutionumEditField
         function ScanRangeXumEditFieldValueChanged(app, event)
             %             value = app.ScanRangeXumEditField.Value;
             app.scanXRange = app.ScanRangeXumEditField.Value; % um
@@ -1010,13 +1010,13 @@ stage.SVO ( PIaxis, switchOn );
             app.yFoVCenter = app.FoVcenterYumEditField.Value;
             app.pixRepetition = app.PixelRepetitionEditField.Value;
             app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter, app.pixRepetition);
-%             app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5);            
-%             app.imSession.NotifyWhenDataAvailableExceeds=length(app.coordPoints(:,1));
+            %             app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5);
+            %             app.imSession.NotifyWhenDataAvailableExceeds=length(app.coordPoints(:,1));
         end
 
         % Value changed function: Switch
         function SwitchValueChanged(app, event)
-
+            
             if app.Switch.Value=="Counter"
                 value = true;
             else
@@ -1047,7 +1047,7 @@ stage.SVO ( PIaxis, switchOn );
                 app.channelPannels(i).Visible = 1;
             end
             updateChannelInfo(app)
-%             setAxes(app,350)
+            %             setAxes(app,350)
         end
 
         % Value changed function: Switch_2
@@ -1066,7 +1066,7 @@ stage.SVO ( PIaxis, switchOn );
             app.AnalogChannelInputDropDown_2Label.Enable = ~value;
             app.ConnectiontypeDropDown_2.Enable = ~value;
             app.ConnectiontypeDropDown_2Label.Enable = ~value;
-
+            
         end
 
         % Value changed function: Switch_3
@@ -1198,19 +1198,19 @@ stage.SVO ( PIaxis, switchOn );
                 %     URB_Ojt = URB_Ojt(1);
             end
             try
-            app.URB_Ojt=serial(app.PolarMotorPortEditField.Value,'BaudRate',57600,'DataBits',8,'FlowControl','software',...
-                'Terminator','CR/LF');
-            fopen(app.URB_Ojt);%URB100CC_PN:B141539_UD:14/10/2013:
-            fprintf(app.URB_Ojt,'1or'); %  execute 'homing' state (Changes Solid Orange to Solid Green)
-            Command = "1pa0";
-            fprintf(app.URB_Ojt,Command);
-            app.InitializePolarMotorButton.Enable = false;
-            app.TakePolarStackButton.Enable = true;
-            app.StartingAngledegrEditField.Enable = true;
-            app.EndingAngledegrEditField.Enable = true;
-            app.StepAngledegrEditField.Enable = true;
-            
-            printLogWindow(app,"Polar motor is ready")
+                app.URB_Ojt=serial(app.PolarMotorPortEditField.Value,'BaudRate',57600,'DataBits',8,'FlowControl','software',...
+                    'Terminator','CR/LF');
+                fopen(app.URB_Ojt);%URB100CC_PN:B141539_UD:14/10/2013:
+                fprintf(app.URB_Ojt,'1or'); %  execute 'homing' state (Changes Solid Orange to Solid Green)
+                Command = "1pa0";
+                fprintf(app.URB_Ojt,Command);
+                app.InitializePolarMotorButton.Enable = false;
+                app.TakePolarStackButton.Enable = true;
+                app.StartingAngledegrEditField.Enable = true;
+                app.EndingAngledegrEditField.Enable = true;
+                app.StepAngledegrEditField.Enable = true;
+                
+                printLogWindow(app,"Polar motor is ready")
             catch ME
                 printLogWindow(app, "Could not initialize the motor");
                 printLogWindow(app, ME.message)
@@ -1248,7 +1248,7 @@ stage.SVO ( PIaxis, switchOn );
                     app.signalData = NLimagingCoords(app,app.coordPoints, app.numberOfAccums, app.pixRepetition);
                     
                     for channel =1 :app.NumberOfEnabledChannels
-                        dataPolCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);                        
+                        dataPolCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);
                     end
                     drawImages(app,firstDraw,app.signalData);
                     firstDraw=false;
@@ -1278,7 +1278,7 @@ stage.SVO ( PIaxis, switchOn );
 
         % Callback function
         function ButtonPushed(app, event)
-
+            
             
         end
 
@@ -1289,18 +1289,18 @@ stage.SVO ( PIaxis, switchOn );
                 [xcoord ,ycoord] = selectGalvoPosition(app,str2num(app.ChannelForImagePixelSelectionDropDown.Value)+1);
                 optimizationPoint = [-double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep*app.calibration+double(xcoord)*app.scanStep*app.calibration;-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep*app.calibration+double(ycoord)*app.scanStep*app.calibration];
                 if app.SimulationmodeCheckBox.Value==false
-                    app.imSession.outputSingleScan([optimizationPoint(1) optimizationPoint(2)])                    
+                    app.imSession.outputSingleScan([optimizationPoint(1) optimizationPoint(2)])
                 end
             end
             longData = [];
             app.liveFig = figure;
-                    liveAx = axes(app.liveFig);
+            liveAx = axes(app.liveFig);
             while value == true
                 %                 app.imSession.queueOutputData([queueCoordX,queueCoordY]);
                 %                 app.imSession.prepare()
-%                 if (~ishandle(app.liveFig))|(~exist(app.liveFig))
-                    
-%                 end
+                %                 if (~ishandle(app.liveFig))|(~exist(app.liveFig))
+                
+                %                 end
                 
                 value = app.StartLiveButton.Value;
                 if value == false
@@ -1322,21 +1322,25 @@ stage.SVO ( PIaxis, switchOn );
                     %                     end
                     %                 end
                     longData = [longData data];
-                    if app.AutoscaleCheckBox_5.Value == true
-                        ylim(app.UIAxes,[min(data)-0.1 max(data)+0.1]);
-                        bar(app.UIAxes, data);
-                        plot(liveAx,longData)
-                        drawnow;
+                    try
+                        if app.AutoscaleCheckBox_5.Value == true
+                            ylim(app.UIAxes,[min(data)-0.1 max(data)+0.1]);
+                            bar(app.UIAxes, data);
+                            plot(liveAx,longData)
+                            drawnow;
+                            
+                        else
+                            ylim(app.UIAxes,[app.MinEditField.Value app.MaxEditField.Value]);
+                            ylim(liveAx,[app.MinEditField.Value app.MaxEditField.Value]);
+                            bar(app.UIAxes, data);
+                            
+                            plot(liveAx);
+                            drawnow;
+                        end
+                    catch ME
                         
-                    else
-                        ylim(app.UIAxes,[app.MinEditField.Value app.MaxEditField.Value]);
-                        ylim(liveAx,[app.MinEditField.Value app.MaxEditField.Value]);
-                        bar(app.UIAxes, data);
-                        
-                        plot(liveAx);
-                        drawnow;
+                        printLogWindow(app, ME.message)
                     end
-                    
                     pause(app.FasterSlider.Value/1000);
                 end
                 
@@ -1429,7 +1433,7 @@ stage.SVO ( PIaxis, switchOn );
                 
                 %Reference PI Stage
                 ReferenceStage(app,app.stage, app.PIaxis)
-                % RefPIStage(stage, PIaxis);                
+                % RefPIStage(stage, PIaxis);
                 app.stage.MOV(app.PIaxis,45.4);
                 app.ConnectDelayLineButton.Enable = false;
             catch ME
@@ -1437,7 +1441,7 @@ stage.SVO ( PIaxis, switchOn );
                 printLogWindow(app, ME.message)
             end
             
-
+            
         end
 
         % Button pushed function: MoveButton
@@ -1449,7 +1453,7 @@ stage.SVO ( PIaxis, switchOn );
         % Button pushed function: ScandelayButton
         function ScandelayButtonPushed(app, event)
             %% Pulse overlap for CARS signal
-            printLogWindow(app, "Scanning the delay");    
+            printLogWindow(app, "Scanning the delay");
             Offset =app.OffsetmmEditField.Value;%mm 20x 0.7 LWD SLM, 1:3 Telescope Oil reference
             % Offset = 45.432499999998580; %mm 20x 0.7 LWD SLM, 1:3 Telescope, SpCOil
             % Offset =45.602499999992550;%mm 20x 0.7 LWD NO 1:3 telescope no SLM
@@ -1457,7 +1461,7 @@ stage.SVO ( PIaxis, switchOn );
             Range = app.RangemmEditField.Value; %mm
             optimizationPoint = [0 0];
             if exist('app.imSession', 'var')
-            app.imSession.outputSingleScan([optimizationPoint(1) optimizationPoint(2)]);
+                app.imSession.outputSingleScan([optimizationPoint(1) optimizationPoint(2)]);
             end
             Step =app.StepmmEditField.Value;%mm
             position = Offset-Range/2;
@@ -1468,7 +1472,7 @@ stage.SVO ( PIaxis, switchOn );
             sessionPulseOver.Rate = 1250000; sessionPulseOver.DurationInSeconds = 0.1;
             chNo=0; %channel number for analog inpupt - PMT
             chPMT=addAnalogInputChannel(sessionPulseOver,'Dev1',app.ChannelEditField.Value,'Voltage');
-            chPMT.TerminalConfig = 'SingleEnded'; % type of voltage measurement. CRUTIAL   
+            chPMT.TerminalConfig = 'SingleEnded'; % type of voltage measurement. CRUTIAL
             f = figure(); app.axxx = axes(f);
             while (position)<=(Offset+Range/2)
                 app.stage.MOV(app.PIaxis,position);
@@ -1479,7 +1483,7 @@ stage.SVO ( PIaxis, switchOn );
                 data(1,counter) = position;
                 data(2, counter) = mean(sessionPulseOver.startForeground);
                 
-%                 figure(fPulseOverlay); plot(data(1,:), data(2,:));axis([Offset-Range/2 Offset+Range/2 min(data(2, :))-0.05 max(data(2, :))+0.05]);title('Delay scan'); drawnow;
+                %                 figure(fPulseOverlay); plot(data(1,:), data(2,:));axis([Offset-Range/2 Offset+Range/2 min(data(2, :))-0.05 max(data(2, :))+0.05]);title('Delay scan'); drawnow;
                 position = position + Step; counter = counter + 1;
                 
             end
@@ -1488,25 +1492,25 @@ stage.SVO ( PIaxis, switchOn );
             
             plot(app.axxx, data(1,:), data(2,:))
             app.stage.MOV(app.PIaxis,Offset);
-%             styleDelay = '%f\t%f\n';
+            %             styleDelay = '%f\t%f\n';
             sessionPulseOver.release;
             clear('sessionPulseOver');
             printLogWindow(app, "..done!");
-%             saveas(fPulseOverlay,"output\"+logfolder+"\delay scan"+string(datetime('now','TimeZone','local','Format','HH-mm'))+".fig");
-%             fileName = "output\"+logfolder+"\delay scan"+string(datetime('now','TimeZone','local','Format','HH-mm'));
-%             saveText(fileName, styleDelay, data'); %save total signal evolution during the optimization
-%             disp('done')
+            %             saveas(fPulseOverlay,"output\"+logfolder+"\delay scan"+string(datetime('now','TimeZone','local','Format','HH-mm'))+".fig");
+            %             fileName = "output\"+logfolder+"\delay scan"+string(datetime('now','TimeZone','local','Format','HH-mm'));
+            %             saveText(fileName, styleDelay, data'); %save total signal evolution during the optimization
+            %             disp('done')
         end
 
         % Button pushed function: Button2
         function Button2Pushed(app, event)
-           
-                        
-                            
-                        
-                        
-                        
-
+            
+            
+            
+            
+            
+            
+            
         end
 
         % Callback function
@@ -1516,7 +1520,7 @@ stage.SVO ( PIaxis, switchOn );
 
         % Button pushed function: ConnectPIFOCButton
         function ConnectPIFOCButtonPushed(app, event)
-            try 
+            try
                 printLogWindow(app, 'Connecting to the PIFOC');
                 addpath ( 'C:\Users\Public\PI\PI_MATLAB_Driver_GCS2' ); % If you are still using XP, please look at the manual for the right path to include.
                 PIFOC_SN =(app.PIFOCControllerSerialNumberDropDown.Value);
@@ -1531,27 +1535,27 @@ stage.SVO ( PIaxis, switchOn );
                     end
                 end
                 
-        
-        stagePIFOCConnected = false;
-        if ( isempty (app.stagePIFOC) ) | ( app.stagePIFOC.IsConnected )
-            [app.stagePIFOC, app.PIFOCaxis, stagePIFOCConnected] = ConnectPIFOC(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,PIFOC_SN );
-        end
-        try
-            app.stagePIFOC.MOV(app.PIFOCaxis,0);
-        catch ME
-            printLogWindow(app, ME.message);
-        end
-        printLogWindow(app, 'Sucessfully connected to PIFOC');
-        catch ME
-                    printLogWindow(app,'Could not connect to the PIFOC');
+                
+                stagePIFOCConnected = false;
+                if ( isempty (app.stagePIFOC) ) | ( app.stagePIFOC.IsConnected )
+                    [app.stagePIFOC, app.PIFOCaxis, stagePIFOCConnected] = ConnectPIFOC(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,PIFOC_SN );
+                end
+                try
+                    app.stagePIFOC.MOV(app.PIFOCaxis,0);
+                catch ME
+                    printLogWindow(app, ME.message);
+                end
+                printLogWindow(app, 'Sucessfully connected to PIFOC');
+            catch ME
+                printLogWindow(app,'Could not connect to the PIFOC');
                 printLogWindow(app, ME.message);
             end
         end
 
         % Button pushed function: MoveZButton
         function MoveZButtonPushed(app, event)
-            try 
-                app.stagePIFOC.MOV(app.PIFOCaxis,app.SetZPositionEditField.Value); 
+            try
+                app.stagePIFOC.MOV(app.PIFOCaxis,app.SetZPositionEditField.Value);
             catch ME
                 printLogWindow(app, ME.message);
             end
@@ -1560,11 +1564,11 @@ stage.SVO ( PIaxis, switchOn );
         % Button pushed function: AcquireZstackButton
         function AcquireZstackButtonPushed(app, event)
             try
-               
-                 acquireZStack(app)
+                
+                acquireZStack(app)
             catch ME
                 printLogWindow(app, 'Could not take a Z stack..');
-                 printLogWindow(app, ME.message);
+                printLogWindow(app, ME.message);
             end
         end
 
@@ -1586,7 +1590,7 @@ stage.SVO ( PIaxis, switchOn );
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.806';
+            app.MatMicroMain.Name = 'microMOSAIC v0.808';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -1669,6 +1673,7 @@ stage.SVO ( PIaxis, switchOn );
 
             % Create NumberOfAccumulationsEditField
             app.NumberOfAccumulationsEditField = uieditfield(app.MainTab, 'numeric');
+            app.NumberOfAccumulationsEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
             app.NumberOfAccumulationsEditField.Position = [176 338 46 22];
             app.NumberOfAccumulationsEditField.Value = 1;
 
@@ -2003,7 +2008,7 @@ stage.SVO ( PIaxis, switchOn );
             app.ObjectiveDropDown.ItemsData = {'0.00484', '0.00968', '0.00462', '0.0220', ''};
             app.ObjectiveDropDown.ValueChangedFcn = createCallbackFcn(app, @ObjectiveDropDownValueChanged, true);
             app.ObjectiveDropDown.Position = [85 437 197 22];
-            app.ObjectiveDropDown.Value = '0.00484';
+            app.ObjectiveDropDown.Value = '0.00462';
 
             % Create SessionUpdateRateHzEditFieldLabel
             app.SessionUpdateRateHzEditFieldLabel = uilabel(app.SettingsTab);
@@ -2070,7 +2075,7 @@ stage.SVO ( PIaxis, switchOn );
             app.ConnectiontypeDropDown.ItemsData = {'SingleEnded', 'Differential'};
             app.ConnectiontypeDropDown.Enable = 'off';
             app.ConnectiontypeDropDown.Position = [110 35 142 22];
-            app.ConnectiontypeDropDown.Value = 'Differential';
+            app.ConnectiontypeDropDown.Value = 'SingleEnded';
 
             % Create CounterChannelInputDropDownLabel
             app.CounterChannelInputDropDownLabel = uilabel(app.FirstChannelSettingsPanel);
@@ -2398,7 +2403,7 @@ stage.SVO ( PIaxis, switchOn );
             % Create PolarMotorPortEditField
             app.PolarMotorPortEditField = uieditfield(app.SettingsTab, 'text');
             app.PolarMotorPortEditField.Position = [992 437 50 22];
-            app.PolarMotorPortEditField.Value = 'COM7';
+            app.PolarMotorPortEditField.Value = 'COM6';
 
             % Create TimeLagForPolarMotorsecEditFieldLabel
             app.TimeLagForPolarMotorsecEditFieldLabel = uilabel(app.SettingsTab);
@@ -2426,7 +2431,7 @@ stage.SVO ( PIaxis, switchOn );
             % Create SavingfolderEditField
             app.SavingfolderEditField = uieditfield(app.SavingSettingsTab, 'text');
             app.SavingfolderEditField.Position = [91 444 483 22];
-            app.SavingfolderEditField.Value = 'c:\Users\mosaic\Documents\images\';
+            app.SavingfolderEditField.Value = 'C:\Users\mosaic\Documents\Paulina\';
 
             % Create FilenameCommentEditFieldLabel
             app.FilenameCommentEditFieldLabel = uilabel(app.SavingSettingsTab);
@@ -2437,7 +2442,7 @@ stage.SVO ( PIaxis, switchOn );
             % Create FilenameCommentEditField
             app.FilenameCommentEditField = uieditfield(app.SavingSettingsTab, 'text');
             app.FilenameCommentEditField.Position = [133 410 441 22];
-            app.FilenameCommentEditField.Value = '_';
+            app.FilenameCommentEditField.Value = 'Control-DRG-SC-fixed_30mW_polar_';
 
             % Create DelaylineTab
             app.DelaylineTab = uitab(app.TabGroup);
@@ -2507,9 +2512,10 @@ stage.SVO ( PIaxis, switchOn );
 
             % Create PositionEditField
             app.PositionEditField = uieditfield(app.DelaylineTab, 'numeric');
+            app.PositionEditField.Limits = [0 150];
             app.PositionEditField.ValueDisplayFormat = '%.4f';
             app.PositionEditField.Position = [638 340 100 22];
-            app.PositionEditField.Value = 45.4349;
+            app.PositionEditField.Value = 45.51;
 
             % Create MoveButton
             app.MoveButton = uibutton(app.DelaylineTab, 'push');
@@ -2539,9 +2545,10 @@ stage.SVO ( PIaxis, switchOn );
 
             % Create OffsetmmEditField
             app.OffsetmmEditField = uieditfield(app.DelaylineTab, 'numeric');
+            app.OffsetmmEditField.Limits = [0 150];
             app.OffsetmmEditField.ValueDisplayFormat = '%.4f';
             app.OffsetmmEditField.Position = [472 145 67 22];
-            app.OffsetmmEditField.Value = 45.4349;
+            app.OffsetmmEditField.Value = 45.51;
 
             % Create RangemmEditFieldLabel
             app.RangemmEditFieldLabel = uilabel(app.DelaylineTab);
