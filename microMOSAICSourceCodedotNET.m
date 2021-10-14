@@ -399,27 +399,44 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     app.CItask(j).Start();
                 end
             end      % start in the background
-            % if there are to omany samples to acquire, the live acquisition and
+            if app.AItask ~= -1
+                    app.AItask.Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;
+                    app.AItask.Start();
+            end      % start in the background
+            % if there are too many samples to acquire, the live acquisition and
             % displaying lags - it complains that it cannnot acquire all the samples
             app.AOwriter.WriteMultiSample(true,coordPoints');   % write voltages to a galvo: triggers the aquisition
+            j = 1;      % ci reader iterator
+            k = 1;      % ai reader iterator
             try
-                for j = 1 : sum(app.channelsData(:,2))
-                    rawData = double(app.CIreader(j).ReadMultiSampleDouble( app.pixRep*app.numberOfPoints)); % get the data from the buffer
+                if app.AItask ~= -1
+                    analogData = double(app.AIreader.ReadMultiSample( app.pixRep*app.numberOfPoints));% get the AI data from the buffer
+                end
+                for i = 1 : app.NumberOfEnabledChannels
+                    if (app.channelsData(i,2) > 0)  % if it is a counter reader
+                        rawData = double(app.CIreader(j).ReadMultiSampleDouble( app.pixRep*app.numberOfPoints)); % get the data from the buffer
+                        j = j + 1;
+                    elseif (app.channelsData(i,2) == 0)  
+                        rawData = analogData(k,:);  % select the data according to AI cnahhel number
+                        k = k + 1;
+                    end
                     data = arrayfun(@(i) mean(rawData(i:i+app.pixRep-1)),1:app.pixRep:length(rawData)-app.pixRep+1)';   % average pixRep
                     size = round(sqrt(length(data())));       % define size
                     %                 imagesc(reshape(data,[size,size])) ;drawnow     % reshape to 2D and display
                     %                 axis image;
-                    signal(:,:,j) = reshape(data,[size,size]);
+                    signal(:,:,i) = reshape(data,[size,size]);
                 end
             catch ME
-                disp(ME.message)
-
+                app.printLogWindow(ME.message)
             end
             app.AOtask.Stop()
-            for j = 1 : sum(app.channelsData(:,2))
-            app.CItask(j).Stop()
+            if app.CItask ~= -1
+                for j = 1 : sum(app.channelsData(:,2))
+                    app.CItask(j).Stop()
+                end
+                app.COtask.Stop()
             end
-            app.COtask.Stop()
+            if app.AItask ~=-1; app.AItask.Stop(); end
             
         end
         
@@ -697,68 +714,65 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             printLogWindow(app,".. done!");
         end
 
-function [stage, PIaxis, stageConnected] = StartPIStage(Controller,stageConnected)
-
-%Start connection (if not already connected)
-stageConnected = false; if ( exist ( 'stage', 'var' ) ), if ( stage.IsConnected ), stageConnected = true; end; end;
-if ( ~(stageConnected ) )
-    % USB
-    stageType ='P-725.4CA';% 113013743     '
-    controllerSerialNumber = '0116034575';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
-   %controllerSerialNumber = '';
-    stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
-    stageConnected=true;
-end
-
-% Query controller identification string
-connectedControllerName = stage.qIDN();
-
-% initialize PIdevice object for use in MATLAB
-stage = stage.InitializeController ();
-
-%Startup Stage
-PIaxis = 'Z';
-
-% switch servo on for axis
-switchOn    = 1;
-% switchOff   = 0;
-stage.SVO ( PIaxis, switchOn );
-
+        function [stage, PIaxis, stageConnected] = StartPIStage(Controller,stageConnected)
+            
+            %Start connection (if not already connected)
+            stageConnected = false; if ( exist ( 'stage', 'var' ) ), if ( stage.IsConnected ), stageConnected = true; end; end;
+            if ( ~(stageConnected ) )
+                % USB
+                stageType ='P-725.4CA';% 113013743     '
+                controllerSerialNumber = '0116034575';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
+                %controllerSerialNumber = '';
+                stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
+                stageConnected=true;
+            end
+            
+            % Query controller identification string
+            connectedControllerName = stage.qIDN();
+            
+            % initialize PIdevice object for use in MATLAB
+            stage = stage.InitializeController ();
+            
+            %Startup Stage
+            PIaxis = 'Z';
+            
+            % switch servo on for axis
+            switchOn    = 1;
+            % switchOff   = 0;
+            stage.SVO ( PIaxis, switchOn );
+        end
         
-
-end
-        
-function [stage, PIaxis, stageConnected] = ConnectPIFOC(app,Controller,connectionType,PIFOCStageType,controllerSerialNumber)%(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,app.PIFOCControllerSerialNumberEditField.Value);
-
-%Start connection (if not already connected)
-stageConnected = false; if ( exist ( 'stage', 'var' ) ), if ( stage.IsConnected ), stageConnected = true; end; end;
-if ( ~(stageConnected ) )
-    % USB
-%     stageType = 'P-725.4CD';% 113013743     stageType = 'P-725.4CD'
-%     controllerSerialNumber = '12220';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
-   %controllerSerialNumber = '';
-    stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
-    stageConnected=true;
-end
-
-% Query controller identification string
-connectedControllerName = stage.qIDN();
-
-% initialize PIdevice object for use in MATLAB
-stage = stage.InitializeController ();
-if str2double(controllerSerialNumber) == 120004758
-    PIaxis = 'Z';
-elseif str2double(controllerSerialNumber )== 12220
-    PIaxis = 'A';
-end
-%Startup Stage
-
-
-% switch servo on for axis
-switchOn    = 1;
-% switchOff   = 0;
-stage.SVO ( PIaxis, switchOn );
-
+        function [stage, PIaxis, stageConnected] = ConnectPIFOC(app,Controller,connectionType,PIFOCStageType,controllerSerialNumber)%(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,app.PIFOCControllerSerialNumberEditField.Value);
+            
+            %Start connection (if not already connected)
+            stageConnected = false; if ( exist ( 'stage', 'var' ) ), if ( stage.IsConnected ), stageConnected = true; end; end;
+            if ( ~(stageConnected ) )
+                % USB
+                %     stageType = 'P-725.4CD';% 113013743     stageType = 'P-725.4CD'
+                %     controllerSerialNumber = '12220';    % Use "devicesUsb = Controller.EnumerateUSB('')" to get all PI controller connected to you PC.
+                %controllerSerialNumber = '';
+                stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
+                stageConnected=true;
+            end
+            
+            % Query controller identification string
+            connectedControllerName = stage.qIDN();
+            
+            % initialize PIdevice object for use in MATLAB
+            stage = stage.InitializeController ();
+            if str2double(controllerSerialNumber) == 120004758
+                PIaxis = 'Z';
+            elseif str2double(controllerSerialNumber )== 12220
+                PIaxis = 'A';
+            end
+            %Startup Stage
+            
+            
+            % switch servo on for axis
+            switchOn    = 1;
+            % switchOff   = 0;
+            stage.SVO ( PIaxis, switchOn );
+            
         end
         
         function results = acquireZStack(app)
@@ -825,9 +839,10 @@ stage.SVO ( PIaxis, switchOn );
                 end
             end
             if sum(app.channelsData(:,2)) < sum(app.channelsData(:,1))      % if number of counter channels is smaller than the total number of used channels
-                aitask = NationalInstruments.DAQmx.Task;
+                aitask = NationalInstruments.DAQmx.Task;        % task for the analog input
             end
             j = 1;      % ci iterator
+
             for i=1:app.NumberOfEnabledChannels
                 if app.channelsData(i,2) == true
                     CIch = citask(j).CIChannels.CreatePulseWidthChannel(strcat(app.Dev,app.counterChannelsInputFields(i).Value), '',0,2^32-1,NationalInstruments.DAQmx.CIPulseWidthStartingEdge.Rising,NationalInstruments.DAQmx.CIPulseWidthUnits.Ticks);
@@ -845,14 +860,13 @@ stage.SVO ( PIaxis, switchOn );
                             CIch.CounterTimebaseSource = strcat(app.Dev,"PFI5");
                     end
                 else
-                switch app.analogChannelConnectionType(i).Value
-                    case "SingleEnded"
-                        connType = NationalInstruments.DAQmx.AITerminalConfiguration.Rse;
-                    case "Differential"
-                        connType = NationalInstruments.DAQmx.AITerminalConfiguration.Differential;
-                end
+                    switch app.analogChannelConnectionType(i).Value
+                        case "SingleEnded"
+                            connType = NationalInstruments.DAQmx.AITerminalConfiguration.Rse;
+                        case "Differential"
+                            connType = NationalInstruments.DAQmx.AITerminalConfiguration.Differential;
+                    end
                     aitask.AIChannels.CreateVoltageChannel(strcat(app.Dev,app.analogChannelsInputFields(i).Value), '', connType, -10, 10, NationalInstruments.DAQmx.AIVoltageUnits.Volts);
-                    
                 end
             end
             if citask~=-1
@@ -865,8 +879,9 @@ stage.SVO ( PIaxis, switchOn );
             end
             if aitask ~= -1
                 aitask.Timing.ConfigureSampleClock('',app.pixFreq, NationalInstruments.DAQmx.SampleClockActiveEdge.Rising, NationalInstruments.DAQmx.SampleQuantityMode.FiniteSamples,app.pixRep*app.numberOfPoints);   % clock
-                aireader = NationalInstruments.DAQmx.AnalogMultiChannelReader (aitask.Stream);     % the input reader
+                aireader = NationalInstruments.DAQmx.AnalogMultiChannelReader(aitask.Stream);     % the input reader
                 aitask.Control(NationalInstruments.DAQmx.TaskAction.Verify)
+
             end
         end
 
