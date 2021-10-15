@@ -9,6 +9,14 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         LogTextAreaLabel                matlab.ui.control.Label
         TabGroup                        matlab.ui.container.TabGroup
         MainTab                         matlab.ui.container.Tab
+        PixelFrequencyHzEditField       matlab.ui.control.NumericEditField
+        PixelFrequencyHzEditFieldLabel  matlab.ui.control.Label
+        DutyCycleEditField              matlab.ui.control.NumericEditField
+        DutyCycleEditFieldLabel         matlab.ui.control.Label
+        PixelRepetitionEditField_2      matlab.ui.control.NumericEditField
+        PixelRepetitionEditField_2Label  matlab.ui.control.Label
+        PixelDwellTimeusEditField       matlab.ui.control.NumericEditField
+        PixelDwellTimeusEditFieldLabel  matlab.ui.control.Label
         ZstackPanel                     matlab.ui.container.Panel
         AcquireZstackButton             matlab.ui.control.Button
         ZGauge                          matlab.ui.control.LinearGauge
@@ -19,8 +27,6 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         EndingZumEditFieldLabel         matlab.ui.control.Label
         StartingZumEditField            matlab.ui.control.NumericEditField
         StartingZumEditFieldLabel       matlab.ui.control.Label
-        PixelRepetitionEditField        matlab.ui.control.NumericEditField
-        PixelRepetitionEditFieldLabel   matlab.ui.control.Label
         ZoomPanel                       matlab.ui.container.Panel
         ChannelDropDown                 matlab.ui.control.DropDown
         ChannelDropDownLabel            matlab.ui.control.Label
@@ -45,7 +51,6 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         InitializePolarMotorButton      matlab.ui.control.Button
         SimulationmodeCheckBox          matlab.ui.control.CheckBox
         LiveButton                      matlab.ui.control.StateButton
-        TestbuttondontpressButton       matlab.ui.control.Button
         NumberOfAccumulationsEditField  matlab.ui.control.NumericEditField
         NumberOfAccumulationsEditFieldLabel  matlab.ui.control.Label
         ScanResolutionumEditField       matlab.ui.control.NumericEditField
@@ -82,14 +87,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         ExternalCounterGenerationChannelEditFieldLabel  matlab.ui.control.Label
         ExternalCounterDeviceNameEditField  matlab.ui.control.EditField
         DeviceNameLabel                 matlab.ui.control.Label
-        PixelRepetitionEditField_2      matlab.ui.control.NumericEditField
-        PixelRepetitionEditField_2Label  matlab.ui.control.Label
-        PixelDwellTimeusEditField       matlab.ui.control.NumericEditField
-        PixelDwellTimeusEditFieldLabel  matlab.ui.control.Label
         CounterGenerationChannelEditField  matlab.ui.control.EditField
         CounterGenerationChannelEditFieldLabel  matlab.ui.control.Label
-        DutyCycleEditField              matlab.ui.control.NumericEditField
-        DutyCycleEditFieldLabel         matlab.ui.control.Label
         CounterTerminalToReceiveSquarePulsesEditField  matlab.ui.control.EditField
         CounterTerminalForSquarePulseGenerationLabel  matlab.ui.control.Label
         CounterBaseSwitch               matlab.ui.control.Switch
@@ -240,7 +239,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         DATA % Description
         ims % Description
         firstDraw % Description
-        pixRepetition % Description
+
         lhIN % Description
         lhOUT
         displayFigure % Description
@@ -267,45 +266,40 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         COtask % counter output task that produces square pulses necesary
         % for counter input channels. Can be produced in the same DAQ card
         % or in external card that must be connected to the acquisition DAQ
-        CItask % counter input task that measures the width of the pulses 
-        % produced by COtask, using the detector input as a clock
+        CItask % counter input task .NET array of all counter input tasks
+        % that measures the width of the pulses 
+        % produced by COtask, using the detector input as a clock. Only a
+        % single CI channel is allowed to be in a task, therefore an array
+        % of task is created
         CIreader % a reader for the CItask
+        Snake % if snake or normal line coordinate generation
     end
     
     methods (Access = private)
         
         function grabData(app,~,event)
             buf = event.Data;
-            
-            size=int16(sqrt(length(buf(:,1)) / app.pixRepetition));
+
+            size=int16(sqrt(length(buf(:,1)) / app.pixRep));
             signal = zeros(size,size,app.NumberOfEnabledChannels);
-            
-                
-                for channel=1:app.NumberOfEnabledChannels
-                    if app.channelsData(channel,2)== true
-                        d = diff(buf(:,channel));
-                        buf2 = [mean(d);  d];                       
-                        if app.pixRepetition>1
-                            buf2 = downSampleImage(app,buf2,app.pixRepetition);
-                        end
-
-                    else
-                        if app.pixRepetition>1
-                            buf2 = downSampleImage(app,buf(:,channel),app.pixRepetition);
-                        else
-                            buf2=buf(:,channel);
-                        end
-                        
+            for channel=1:app.NumberOfEnabledChannels
+                if app.channelsData(channel,2)== true
+                    d = diff(buf(:,channel));
+                    buf2 = [mean(d);  d];
+                    if app.pixRep>1
+                        buf2 = downSampleImage(app,buf2,app.pixRep);
                     end
-                    image = reshape(buf2,[size,size]);
-                    signal(:,:,channel) = image;
+                else
+                    if app.pixRep>1
+                        buf2 = downSampleImage(app,buf(:,channel),app.pixRep);
+                    else
+                        buf2=buf(:,channel);
+                    end
                 end
+                image = reshape(buf2,[size,size]);
+                signal(:,:,channel) = image;
+            end
 
-
-            
-            
-            
-            
 % % % % %             for channel=1:app.NumberOfEnabledChannels
 % % % % %                 if app.channelsData(channel,2)== true
 % % % % %                     buf2 = [buf(1,channel); diff(buf(:,channel))];
@@ -320,31 +314,46 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             drawImages(app, app.firstDraw,signal)
             app.firstDraw=false;
             % if length(buf) >1
-            %     disp('Success')
+            %     app.printLogWindow('Success')
             % end
         end
     
-            function queueData(app,src,event)
-                app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)])
-            end
-        function [coordPoints] = GalvoCoordinatesForImage(app, scanXRange, scanYRange, scanStep, XCenter, YCenter, pixRep)
+%             function queueData(app,src,event)
+%                 app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)])
+%             end
+        function [coordPoints] = GalvoCoordinatesForImage(app, scanXRange, scanYRange, scanStep, XCenter, YCenter)
             %Takes X-Y range and step and creates the array of coordinates for glvo
-            %mirrors
-            if ~exist('pixRep', 'var')
-                pixRep = 1;
-            end
+            %mirrors            
             x = -scanXRange/2:scanStep:scanXRange/2;
             y = -scanYRange/2:scanStep:scanYRange/2;
+            app.numberOfPoints = length(x) * length(y);
             x = x + XCenter;
             y = y + YCenter;
             [X,Y] = meshgrid(x,y);
-            coordPoints = [repelem(X(:)*app.calibration,pixRep), repelem(Y(:)*app.calibration, pixRep)];
-            
+            coordPoints = [X(:)*app.calibration,Y(:)*app.calibration];            
+            app.Snake = false;
+        end
+        function [coordPoints] = GalvoCoordinatesForImageSnake(app, scanXRange, scanYRange, scanStep, XCenter, YCenter)
+            %Takes X-Y range and step and creates the array of coordinates for glvo
+            %mirrors            
+            x = -scanXRange/2:scanStep:scanXRange/2;
+            y = -scanYRange/2:scanStep:scanYRange/2;
+            app.numberOfPoints = length(x) * length(y);
+            x = x + XCenter;
+            y = y + YCenter;
+            [X,Y] = meshgrid(x,y);
+            for i=1: size(Y,1)
+                if ~mod(i,2)
+                    Y(:,i) = - Y(:,i);
+                end
+            end
+            coordPoints = [X(:)*app.calibration,Y(:)*app.calibration];            
+            app.Snake = true;
         end
         
 
         
-        function [signal] =  NLimagingCoords(app, coordPoints,accumulation, pixRep)
+        function [signal] =  NLimagingCoords(app, coordPoints,accumulation, pixRep)     % obsolete, requires data acquisition toolbox
             % Acquires a single image by scanning galvo mirrors at set FOV with set
             % precision
             
@@ -384,9 +393,10 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 %             app.imSession.outputSingleScan([0,0]);         % return to the image center
             
         end
-        function [signal] =  NLimagingCoordsdotNET(app, coordPoints,accumulation, pixRep)            
+        function [signal] =  NLimagingCoordsdotNET(app, coordPoints)            
             app.AOtask.Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;     % set the timeout time 3 times longer 
-                 % than the writing time            
+                 % than the writing time      
+
             size = uint16(sqrt(length(coordPoints(:,1))));       % image size
             signal = zeros(size, size,app.NumberOfEnabledChannels);       % Array where signal data is stored
             if app.COtask ~= -1
@@ -408,6 +418,9 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.AOwriter.WriteMultiSample(true,coordPoints');   % write voltages to a galvo: triggers the aquisition
             j = 1;      % ci reader iterator
             k = 1;      % ai reader iterator
+%             if app.AOtask.IsDone == false
+%                 app.AOtask.WaitUntilDone() ;
+%             end
             try
                 if app.AItask ~= -1
                     analogData = double(app.AIreader.ReadMultiSample( app.pixRep*app.numberOfPoints));% get the AI data from the buffer
@@ -424,7 +437,15 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     size = round(sqrt(length(data())));       % define size
                     %                 imagesc(reshape(data,[size,size])) ;drawnow     % reshape to 2D and display
                     %                 axis image;
+
                     signal(:,:,i) = reshape(data,[size,size]);
+                    if app.Snake==true
+                        for ss=1:length(signal(:,1,i))
+                            if ~mod(ss,2)
+                                signal(:,ss,i) = fliplr(signal(:,ss,i));
+                            end
+                        end
+                    end
                 end
             catch ME
                 app.printLogWindow(ME.message)
@@ -453,6 +474,13 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             if ~ishandle(app.displayFigure)         % check if figure for displaying exists                                
                 app.displayFigure = figure('Name',app.MatMicroMain.Name,'NumberTitle','off');       % create figure if doesn't exist
             end
+%             switch app.NumberOfEnabledChannels
+%                 case 1
+%                     app.ax = axes(app.displayFigure,'Position',[0.025 0.025 0.95 0.95]);
+%                 case 2
+%                     app.ax = axes(app.displayFigure,'Position',[0 1 0.5 0.5])
+%                     app.ax = axes(app.displayFigure,'Position',[0.5 1 0.5 0.5])
+%             end
             app.ax =[app.ax axes(app.displayFigure,'Position',[0 imSize imSize imSize])];
             app.ax =[app.ax axes(app.displayFigure,'Position',[imSize imSize imSize imSize])];
             app.ax =[app.ax axes(app.displayFigure,'Position',[0 0 imSize imSize])];
@@ -534,7 +562,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             if ~exist(logfolder, 'dir')
                 mkdir (logfolder); cd ..;
             end
-            fullnameImage =logfolder+string(datetime('now','TimeZone','local','Format','HH-mm'))+'NLimage X='+string(app.scanXRange)+' Y='+ string(app.scanXRange)+'_'+app.scanStep+'_'+"pixRep_"+string(app.pixRepetition)+"_"+zcoordName;
+            fullnameImage =logfolder+string(datetime('now','TimeZone','local','Format','HH-mm'))+'NLimage X='+string(app.scanXRange)+' Y='+ string(app.scanXRange)+'_'+app.scanStep+'_'+"pixRep_"+string(app.pixRep)+"_"+zcoordName;
             if (length(size(data)) == 3) | (length(size(data)) == 2)
                 for channel=1:app.NumberOfEnabledChannels
                     printLogWindow(app,'Saving channel '    + string(channel-1))
@@ -584,7 +612,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             if app.SimulationmodeCheckBox.Value == true
                 image = magic(256);
             else
-                app.signalData =NLimagingCoords(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
+                app.signalData =NLimagingCoordsdotNET(app ,app.coordPoints);
                 image = app.signalData(:,:,channelNumber);
             end
             hFigForplotting = figure;
@@ -740,6 +768,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             switchOn    = 1;
             % switchOff   = 0;
             stage.SVO ( PIaxis, switchOn );
+        
+            
         end
         
         function [stage, PIaxis, stageConnected] = ConnectPIFOC(app,Controller,connectionType,PIFOCStageType,controllerSerialNumber)%(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,app.PIFOCControllerSerialNumberEditField.Value);
@@ -796,7 +826,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     localIterator = localIterator +1;
                     printLogWindow(app, 'Acquiring Z stack, please wait')
                     app.stagePIFOC.MOV(app.PIFOCaxis,Z)
-                    app.signalData = NLimagingCoords(app,app.coordPoints, app.numberOfAccums, app.pixRepetition);
+                    app.signalData = NLimagingCoordsdotNET(app,app.coordPoints);
                     
                     for channel =1 :app.NumberOfEnabledChannels
                         dataZCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);                        
@@ -823,6 +853,15 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         
 
         function [aotask,aowriter, cotask, aitask,aireader,citask,cireader]= initChannels(app)
+            if (~isempty(app.AOtask)&&(app.AOtask~=-1));app.AOtask.Dispose();end % in case this is a REintialization
+            if (~isempty(app.AItask)&&(app.AItask~=-1));app.AItask.Dispose();end % in case this is a REintialization
+            if (~isempty(app.CItask)&&(app.CItask~=-1))
+                for j=1 : app.CItask.Length
+                app.CItask(j).Dispose();
+                end
+            end
+            if (~isempty(app.COtask)&&(app.COtask~=-1));app.COtask.Dispose();end
+
             cotask=-1; aitask=-1;aireader=-1;citask=-1;cireader=-1;
             aotask = NationalInstruments.DAQmx.Task;        % a task to control the galvos
             aotask.AOChannels.CreateVoltageChannel(strcat(app.Dev, "ao0:1"), '',-10, 10,  NationalInstruments.DAQmx.AOVoltageUnits.Volts);    % output channels: the galvos
@@ -917,6 +956,28 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 app.counterGateTerminal =strcat(app.Dev,app.CounterTerminalToReceiveSquarePulsesEditField.Value);  % here would come square pulses 
             end
         end
+        function updateChannels(app)
+            app.AOtask.Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;
+            app.AOtask.Timing.SampleClockRate = app.pixFreq;
+            app.AOtask.Timing.SamplesPerChannel = app.pixRep*app.numberOfPoints;
+            if (~isempty(app.AItask)&&(app.AItask~=-1))
+                app.AItask.Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;
+                app.AItask.Timing.SampleClockRate = app.pixFreq;
+                app.AItask.Timing.SamplesPerChannel = app.pixRep*app.numberOfPoints;
+            end
+            if (~isempty(app.COtask)&&(app.COtask~=-1))
+                app.COtask.Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;
+                app.COtask.Timing.SamplesPerChannel = app.pixRep*app.numberOfPoints;
+                app.COtask.COChannels.Item(0).PulseFrequency = app.pixFreq;
+                app.COtask.COChannels.Item(0).PulseDutyCycle = app.dutyCycle;
+            end
+            if (~isempty(app.CItask)&&(app.CItask~=-1))
+                for j=1:app.CItask.Length
+                    app.CItask(j).Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;
+                    app.CItask(j).Timing.SamplesPerChannel = app.pixRep*app.numberOfPoints;
+                end
+            end
+        end
 
         function results = readSettings(app)
             app.calibration = str2double(app.ObjectiveDropDown.Value); %choose objective lens
@@ -924,20 +985,20 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 app.scanYRange = app.ScanRangeYumEditField.Value; % y FoV, um
                 app.scanStep =app.ScanResolutionumEditField.Value; % resolution, um
                 app.numberOfAccums =round( app.NumberOfAccumulationsEditField.Value); % number of frame repetitions
-                app.pixRepetition = app.PixelRepetitionEditField.Value;
+%                 app.pixRepetition = app.PixelRepetitionEditField.Value;
                 app.xFoVCenter = app.FoVcenterXumEditField.Value;
                 app.yFoVCenter = app.FoVcenterYumEditField.Value;
                 
                 app.NumberOfEnabledChannels = app.NumberOfChannelsSlider.Value;
                 %             app.NumberOfChannelsSlider.Enable = false;
                 app.NumberOfChannelsSliderValueChanged(app)
-                app.NumberOfChannelsSlider.Enable = false;
-                app.Switch.Enable = false;
+%                 app.NumberOfChannelsSlider.Enable = false;
+%                 app.Switch.Enable = false;
                 app.Dev = "/" + app.DeviceNameEditField.Value + "/";  
                 app.pixRep = app.PixelRepetitionEditField_2.Value;                
                 app.dwellTime = app.PixelDwellTimeusEditField.Value;
                 app.pixFreq = 1 / (app.dwellTime / 1000000 * 2);
-                app.numberOfPoints = (app.scanXRange / app.scanStep + 1)^2;
+                app.PixelFrequencyHzEditField.Value = app.pixFreq;
                 app.dutyCycle = app.DutyCycleEditField.Value;
         end
     end
@@ -992,11 +1053,11 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             value = app.TimeLagForPolarMotorsecEditField.Value;
             app.TimeLag = value;
             % try loading DAQmx driver
-            fprintf('Starting up: loading DAQmx...\n')
+            fprintf('Starting up: loading DAQmx...')
             try
                 NET.addAssembly('NationalInstruments.DAQmx');
                 import NationalInstruments.DAQmx.*
-                fprintf('Assembly successfully loaded!\n')
+                fprintf('Assembly successfully loaded!')
             catch
                 error('Error loading .NET assembly! Check NIDAQmx .NET installation.')
             end
@@ -1007,26 +1068,25 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             %             app.ax=[]
             printLogWindow(app,"Initialization..");
             try
-                app.displayFigure = figure('Name',app.MatMicroMain.Name,'NumberTitle','off');
-                setAxes(app,0.5)
+                app.displayFigure = figure('Name',app.MatMicroMain.Name,'NumberTitle','off');                
                 app.readSettings()
-                app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter,app.pixRepetition);
+                setAxes(app,0.5)
+                app.coordPoints = GalvoCoordinatesForImageSnake(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter);
                 
                 if app.SimulationmodeCheckBox.Value==false
                     
                     % Load NIDAQmx .NET assembly
-                    printLogWindow(app,'Starting up: loading DAQmx...\n')
+                    printLogWindow(app,'Starting up: loading DAQmx...')
                     try
                         NET.addAssembly('NationalInstruments.DAQmx');
                         import NationalInstruments.DAQmx.*
-                        app.I =import;
-                        printLogWindow(app,'Assembly successfully loaded!\n')
+                        printLogWindow(app,'Assembly successfully loaded!')
                     catch
                         printLogWindow(app,'Error loading .NET assembly! Check NIDAQmx .NET installation.')
                     end
                      [app.AOtask,app.AOwriter, app.COtask, app.AItask,app.AIreader,app.CItask,app.CIreader] = app.initChannels();
 
-                    analogChannels = []; counterChannels = [];
+
 %                     for channel=1:app.NumberOfEnabledChannels
 %                         if app.channelsData(channel,2) == false
 %                             chImPMT= addAnalogInputChannel(app.imSession,app.DeviceNameEditField.Value,app.analogChannelsInputFields(channel).Value,'Voltage');
@@ -1072,6 +1132,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 app.ZoomInButton.Enable = true;
                 app.ZoomOutButton.Enable = true;
                 app.ims = [];
+                app.InitializeButton.Text = "Reinitialize";
             catch ME
                 printLogWindow(app,"Could not initialize NI DAQ card! So sad..")
                 printLogWindow(app, ME.message)
@@ -1081,60 +1142,51 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         % Button pushed function: ScanSaveButton
         function ScanSaveButtonPushed(app, event)
             try
-            saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
-%             if app.imSession.IsRunning
-%                 app.imSession.stop();
-%             end
-            if app.SimulationmodeCheckBox.Value==false
-                signal = NLimagingCoordsdotNET(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
-                %                 app.signalData = signal;
-                
-            else
-                for channel=1: app.NumberOfEnabledChannels
-                    buf =  rand(round(app.scanXRange/app.scanStep));
-                    signal =buf.*10;
-                    app.signalData(:,:,channel)  = signal;
+                saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
+                %             if app.imSession.IsRunning
+                %                 app.imSession.stop();
+                %             end
+                if app.AOtask.IsDone == false
+                    app.AOtask.WaitUntilDone() ;
                 end
-            end
-            zcoordName="";
-            if exist('stagePIFOC','var')
-                zcoordName ='Z='+string(stagePIFOC.qPOS('A'));
-            end
-            drawImages(app,true,signal);
-            printLogWindow(app,'NL image - Done')
+                if app.SimulationmodeCheckBox.Value==false
+                    signal = NLimagingCoordsdotNET(app ,app.coordPoints);
+                    %                 app.signalData = signal;
+
+                else
+                    for channel=1: app.NumberOfEnabledChannels
+                        buf =  rand(round(app.scanXRange/app.scanStep));
+                        signal =buf.*10;
+                        app.signalData(:,:,channel)  = signal;
+                    end
+                end
+                zcoordName="";
+                if exist('stagePIFOC','var')
+                    zcoordName ='Z='+string(stagePIFOC.qPOS('A'));
+                end
+                drawImages(app,true,signal);
+                printLogWindow(app,'NL image - Done')
             catch ME
                 printLogWindow(app,"Could not acquire an image. Try once again or restart the software")
                 printLogWindow(app, ME.message)
             end
             try
-            if saveTIFF == true
-                saveDataTiff(app,app.FilenameCommentEditField.Value,signal)
-                
-            elseif saveHDF5==true
-                
-            end
+                if saveTIFF == true
+                    saveDataTiff(app,app.FilenameCommentEditField.Value,signal)
+
+                elseif saveHDF5==true
+
+                end
             catch ME
                 printLogWindow(app,"Could not save the image.")
                 printLogWindow(app, ME.message)
             end
-            
+
         end
 
-        % Button pushed function: TestbuttondontpressButton
+        % Callback function
         function TestbuttondontpressButtonPushed(app, event)
-            RGB = magic(50);
-            imSize = 350;
-            for channel=1: app.NumberOfEnabledChannels
-                    buf =  rand(round(app.scanXRange/app.scanStep));
-                    app.signalData(:,:,channel) =buf.*10;
-            end
-                        tic;
-            drawImages(app,true);
-            printLogWindow(app,toc)
-            tic;
-            drawImages2(app,true, app.signalData)
-            printLogWindow(app,toc)
-
+app.ReadyLampLabel.Text = "Not Ready";
 
 %             printLogWindow(app,'test')
             
@@ -1150,10 +1202,10 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 app.firstDraw=true;
                 while value == true
                     value = app.LiveButton.Value;
-                    if app.imSession.IsRunning
-                        app.imSession.stop();
+                    if app.AOtask.IsDone == false
+                        app.AOtask.WaitUntilDone() ;
                     end
-                    signal = NLimagingCoords(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
+                    signal = NLimagingCoordsdotNET(app ,app.coordPoints);
                     drawImages(app,app.firstDraw,signal);
                     app.firstDraw = false;
                     
@@ -1207,10 +1259,13 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                         clear ControllerPIFOC;
                         clear stagePIFOC;
                     end
-                    if (~isempty(app.AOtask)&&(app.AOtask~=-1));app.AOtask.Dispose();end
-                    
-                    if (~isempty(app.CItask)&&(app.CItask~=-1));app.CItask.Dispose();end
-
+                    if (~isempty(app.AOtask)&&(app.AOtask~=-1));app.AOtask.Dispose();end % in case this is a REintialization
+                    if (~isempty(app.AItask)&&(app.AItask~=-1));app.AItask.Dispose();end % in case this is a REintialization
+                    if (~isempty(app.CItask)&&(app.CItask~=-1))
+                        for j=1 : sum(app.channelsData(:,2))
+                            app.CItask(j).Dispose();
+                        end
+                    end
                     if (~isempty(app.COtask)&&(app.COtask~=-1));app.COtask.Dispose();end
                     catch
                     end
@@ -1225,8 +1280,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
         % Value changed function: FoVcenterXumEditField, 
         % FoVcenterYumEditField, NumberOfAccumulationsEditField, 
-        % PixelRepetitionEditField, ScanRangeXumEditField, 
-        % ScanRangeYumEditField, ScanResolutionumEditField
+        % ScanRangeXumEditField, ScanRangeYumEditField, 
+        % ScanResolutionumEditField
         function ScanRangeXumEditFieldValueChanged(app, event)
             %             value = app.ScanRangeXumEditField.Value;
             app.scanXRange = app.ScanRangeXumEditField.Value; % um
@@ -1235,8 +1290,9 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.numberOfAccums = app.NumberOfAccumulationsEditField.Value;
             app.xFoVCenter = app.FoVcenterXumEditField.Value;
             app.yFoVCenter = app.FoVcenterYumEditField.Value;
-            app.pixRepetition = app.PixelRepetitionEditField.Value;
-            app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter, app.pixRepetition);
+            app.pixRep = app.PixelRepetitionEditField_2.Value;
+            app.coordPoints = GalvoCoordinatesForImageSnake(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter);
+            app.updateChannels()
 %             app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5);            
 %             app.imSession.NotifyWhenDataAvailableExceeds=length(app.coordPoints(:,1));
         end
@@ -1472,7 +1528,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     localIterator = localIterator +1;
                     printLogWindow(app, "Acquiring Polar stack, please wait")
                     setPolarAngle(app,Angle);
-                    app.signalData = NLimagingCoords(app,app.coordPoints, app.numberOfAccums, app.pixRepetition);
+                    app.signalData = NLimagingCoordsdotNET(app,app.coordPoints);
                     
                     for channel =1 :app.NumberOfEnabledChannels
                         dataPolCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);                        
@@ -1569,8 +1625,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             
             zoomFactor = app.ZoomfactorEditField.Value;
             zoomImage(app,zoomFactor);
-            app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange,app.scanYRange,app.scanStep,app.xFoVCenter,app.yFoVCenter,app.pixRepetition);
-            signal = NLimagingCoords(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
+            app.coordPoints = GalvoCoordinatesForImageSnake(app,app.scanXRange,app.scanYRange,app.scanStep,app.xFoVCenter,app.yFoVCenter);
+            signal = NLimagingCoordsdotNET(app ,app.coordPoints);
             drawImages(app,true,signal)
         end
 
@@ -1581,8 +1637,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.FoVcenterYumEditField.Value = -double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
             zoomFactor =1 / app.ZoomfactorEditField.Value;
             zoomImage(app,zoomFactor);
-            app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange,app.scanYRange,app.scanStep,app.xFoVCenter,app.yFoVCenter,app.pixRepetition);
-            signal = NLimagingCoords(app ,app.coordPoints, app.numberOfAccums,app.pixRepetition);
+            app.coordPoints = GalvoCoordinatesForImageSnake(app,app.scanXRange,app.scanYRange,app.scanStep,app.xFoVCenter,app.yFoVCenter);
+            signal = NLimagingCoordsdotNET(app ,app.coordPoints);
             drawImages(app,true,signal)
         end
 
@@ -1706,7 +1762,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 %             saveas(fPulseOverlay,"output\"+logfolder+"\delay scan"+string(datetime('now','TimeZone','local','Format','HH-mm'))+".fig");
 %             fileName = "output\"+logfolder+"\delay scan"+string(datetime('now','TimeZone','local','Format','HH-mm'));
 %             saveText(fileName, styleDelay, data'); %save total signal evolution during the optimization
-%             disp('done')
+%             app.printLogWindow('done')
         end
 
         % Button pushed function: Button2
@@ -1792,6 +1848,22 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             value = app.ObjectiveDropDown.Value;
             app.calibration = value;
         end
+
+        % Value changed function: DutyCycleEditField, 
+        % PixelDwellTimeusEditField, PixelRepetitionEditField_2
+        function PixelRepetitionEditField_2ValueChanged(app, event)
+            value = app.PixelRepetitionEditField_2.Value;
+            %update channels: their clocks depend on pix freq, number of
+            %points, pix repetition
+            app.pixRep = value;
+            app.dutyCycle = app.DutyCycleEditField.Value;
+            app.dwellTime = app.PixelDwellTimeusEditField.Value;   
+            app.pixFreq = 1 / (app.dwellTime / 1000000 * 2);
+            app.PixelFrequencyHzEditField.Value = app.pixFreq;
+            app.updateChannels()
+
+
+        end
     end
 
     % Component initialization
@@ -1823,7 +1895,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.ScanSaveButton = uibutton(app.MainTab, 'push');
             app.ScanSaveButton.ButtonPushedFcn = createCallbackFcn(app, @ScanSaveButtonPushed, true);
             app.ScanSaveButton.Enable = 'off';
-            app.ScanSaveButton.Position = [123 169 110 36];
+            app.ScanSaveButton.Position = [123 132 110 36];
             app.ScanSaveButton.Text = 'Scan&Save';
 
             % Create ScanRangeXumEditFieldLabel
@@ -1861,7 +1933,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.ScanResolutionumEditField = uieditfield(app.MainTab, 'numeric');
             app.ScanResolutionumEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
             app.ScanResolutionumEditField.Position = [142 355 80 22];
-            app.ScanResolutionumEditField.Value = 0.5;
+            app.ScanResolutionumEditField.Value = 1;
 
             % Create NumberOfAccumulationsEditFieldLabel
             app.NumberOfAccumulationsEditFieldLabel = uilabel(app.MainTab);
@@ -1875,18 +1947,12 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.NumberOfAccumulationsEditField.Position = [176 323 46 22];
             app.NumberOfAccumulationsEditField.Value = 1;
 
-            % Create TestbuttondontpressButton
-            app.TestbuttondontpressButton = uibutton(app.MainTab, 'push');
-            app.TestbuttondontpressButton.ButtonPushedFcn = createCallbackFcn(app, @TestbuttondontpressButtonPushed, true);
-            app.TestbuttondontpressButton.Position = [478 387 139 23];
-            app.TestbuttondontpressButton.Text = 'Test button, don''t press';
-
             % Create LiveButton
             app.LiveButton = uibutton(app.MainTab, 'state');
             app.LiveButton.ValueChangedFcn = createCallbackFcn(app, @LiveButtonValueChanged, true);
             app.LiveButton.Enable = 'off';
             app.LiveButton.Text = 'Live';
-            app.LiveButton.Position = [11 169 110 36];
+            app.LiveButton.Position = [11 132 110 36];
 
             % Create SimulationmodeCheckBox
             app.SimulationmodeCheckBox = uicheckbox(app.MainTab);
@@ -1897,7 +1963,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.PolarPanel = uipanel(app.MainTab);
             app.PolarPanel.AutoResizeChildren = 'off';
             app.PolarPanel.Title = 'Polar';
-            app.PolarPanel.Position = [253 95 260 257];
+            app.PolarPanel.Position = [622 201 260 257];
 
             % Create InitializePolarMotorButton
             app.InitializePolarMotorButton = uibutton(app.PolarPanel, 'push');
@@ -1988,7 +2054,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.ZoomPanel = uipanel(app.MainTab);
             app.ZoomPanel.AutoResizeChildren = 'off';
             app.ZoomPanel.Title = 'Zoom';
-            app.ZoomPanel.Position = [661 314 168 128];
+            app.ZoomPanel.Position = [248 321 168 128];
 
             % Create ZoomfactorEditFieldLabel
             app.ZoomfactorEditFieldLabel = uilabel(app.ZoomPanel);
@@ -2028,72 +2094,111 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.ChannelDropDown.Position = [65 4 100 22];
             app.ChannelDropDown.Value = '0';
 
-            % Create PixelRepetitionEditFieldLabel
-            app.PixelRepetitionEditFieldLabel = uilabel(app.MainTab);
-            app.PixelRepetitionEditFieldLabel.HorizontalAlignment = 'right';
-            app.PixelRepetitionEditFieldLabel.Position = [18 237 89 22];
-            app.PixelRepetitionEditFieldLabel.Text = 'Pixel Repetition';
-
-            % Create PixelRepetitionEditField
-            app.PixelRepetitionEditField = uieditfield(app.MainTab, 'numeric');
-            app.PixelRepetitionEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
-            app.PixelRepetitionEditField.Position = [122 237 100 22];
-            app.PixelRepetitionEditField.Value = 1;
-
             % Create ZstackPanel
             app.ZstackPanel = uipanel(app.MainTab);
             app.ZstackPanel.AutoResizeChildren = 'off';
             app.ZstackPanel.Title = 'Z stack';
-            app.ZstackPanel.Position = [603 60 260 221];
+            app.ZstackPanel.Position = [622 11 260 179];
 
             % Create StartingZumEditFieldLabel
             app.StartingZumEditFieldLabel = uilabel(app.ZstackPanel);
             app.StartingZumEditFieldLabel.HorizontalAlignment = 'right';
-            app.StartingZumEditFieldLabel.Position = [0 164 81 22];
+            app.StartingZumEditFieldLabel.Position = [55 129 81 22];
             app.StartingZumEditFieldLabel.Text = 'Starting Z, um';
 
             % Create StartingZumEditField
             app.StartingZumEditField = uieditfield(app.ZstackPanel, 'numeric');
-            app.StartingZumEditField.Position = [96 164 100 22];
+            app.StartingZumEditField.Position = [150 129 41 22];
             app.StartingZumEditField.Value = 50;
 
             % Create EndingZumEditFieldLabel
             app.EndingZumEditFieldLabel = uilabel(app.ZstackPanel);
             app.EndingZumEditFieldLabel.HorizontalAlignment = 'right';
-            app.EndingZumEditFieldLabel.Position = [-2 123 77 22];
+            app.EndingZumEditFieldLabel.Position = [58 100 77 22];
             app.EndingZumEditFieldLabel.Text = 'Ending Z, um';
 
             % Create EndingZumEditField
             app.EndingZumEditField = uieditfield(app.ZstackPanel, 'numeric');
-            app.EndingZumEditField.Position = [90 123 100 22];
+            app.EndingZumEditField.Position = [150 100 41 22];
             app.EndingZumEditField.Value = 60;
 
             % Create ZStepEditFieldLabel
             app.ZStepEditFieldLabel = uilabel(app.ZstackPanel);
             app.ZStepEditFieldLabel.HorizontalAlignment = 'right';
-            app.ZStepEditFieldLabel.Position = [34 79 41 22];
+            app.ZStepEditFieldLabel.Position = [92 69 41 22];
             app.ZStepEditFieldLabel.Text = 'Z Step';
 
             % Create ZStepEditField
             app.ZStepEditField = uieditfield(app.ZstackPanel, 'numeric');
-            app.ZStepEditField.Position = [90 79 100 22];
+            app.ZStepEditField.Position = [150 69 41 22];
             app.ZStepEditField.Value = 1;
 
             % Create ZGaugeLabel
             app.ZGaugeLabel = uilabel(app.ZstackPanel);
             app.ZGaugeLabel.HorizontalAlignment = 'center';
-            app.ZGaugeLabel.Position = [73 1 25 22];
+            app.ZGaugeLabel.Position = [74 7 25 22];
             app.ZGaugeLabel.Text = 'Z';
 
             % Create ZGauge
             app.ZGauge = uigauge(app.ZstackPanel, 'linear');
-            app.ZGauge.Position = [24 38 119 40];
+            app.ZGauge.Position = [25 26 119 40];
 
             % Create AcquireZstackButton
             app.AcquireZstackButton = uibutton(app.ZstackPanel, 'push');
             app.AcquireZstackButton.ButtonPushedFcn = createCallbackFcn(app, @AcquireZstackButtonPushed, true);
-            app.AcquireZstackButton.Position = [150 22 100 49];
+            app.AcquireZstackButton.Position = [152 17 100 49];
             app.AcquireZstackButton.Text = 'Acquire Z stack';
+
+            % Create PixelDwellTimeusEditFieldLabel
+            app.PixelDwellTimeusEditFieldLabel = uilabel(app.MainTab);
+            app.PixelDwellTimeusEditFieldLabel.HorizontalAlignment = 'right';
+            app.PixelDwellTimeusEditFieldLabel.Position = [14 241 114 22];
+            app.PixelDwellTimeusEditFieldLabel.Text = 'Pixel Dwell Time, us';
+
+            % Create PixelDwellTimeusEditField
+            app.PixelDwellTimeusEditField = uieditfield(app.MainTab, 'numeric');
+            app.PixelDwellTimeusEditField.Limits = [0 Inf];
+            app.PixelDwellTimeusEditField.ValueChangedFcn = createCallbackFcn(app, @PixelRepetitionEditField_2ValueChanged, true);
+            app.PixelDwellTimeusEditField.Position = [132 241 35 22];
+            app.PixelDwellTimeusEditField.Value = 2;
+
+            % Create PixelRepetitionEditField_2Label
+            app.PixelRepetitionEditField_2Label = uilabel(app.MainTab);
+            app.PixelRepetitionEditField_2Label.HorizontalAlignment = 'right';
+            app.PixelRepetitionEditField_2Label.Position = [27 217 89 22];
+            app.PixelRepetitionEditField_2Label.Text = 'Pixel Repetition';
+
+            % Create PixelRepetitionEditField_2
+            app.PixelRepetitionEditField_2 = uieditfield(app.MainTab, 'numeric');
+            app.PixelRepetitionEditField_2.Limits = [1 Inf];
+            app.PixelRepetitionEditField_2.RoundFractionalValues = 'on';
+            app.PixelRepetitionEditField_2.ValueDisplayFormat = '%.0f';
+            app.PixelRepetitionEditField_2.ValueChangedFcn = createCallbackFcn(app, @PixelRepetitionEditField_2ValueChanged, true);
+            app.PixelRepetitionEditField_2.Position = [131 217 34 22];
+            app.PixelRepetitionEditField_2.Value = 20;
+
+            % Create DutyCycleEditFieldLabel
+            app.DutyCycleEditFieldLabel = uilabel(app.MainTab);
+            app.DutyCycleEditFieldLabel.HorizontalAlignment = 'right';
+            app.DutyCycleEditFieldLabel.Position = [50 193 64 22];
+            app.DutyCycleEditFieldLabel.Text = 'Duty Cycle';
+
+            % Create DutyCycleEditField
+            app.DutyCycleEditField = uieditfield(app.MainTab, 'numeric');
+            app.DutyCycleEditField.ValueChangedFcn = createCallbackFcn(app, @PixelRepetitionEditField_2ValueChanged, true);
+            app.DutyCycleEditField.Position = [129 193 30 22];
+            app.DutyCycleEditField.Value = 0.9;
+
+            % Create PixelFrequencyHzEditFieldLabel
+            app.PixelFrequencyHzEditFieldLabel = uilabel(app.MainTab);
+            app.PixelFrequencyHzEditFieldLabel.HorizontalAlignment = 'right';
+            app.PixelFrequencyHzEditFieldLabel.Position = [175 241 113 22];
+            app.PixelFrequencyHzEditFieldLabel.Text = 'Pixel Frequency, Hz';
+
+            % Create PixelFrequencyHzEditField
+            app.PixelFrequencyHzEditField = uieditfield(app.MainTab, 'numeric');
+            app.PixelFrequencyHzEditField.Editable = 'off';
+            app.PixelFrequencyHzEditField.Position = [303 241 100 22];
 
             % Create LiveTab
             app.LiveTab = uitab(app.TabGroup);
@@ -2642,17 +2747,6 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.CounterTerminalToReceiveSquarePulsesEditField.Position = [835 129 49 22];
             app.CounterTerminalToReceiveSquarePulsesEditField.Value = 'PFI15';
 
-            % Create DutyCycleEditFieldLabel
-            app.DutyCycleEditFieldLabel = uilabel(app.SettingsTab);
-            app.DutyCycleEditFieldLabel.HorizontalAlignment = 'right';
-            app.DutyCycleEditFieldLabel.Position = [533 374 64 22];
-            app.DutyCycleEditFieldLabel.Text = 'Duty Cycle';
-
-            % Create DutyCycleEditField
-            app.DutyCycleEditField = uieditfield(app.SettingsTab, 'numeric');
-            app.DutyCycleEditField.Position = [612 374 30 22];
-            app.DutyCycleEditField.Value = 0.9;
-
             % Create CounterGenerationChannelEditFieldLabel
             app.CounterGenerationChannelEditFieldLabel = uilabel(app.SettingsTab);
             app.CounterGenerationChannelEditFieldLabel.HorizontalAlignment = 'right';
@@ -2663,32 +2757,6 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.CounterGenerationChannelEditField = uieditfield(app.SettingsTab, 'text');
             app.CounterGenerationChannelEditField.Position = [908 313 39 22];
             app.CounterGenerationChannelEditField.Value = 'ctr0';
-
-            % Create PixelDwellTimeusEditFieldLabel
-            app.PixelDwellTimeusEditFieldLabel = uilabel(app.SettingsTab);
-            app.PixelDwellTimeusEditFieldLabel.HorizontalAlignment = 'right';
-            app.PixelDwellTimeusEditFieldLabel.Position = [313 390 114 22];
-            app.PixelDwellTimeusEditFieldLabel.Text = 'Pixel Dwell Time, us';
-
-            % Create PixelDwellTimeusEditField
-            app.PixelDwellTimeusEditField = uieditfield(app.SettingsTab, 'numeric');
-            app.PixelDwellTimeusEditField.Limits = [0 Inf];
-            app.PixelDwellTimeusEditField.Position = [431 390 35 22];
-            app.PixelDwellTimeusEditField.Value = 20;
-
-            % Create PixelRepetitionEditField_2Label
-            app.PixelRepetitionEditField_2Label = uilabel(app.SettingsTab);
-            app.PixelRepetitionEditField_2Label.HorizontalAlignment = 'right';
-            app.PixelRepetitionEditField_2Label.Position = [321 361 89 22];
-            app.PixelRepetitionEditField_2Label.Text = 'Pixel Repetition';
-
-            % Create PixelRepetitionEditField_2
-            app.PixelRepetitionEditField_2 = uieditfield(app.SettingsTab, 'numeric');
-            app.PixelRepetitionEditField_2.Limits = [1 Inf];
-            app.PixelRepetitionEditField_2.RoundFractionalValues = 'on';
-            app.PixelRepetitionEditField_2.ValueDisplayFormat = '%.0f';
-            app.PixelRepetitionEditField_2.Position = [425 361 34 22];
-            app.PixelRepetitionEditField_2.Value = 2;
 
             % Create DeviceNameLabel
             app.DeviceNameLabel = uilabel(app.SettingsTab);
@@ -3019,13 +3087,12 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
             % Create ReadyLampLabel
             app.ReadyLampLabel = uilabel(app.MatMicroMain);
-            app.ReadyLampLabel.HorizontalAlignment = 'right';
-            app.ReadyLampLabel.Position = [826 619 40 22];
+            app.ReadyLampLabel.Position = [39 615 85 22];
             app.ReadyLampLabel.Text = 'Ready';
 
             % Create ReadyLamp
             app.ReadyLamp = uilamp(app.MatMicroMain);
-            app.ReadyLamp.Position = [881 619 20 20];
+            app.ReadyLamp.Position = [11 616 20 20];
             app.ReadyLamp.Color = [1 0 0];
 
             % Show the figure after all components are created
