@@ -9,6 +9,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         LogTextAreaLabel                matlab.ui.control.Label
         TabGroup                        matlab.ui.container.TabGroup
         MainTab                         matlab.ui.container.Tab
+        Button2                         matlab.ui.control.Button
         PixelFrequencyHzEditField       matlab.ui.control.NumericEditField
         PixelFrequencyHzEditFieldLabel  matlab.ui.control.Label
         DutyCycleEditField              matlab.ui.control.NumericEditField
@@ -60,7 +61,11 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         ScanRangeXumEditField           matlab.ui.control.NumericEditField
         ScanRangeXumEditFieldLabel      matlab.ui.control.Label
         ScanSaveButton                  matlab.ui.control.Button
-        LiveTab                         matlab.ui.container.Tab
+        LiveIntensityTab                matlab.ui.container.Tab
+        SamplesperpointEditField_2      matlab.ui.control.NumericEditField
+        SamplesperpointEditField_2Label  matlab.ui.control.Label
+        ChannelDropDown_3               matlab.ui.control.DropDown
+        ChannelDropDown_3Label          matlab.ui.control.Label
         Button                          matlab.ui.control.StateButton
         MinEditField                    matlab.ui.control.NumericEditField
         MinEditFieldLabel               matlab.ui.control.Label
@@ -163,9 +168,10 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         SavingfolderEditField           matlab.ui.control.EditField
         SavingfolderEditFieldLabel      matlab.ui.control.Label
         DelaylineTab                    matlab.ui.container.Tab
-        Button2                         matlab.ui.control.Button
-        ChannelEditField                matlab.ui.control.EditField
-        ChannelEditFieldLabel           matlab.ui.control.Label
+        SamplesperpointEditField        matlab.ui.control.NumericEditField
+        SamplesperpointEditFieldLabel   matlab.ui.control.Label
+        ChannelDropDown_2               matlab.ui.control.DropDown
+        ChannelDropDown_2Label          matlab.ui.control.Label
         StepmmEditField                 matlab.ui.control.NumericEditField
         StepmmEditFieldLabel            matlab.ui.control.Label
         RangemmEditField                matlab.ui.control.NumericEditField
@@ -174,8 +180,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         OffsetmmEditFieldLabel          matlab.ui.control.Label
         ScandelayButton                 matlab.ui.control.Button
         MoveButton                      matlab.ui.control.Button
-        PositionEditField               matlab.ui.control.NumericEditField
-        PositionEditFieldLabel          matlab.ui.control.Label
+        SetOffsetmmEditField            matlab.ui.control.NumericEditField
+        SetOffsetmmEditFieldLabel       matlab.ui.control.Label
         DelayLineConnectionPanel        matlab.ui.container.Panel
         PortEditField                   matlab.ui.control.EditField
         PortEditFieldLabel              matlab.ui.control.Label
@@ -273,51 +279,38 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         % of task is created
         CIreader % a reader for the CItask
         Snake % if snake or normal line coordinate generation
+        intensityFigure; % a figure to draw live intensity profile
+        axIntensity % axes for live intensity plotting
+        dataBuffer
     end
     
     methods (Access = private)
         
         function grabData(app,~,event)
-            buf = event.Data;
-
-            size=int16(sqrt(length(buf(:,1)) / app.pixRep));
-            signal = zeros(size,size,app.NumberOfEnabledChannels);
-            for channel=1:app.NumberOfEnabledChannels
-                if app.channelsData(channel,2)== true
-                    d = diff(buf(:,channel));
-                    buf2 = [mean(d);  d];
-                    if app.pixRep>1
-                        buf2 = downSampleImage(app,buf2,app.pixRep);
+            if ~isempty(app.AIreader)&&(app.AIreader~=-1)
+                analogBuf = app.AIreader.ReadMultiSample(-1).double;
+                buf = zeros(app.AItask.EveryNSamplesReadEventInterval,app.NumberOfEnabledChannels);
+            elseif (~isempty(app.CItask)&&(app.CItask~=-1))  
+                buf = zeros(app.CItask(1).EveryNSamplesReadEventInterval,app.NumberOfEnabledChannels);
+            end
+            j = 1; k = 1;
+            for i=1:app.NumberOfEnabledChannels
+                if app.channelsData(i,2)>0
+                    if (~isempty(app.CItask)&&(app.CItask~=-1))
+                        buf(i) = double(app.CIreader(j).ReadMultiSampleDouble( -1));
+                        j = j + 1;
                     end
                 else
-                    if app.pixRep>1
-                        buf2 = downSampleImage(app,buf(:,channel),app.pixRep);
-                    else
-                        buf2=buf(:,channel);
-                    end
+                    buf(i) = analogBuf(k,:);
+                    k = k + 1;
                 end
-                image = reshape(buf2,[size,size]);
-                signal(:,:,channel) = image;
             end
-
-% % % % %             for channel=1:app.NumberOfEnabledChannels
-% % % % %                 if app.channelsData(channel,2)== true
-% % % % %                     buf2 = [buf(1,channel); diff(buf(:,channel))];
-% % % % %                     image = reshape(buf2,[size,size]);
-% % % % %                 else
-% % % % %                     image = reshape(buf(:,channel),[size,size]);
-% % % % %                 end
-% % % % %                 signal(:,:,channel) = image;
-% % % % %             end
-            %             app.signalData = signal;
-            
-            drawImages(app, app.firstDraw,signal)
-            app.firstDraw=false;
-            % if length(buf) >1
-            %     app.printLogWindow('Success')
-            % end
+            app.dataBuffer = [app.dataBuffer buf];
+            if length(app.dataBuffer)>(length(buf) * 100)
+                app.dataBuffer = app.dataBuffer(:,end-length(buf) * 100:end)
+            end
         end
-    
+
 %             function queueData(app,src,event)
 %                 app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)])
 %             end
@@ -342,9 +335,9 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             x = x + XCenter;
             y = y + YCenter;
             [X,Y] = meshgrid(x,y);
-            for i=1: size(Y,1)
+            for i=1: size(Y,2)
                 if ~mod(i,2)
-                    Y(:,i) = - Y(:,i);
+                    Y(:,i) = fliplr( Y(:,i));
                 end
             end
             coordPoints = [X(:)*app.calibration,Y(:)*app.calibration];            
@@ -395,10 +388,14 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         end
         function [signal] =  NLimagingCoordsdotNET(app, coordPoints)            
             app.AOtask.Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;     % set the timeout time 3 times longer 
-                 % than the writing time      
-
-            size = uint16(sqrt(length(coordPoints(:,1))));       % image size
-            signal = zeros(size, size,app.NumberOfEnabledChannels);       % Array where signal data is stored
+                 % than the writing time   
+                 xsize = uint16(app.scanXRange / app.scanStep + 1); ysize = uint16(app.scanYRange / app.scanStep + 1);
+                 coordsize = uint16(sqrt(length(coordPoints(:,1))));
+                 if (xsize * ysize) == coordsize        % check if we send coords for an image, or simply an array to acquire from a signle point
+                     signal = zeros(xsize, ysize,app.NumberOfEnabledChannels);       % Array where signal data is stored
+                 else
+                     signal = zeros(coordsize, coordsize,app.NumberOfEnabledChannels);       % Array where signal data is stored
+                 end
             if app.COtask ~= -1
                 app.COtask.Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;
                 app.COtask.Start();
@@ -434,11 +431,16 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                         k = k + 1;
                     end
                     data = arrayfun(@(i) mean(rawData(i:i+app.pixRep-1)),1:app.pixRep:length(rawData)-app.pixRep+1)';   % average pixRep
-                    size = round(sqrt(length(data())));       % define size
+%                     size = round(sqrt(length(data())));       % define size
                     %                 imagesc(reshape(data,[size,size])) ;drawnow     % reshape to 2D and display
                     %                 axis image;
-
-                    signal(:,:,i) = reshape(data,[size,size]);
+                    xsize = uint16(app.scanXRange / app.scanStep + 1); ysize = uint16(app.scanYRange / app.scanStep + 1);
+                    coordsize = uint16(sqrt(length(coordPoints(:,1))));
+                    if (xsize * ysize) == coordsize
+                        signal(:,:,i) = reshape(data,[xsize ysize]);
+                    else
+                        signal(:,:,i) = reshape(data,[coordsize coordsize]);
+                    end
                     if app.Snake==true
                         for ss=1:length(signal(:,1,i))
                             if ~mod(ss,2)
@@ -472,7 +474,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.ax = [];
             imSize = 0.45;
             if ~ishandle(app.displayFigure)         % check if figure for displaying exists                                
-                app.displayFigure = figure('Name',app.MatMicroMain.Name,'NumberTitle','off');       % create figure if doesn't exist
+                app.displayFigure = figure('Name',strcat(app.MatMicroMain.Name,": Images"),'NumberTitle','off');       % create figure if doesn't exist
             end
 %             switch app.NumberOfEnabledChannels
 %                 case 1
@@ -617,7 +619,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             end
             hFigForplotting = figure;
             tempAx = axes(hFigForplotting);
-            imagesc(tempAx,image);pbaspect(tempAx,[1,1,1]);
+            imagesc(tempAx,image);axis(tempAx,'image')
             title(tempAx,"Select where to park the galvos");
             s = size(image);
             exitVar = (xcoord<0)|(xcoord>s(1))|(ycoord<0)|(ycoord>s(2));
@@ -760,16 +762,39 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             
             % initialize PIdevice object for use in MATLAB
             stage = stage.InitializeController ();
-            
+
             %Startup Stage
             PIaxis = 'Z';
-            
+
             % switch servo on for axis
             switchOn    = 1;
             % switchOff   = 0;
-            stage.SVO ( PIaxis, switchOn );
-        
-            
+            stage.SVO ( PIaxis, switchOn )
+        end
+        function [AIlistener, CIlistener] = addListeners(app, notifyEvery)
+            if (~isempty(app.AItask)&&(app.AItask~=-1))
+                app.AItask.EveryNSamplesReadEventInterval = notifyEvery;
+                AIlistener = addlistener(app.AItask, 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
+            end
+            if (~isempty(app.CItask)&&(app.CItask~=-1))
+                for j =1:app.CItask.Length
+                    app.CItask(j).EveryNSamplesReadEventInterval = notifyEvery;
+                    CIlistener(j) = addlistener(app.CItask(j), 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
+                end
+            end
+
+        end
+
+        function delayScanSetAxes(app)
+            % set delay scan axis ticks
+            offset = app.OffsetmmEditField.Value;
+            range = app.RangemmEditField.Value;
+            step = app.StepmmEditField.Value;
+            app.UIAxes2.XLim = [(offset - range-step) (offset + range+step)];
+            delaysForTicks = [(offset - range - step) :range / 20:(offset + range+step)];
+            app.UIAxes2.XTickLabelRotation = 90;
+            app.UIAxes2.XTick = delaysForTicks;
+            app.UIAxes2.XTickLabel = delaysForTicks;
         end
         
         function [stage, PIaxis, stageConnected] = ConnectPIFOC(app,Controller,connectionType,PIFOCStageType,controllerSerialNumber)%(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,app.PIFOCControllerSerialNumberEditField.Value);
@@ -831,7 +856,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     for channel =1 :app.NumberOfEnabledChannels
                         dataZCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);                        
                     end
-                    drawImages(app,firstDraw,app.signalData);
+                    drawImages(app,app.firstDraw,app.signalData);
                     firstDraw=false;
                     Z = Z+ ZStep;
                 end
@@ -906,6 +931,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                             connType = NationalInstruments.DAQmx.AITerminalConfiguration.Differential;
                     end
                     aitask.AIChannels.CreateVoltageChannel(strcat(app.Dev,app.analogChannelsInputFields(i).Value), '', connType, -10, 10, NationalInstruments.DAQmx.AIVoltageUnits.Volts);
+                    aitask.Stream.ReadWaitMode = NationalInstruments.DAQmx.ReadWaitMode.Poll;
                 end
             end
             if citask~=-1
@@ -913,6 +939,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 for j = 1 : sum(app.channelsData(:,2))
                     citask(j).Timing.ConfigureImplicit(NationalInstruments.DAQmx.SampleQuantityMode.FiniteSamples,app.pixRep*app.numberOfPoints);   % clock
                     cireader(j) = NationalInstruments.DAQmx.CounterReader(citask(j).Stream);       % start in the background: it doesn't start before COtask and AOtask
+                    citask(j).Stream.ReadWaitMode = NationalInstruments.DAQmx.ReadWaitMode.Poll;
                     citask(j).Control(NationalInstruments.DAQmx.TaskAction.Verify)
                 end
             end
@@ -957,6 +984,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             end
         end
         function updateChannels(app)
+            app.pixFreq = 1 / (app.dwellTime / 1000000 * 2);
             app.AOtask.Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;
             app.AOtask.Timing.SampleClockRate = app.pixFreq;
             app.AOtask.Timing.SamplesPerChannel = app.pixRep*app.numberOfPoints;
@@ -1006,32 +1034,32 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         
 
         
-        function results = plotLiveChannels (app, rsc, event)
-            persistent tempData;
-            if isempty(tempData)
-                tempData=[];
-            end
-            
-            
-            data=zeros(app.NumberOfEnabledChannels,1);
-            buf = event.Data;
-            for channel=1:app.NumberOfEnabledChannels
-                if app.channelsData(channel,2)== true
-                    
-                    buf2 = [buf(1,channel); diff(buf(:,channel))];
-                    data(channel,1) = mean(buf2);
-                else
-                    data(channel,1) = mean(buf);
-                end
-            end
-            if app.AutoscaleCheckBox_5.Value == true
-                ylim(app.UIAxes,[min(data)-0.1 max(data)+0.1]);
-                bar(app.UIAxes, data);drawnow;
-            else
-                ylim(app.UIAxes,[app.MinEditField.Value app.MaxEditField.Value]);
-                bar(app.UIAxes, data);drawnow;
-            end
-        end
+%         function results = plotLiveChannels (app, rsc, event)
+%             persistent tempData;
+%             if isempty(tempData)
+%                 tempData=[];
+%             end
+%             
+%            
+%             data=zeros(app.NumberOfEnabledChannels,1);
+%             buf = event.Data;
+%             for channel=1:app.NumberOfEnabledChannels
+%                 if app.channelsData(channel,2)== true
+%                     
+%                     buf2 = [buf(1,channel); diff(buf(:,channel))];
+%                     data(channel,1) = mean(buf2);
+%                 else
+%                     data(channel,1) = mean(buf);
+%                 end
+%             end
+%             if app.AutoscaleCheckBox_5.Value == true
+%                 ylim(app.UIAxes,[min(data)-0.1 max(data)+0.1]);
+%                 bar(app.UIAxes, data);drawnow;
+%             else
+%                 ylim(app.UIAxes,[app.MinEditField.Value app.MaxEditField.Value]);
+%                 bar(app.UIAxes, data);drawnow;
+%             end
+%         end
     end
     
 
@@ -1052,15 +1080,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.channelsData(1,1) = 1;
             value = app.TimeLagForPolarMotorsecEditField.Value;
             app.TimeLag = value;
-            % try loading DAQmx driver
-            fprintf('Starting up: loading DAQmx...')
-            try
-                NET.addAssembly('NationalInstruments.DAQmx');
-                import NationalInstruments.DAQmx.*
-                fprintf('Assembly successfully loaded!')
-            catch
-                error('Error loading .NET assembly! Check NIDAQmx .NET installation.')
-            end
+            app.delayScanSetAxes();
+
         end
 
         % Button pushed function: InitializeButton
@@ -1568,48 +1589,52 @@ app.ReadyLampLabel.Text = "Not Ready";
         % Value changed function: StartLiveButton
         function StartLiveButtonValueChanged(app, event)
             value = app.StartLiveButton.Value;
-            if value ==true
-                [xcoord ,ycoord] = selectGalvoPosition(app,str2num(app.ChannelForImagePixelSelectionDropDown.Value)+1);
-                optimizationPoint = [-double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep*app.calibration+double(xcoord)*app.scanStep*app.calibration;-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep*app.calibration+double(ycoord)*app.scanStep*app.calibration];
-                if app.SimulationmodeCheckBox.Value==false
-                    app.imSession.outputSingleScan([optimizationPoint(1) optimizationPoint(2)])                    
-                end
-            end
-            while value == true
-                %                 app.imSession.queueOutputData([queueCoordX,queueCoordY]);
-                %                 app.imSession.prepare()
+            app.intensityFigure = figure('Name',strcat(app.MatMicroMain.Name,"  Intensity Profile"),'NumberTitle','off');       % create figure if doesn't exist
+            app.axIntensity = axes(app.intensityFigure,'Position',[0.025 0.025 0.95 0.95]);
+            try
+            channel  = str2num(app.ChannelDropDown_2.Value);
+            if channel > app.NumberOfEnabledChannels
+                app.printLogWindow("Selected channel is not used")
+            else
+%                 app.delayScanSetAxes();
+%                 if app.channelsData(channel,2) == true
+%                     CIlistener = addlistener(app.CItask, 'EveryNSamplesRead', @(~, ev) myCallback(app.CIreader.ReadMultiSample(-1).double)); % Function is executed at each 'EveryNSamplesRead' event
+
+                app.numberOfPoints = app.SamplesperpointEditField.Value;
+                app.pixRep =1;
+                app.dwellTime = 1;
+                app.updateChannels();
+
+                optimizationPoint = [0 0];
+                coordPointsForDelay = zeros(app.numberOfPoints,2);
+                coordPointsForDelay(:,1) = coordPointsForDelay(:,1) + optimizationPoint(1);
+                coordPointsForDelay(:,2) = coordPointsForDelay(:,2) + optimizationPoint(2);
+
                 
-                value = app.StartLiveButton.Value;
-                if value == false
-                    break
+                data = [];
+                counter =1;
+                if ~ishandle(app.intensityFigure)         % check if figure for displaying exists
+                    app.intensityFigure = figure('Name',strcat(app.MatMicroMain.Name,"  Intensity Profile"),'NumberTitle','off');       % create figure if doesn't exist
+                    app.axIntensity = axes(app.intensityFigure,'Position',[0.025 0.025 0.95 0.95]);             % complete redraw next time
                 end
-                if app.SimulationmodeCheckBox.Value==true
-                    data = randi(100,4,1);
-                else
-                    data = app.singleMeasurement();
-                    %                     data=zeros(app.NumberOfEnabledChannels,1);
-                    %                     buf = app.imSession.startForeground();
-                    %                 for channel=1:app.NumberOfEnabledChannels
-                    %                     if app.channelsData(channel,2)== true
-                    %
-                    %                     buf2 = [buf(1,channel); diff(buf(:,channel))];
-                    %                     data(channel,1) = mean(buf2);
-                    %                     else
-                    %                         data(channel,1) = mean(buf);properties
-                    %                     end
-                    %                 end
-                    if app.AutoscaleCheckBox_5.Value == true
-                        ylim(app.UIAxes,[min(data)-0.1 max(data)+0.1]);
-                        bar(app.UIAxes, data);drawnow;
-                    else
-                        ylim(app.UIAxes,[app.MinEditField.Value app.MaxEditField.Value]);
-                        bar(app.UIAxes, data);drawnow;
-                    end
-                    
-                    pause(app.FasterSlider.Value/1000);
+                counter =1;
+                while ishandle(app.intensityFigure)
+
+%                     data(1,counter) = [data(1,counter)counter;
+                    buf = app.NLimagingCoordsdotNET(coordPointsForDelay);
+                    data =[data mean(mean(buf(:,:,channel)))];
+                    plot(app.axIntensity,data);
+                    counter = counter + 1;                    
                 end
-                
+                plot(app.axIntensity, data(1,:), data(2,:))
+%                 app.stage.MOV(app.PIaxis,Offset);
             end
+            catch ME
+                app.printLogWindow(ME.message);
+            end
+            ScanRangeXumEditFieldValueChanged(app, event);
+            PixelRepetitionEditField_2ValueChanged(app, event);
+            printLogWindow(app, "..done!");
         end
 
         % Value changed function: AutoscaleCheckBox_5
@@ -1711,69 +1736,66 @@ app.ReadyLampLabel.Text = "Not Ready";
 
         % Button pushed function: MoveButton
         function MoveButtonPushed(app, event)
-            app.stage.MOV(app.PIaxis,app.PositionEditField.Value);
-            printLogWindow(app, "Stage moved to "+app.PositionEditField.Value);
+            app.stage.MOV(app.PIaxis,app.SetOffsetmmEditField.Value);
+            printLogWindow(app, "Stage moved to "+app.SetOffsetmmEditField.Value);
         end
 
         % Button pushed function: ScandelayButton
         function ScandelayButtonPushed(app, event)
             %% Pulse overlap for CARS signal
-            printLogWindow(app, "Scanning the delay");    
-            Offset =45.434999999999600;%mm 20x 0.7 LWD SLM, 1:3 Telescope Oil reference
-            % Offset = 45.432499999998580; %mm 20x 0.7 LWD SLM, 1:3 Telescope, SpCOil
-            % Offset =45.602499999992550;%mm 20x 0.7 LWD NO 1:3 telescope no SLM
-            % Offset = 45.692499999999140; % Leaf fresh low
-            Range = app.RangemmEditField.Value; %mm
-            optimizationPoint = [0 0];
-            if exist('app.imSession', 'var')
-            app.imSession.outputSingleScan([optimizationPoint(1) optimizationPoint(2)]);
-            end
-            Step =app.StepmmEditField.Value;%mm
-            position = Offset-Range/2;
-            data = zeros(2, int32(Range/Step));
-            counter =1;
-            
-            sessionPulseOver = daq.createSession('ni');
-            sessionPulseOver.Rate = 1250000; sessionPulseOver.DurationInSeconds = 0.1;
-            chNo=0; %channel number for analog inpupt - PMT
-            chPMT=addAnalogInputChannel(sessionPulseOver,'Dev1',app.ChannelEditField.Value,'Voltage');
-            chPMT.TerminalConfig = 'SingleEnded'; % type of voltage measurement. CRUTIAL                  
-            while (position)<=(Offset+Range/2)
-                app.stage.MOV(app.PIaxis,position);
-                while(app.stage.IsMoving==true)
-                    pause(0.1);
+            printLogWindow(app, "Scanning the delay"); 
+            try
+            channel  = str2num(app.ChannelDropDown_2.Value);
+            if channel > app.NumberOfEnabledChannels
+                app.printLogWindow("Selected channel is not used")
+            else
+                app.delayScanSetAxes();
+%                 if app.channelsData(channel,2) == true
+%                     CIlistener = addlistener(app.CItask, 'EveryNSamplesRead', @(~, ev) myCallback(app.CIreader.ReadMultiSample(-1).double)); % Function is executed at each 'EveryNSamplesRead' event
+                Offset = app.OffsetmmEditField.Value;
+                app.numberOfPoints = app.SamplesperpointEditField.Value;
+                app.pixRep =1;
+                app.dwellTime = 1;
+                app.updateChannels();
+                Range = app.RangemmEditField.Value; %mm
+                optimizationPoint = [0 0];
+                coordPointsForDelay = zeros(app.numberOfPoints,2);
+                coordPointsForDelay(:,1) = coordPointsForDelay(:,1) + optimizationPoint(1);
+                coordPointsForDelay(:,2) = coordPointsForDelay(:,2) + optimizationPoint(2);
+                Step =app.StepmmEditField.Value;%mm
+                position = Offset-Range/2;
+                data = zeros(2, int32(Range/Step));
+                counter =1;
+
+                while (position)<=(Offset+Range/2)
+%                     app.stage.MOV(app.PIaxis,position);
+%                     while(app.stage.IsMoving==true)
+                        pause(0.1);
+%                     end
+
+                    data(1,counter) = position;
+                    buf = app.NLimagingCoordsdotNET(coordPointsForDelay);
+                    data(2, counter) = mean(mean(buf(:,:,channel)));
+                    plot(app.UIAxes2,data(1,:),data(2,:));
+                    %                 figure(fPulseOverlay); plot(data(1,:), data(2,:));axis([Offset-Range/2 Offset+Range/2 min(data(2, :))-0.05 max(data(2, :))+0.05]);title('Delay scan'); drawnow;
+                    position = position + Step; counter = counter + 1;
+
                 end
-                
-                data(1,counter) = position;
-                data(2, counter) = mean(sessionPulseOver.startForeground);
-                
-%                 figure(fPulseOverlay); plot(data(1,:), data(2,:));axis([Offset-Range/2 Offset+Range/2 min(data(2, :))-0.05 max(data(2, :))+0.05]);title('Delay scan'); drawnow;
-                position = position + Step; counter = counter + 1;
-                
+                app.UIAxes2.XTick = [Offset-Range/2:Range /9: Offset+Range/2];
+                app.UIAxes2.XTickLabelRotation = 90;
+                plot(app.UIAxes2, data(1,:), data(2,:))
+%                 app.stage.MOV(app.PIaxis,Offset);
             end
-            app.UIAxes2.XTick = [Offset-Range/2:Range /9: Offset+Range/2];
-            app.UIAxes2.XTickLabelRotation = 90;
-            plot(app.UIAxes2, data(1,:), data(2,:))
-            app.stage.MOV(app.PIaxis,Offset);
-%             styleDelay = '%f\t%f\n';
-            sessionPulseOver.release;
-            clear('sessionPulseOver');
+            catch ME
+                app.printLogWindow(ME.message);
+            end
+            ScanRangeXumEditFieldValueChanged(app, event);
+            PixelRepetitionEditField_2ValueChanged(app, event);
             printLogWindow(app, "..done!");
 %             saveas(fPulseOverlay,"output\"+logfolder+"\delay scan"+string(datetime('now','TimeZone','local','Format','HH-mm'))+".fig");
 %             fileName = "output\"+logfolder+"\delay scan"+string(datetime('now','TimeZone','local','Format','HH-mm'));
 %             saveText(fileName, styleDelay, data'); %save total signal evolution during the optimization
 %             app.printLogWindow('done')
-        end
-
-        % Button pushed function: Button2
-        function Button2Pushed(app, event)
-           
-                        
-                            
-                        
-                        
-                        
-
         end
 
         % Callback function
@@ -1858,11 +1880,17 @@ app.ReadyLampLabel.Text = "Not Ready";
             app.pixRep = value;
             app.dutyCycle = app.DutyCycleEditField.Value;
             app.dwellTime = app.PixelDwellTimeusEditField.Value;   
-            app.pixFreq = 1 / (app.dwellTime / 1000000 * 2);
-            app.PixelFrequencyHzEditField.Value = app.pixFreq;
+            
             app.updateChannels()
+            app.PixelFrequencyHzEditField.Value = app.pixFreq;
+            
 
 
+        end
+
+        % Button pushed function: Button2
+        function Button2Pushed(app, event)
+            
         end
     end
 
@@ -2200,12 +2228,18 @@ app.ReadyLampLabel.Text = "Not Ready";
             app.PixelFrequencyHzEditField.Editable = 'off';
             app.PixelFrequencyHzEditField.Position = [303 241 100 22];
 
-            % Create LiveTab
-            app.LiveTab = uitab(app.TabGroup);
-            app.LiveTab.Title = 'Live';
+            % Create Button2
+            app.Button2 = uibutton(app.MainTab, 'push');
+            app.Button2.ButtonPushedFcn = createCallbackFcn(app, @Button2Pushed, true);
+            app.Button2.Position = [478 314 100 22];
+            app.Button2.Text = 'Button2';
+
+            % Create LiveIntensityTab
+            app.LiveIntensityTab = uitab(app.TabGroup);
+            app.LiveIntensityTab.Title = 'Live Intensity';
 
             % Create UIAxes
-            app.UIAxes = uiaxes(app.LiveTab);
+            app.UIAxes = uiaxes(app.LiveIntensityTab);
             xlabel(app.UIAxes, 'Channel')
             ylabel(app.UIAxes, 'Signal')
             app.UIAxes.XTick = [0 1 2 3];
@@ -2213,85 +2247,109 @@ app.ReadyLampLabel.Text = "Not Ready";
             app.UIAxes.Position = [20 86 288 354];
 
             % Create FasterSliderLabel
-            app.FasterSliderLabel = uilabel(app.LiveTab);
+            app.FasterSliderLabel = uilabel(app.LiveIntensityTab);
             app.FasterSliderLabel.HorizontalAlignment = 'right';
             app.FasterSliderLabel.Position = [448 353 40 22];
             app.FasterSliderLabel.Text = 'Faster';
 
             % Create FasterSlider
-            app.FasterSlider = uislider(app.LiveTab);
+            app.FasterSlider = uislider(app.LiveIntensityTab);
             app.FasterSlider.Limits = [0 500];
             app.FasterSlider.MajorTicks = [];
             app.FasterSlider.MinorTicks = [];
             app.FasterSlider.Position = [509 362 150 3];
 
             % Create StartLiveButton
-            app.StartLiveButton = uibutton(app.LiveTab, 'state');
+            app.StartLiveButton = uibutton(app.LiveIntensityTab, 'state');
             app.StartLiveButton.ValueChangedFcn = createCallbackFcn(app, @StartLiveButtonValueChanged, true);
             app.StartLiveButton.Enable = 'off';
             app.StartLiveButton.Text = 'Start Live';
             app.StartLiveButton.Position = [347 171 138 113];
 
             % Create SlowerLabel
-            app.SlowerLabel = uilabel(app.LiveTab);
+            app.SlowerLabel = uilabel(app.LiveIntensityTab);
             app.SlowerLabel.Position = [674 353 42 22];
             app.SlowerLabel.Text = 'Slower';
 
             % Create RefreshrateLabel
-            app.RefreshrateLabel = uilabel(app.LiveTab);
+            app.RefreshrateLabel = uilabel(app.LiveIntensityTab);
             app.RefreshrateLabel.Position = [553 382 72 22];
             app.RefreshrateLabel.Text = 'Refresh rate';
 
             % Create ChannelForImagePixelSelectionDropDownLabel
-            app.ChannelForImagePixelSelectionDropDownLabel = uilabel(app.LiveTab);
+            app.ChannelForImagePixelSelectionDropDownLabel = uilabel(app.LiveIntensityTab);
             app.ChannelForImagePixelSelectionDropDownLabel.HorizontalAlignment = 'right';
             app.ChannelForImagePixelSelectionDropDownLabel.Position = [339 293 191 22];
             app.ChannelForImagePixelSelectionDropDownLabel.Text = 'Channel For Image Pixel Selection';
 
             % Create ChannelForImagePixelSelectionDropDown
-            app.ChannelForImagePixelSelectionDropDown = uidropdown(app.LiveTab);
+            app.ChannelForImagePixelSelectionDropDown = uidropdown(app.LiveIntensityTab);
             app.ChannelForImagePixelSelectionDropDown.Items = {'0', '1', '2', '3'};
             app.ChannelForImagePixelSelectionDropDown.ItemsData = {'0', '1', '2', '3'};
             app.ChannelForImagePixelSelectionDropDown.Position = [545 293 100 22];
             app.ChannelForImagePixelSelectionDropDown.Value = '0';
 
             % Create AutoscaleCheckBox_5
-            app.AutoscaleCheckBox_5 = uicheckbox(app.LiveTab);
+            app.AutoscaleCheckBox_5 = uicheckbox(app.LiveIntensityTab);
             app.AutoscaleCheckBox_5.ValueChangedFcn = createCallbackFcn(app, @AutoscaleCheckBox_5ValueChanged, true);
             app.AutoscaleCheckBox_5.Text = 'Autoscale';
             app.AutoscaleCheckBox_5.Position = [347 382 75 22];
             app.AutoscaleCheckBox_5.Value = true;
 
             % Create MaxEditFieldLabel
-            app.MaxEditFieldLabel = uilabel(app.LiveTab);
+            app.MaxEditFieldLabel = uilabel(app.LiveIntensityTab);
             app.MaxEditFieldLabel.HorizontalAlignment = 'right';
             app.MaxEditFieldLabel.Enable = 'off';
             app.MaxEditFieldLabel.Position = [339 355 28 22];
             app.MaxEditFieldLabel.Text = 'Max';
 
             % Create MaxEditField
-            app.MaxEditField = uieditfield(app.LiveTab, 'numeric');
+            app.MaxEditField = uieditfield(app.LiveIntensityTab, 'numeric');
             app.MaxEditField.Enable = 'off';
             app.MaxEditField.Position = [379 355 51 22];
             app.MaxEditField.Value = 3000;
 
             % Create MinEditFieldLabel
-            app.MinEditFieldLabel = uilabel(app.LiveTab);
+            app.MinEditFieldLabel = uilabel(app.LiveIntensityTab);
             app.MinEditFieldLabel.HorizontalAlignment = 'right';
             app.MinEditFieldLabel.Enable = 'off';
             app.MinEditFieldLabel.Position = [339 334 25 22];
             app.MinEditFieldLabel.Text = 'Min';
 
             % Create MinEditField
-            app.MinEditField = uieditfield(app.LiveTab, 'numeric');
+            app.MinEditField = uieditfield(app.LiveIntensityTab, 'numeric');
             app.MinEditField.Enable = 'off';
             app.MinEditField.Position = [379 334 51 22];
 
             % Create Button
-            app.Button = uibutton(app.LiveTab, 'state');
+            app.Button = uibutton(app.LiveIntensityTab, 'state');
             app.Button.ValueChangedFcn = createCallbackFcn(app, @ButtonValueChanged, true);
             app.Button.Text = 'Button';
             app.Button.Position = [641 228 100 22];
+
+            % Create ChannelDropDown_3Label
+            app.ChannelDropDown_3Label = uilabel(app.LiveIntensityTab);
+            app.ChannelDropDown_3Label.HorizontalAlignment = 'right';
+            app.ChannelDropDown_3Label.Position = [448 93 50 22];
+            app.ChannelDropDown_3Label.Text = 'Channel';
+
+            % Create ChannelDropDown_3
+            app.ChannelDropDown_3 = uidropdown(app.LiveIntensityTab);
+            app.ChannelDropDown_3.Items = {'1', '2', '3', '4'};
+            app.ChannelDropDown_3.ItemsData = {'1', '2', '3', '4'};
+            app.ChannelDropDown_3.Position = [513 93 44 22];
+            app.ChannelDropDown_3.Value = '1';
+
+            % Create SamplesperpointEditField_2Label
+            app.SamplesperpointEditField_2Label = uilabel(app.LiveIntensityTab);
+            app.SamplesperpointEditField_2Label.HorizontalAlignment = 'right';
+            app.SamplesperpointEditField_2Label.Position = [340 129 102 22];
+            app.SamplesperpointEditField_2Label.Text = 'Samples per point';
+
+            % Create SamplesperpointEditField_2
+            app.SamplesperpointEditField_2 = uieditfield(app.LiveIntensityTab, 'numeric');
+            app.SamplesperpointEditField_2.Position = [457 129 100 22];
+            app.SamplesperpointEditField_2.Value = 100;
 
             % Create SettingsTab
             app.SettingsTab = uitab(app.TabGroup);
@@ -2856,32 +2914,33 @@ app.ReadyLampLabel.Text = "Not Ready";
 
             % Create UIAxes2
             app.UIAxes2 = uiaxes(app.DelaylineTab);
-            title(app.UIAxes2, 'Title')
-            xlabel(app.UIAxes2, 'X')
-            ylabel(app.UIAxes2, 'Y')
-            app.UIAxes2.XTick = [0 0.1 0.2 0.4 0.6 0.8 1];
-            app.UIAxes2.Position = [692 26 300 185];
+            title(app.UIAxes2, 'Delay Scan, mm')
+            xlabel(app.UIAxes2, 'Delay Line Position, mm')
+            ylabel(app.UIAxes2, 'Intensity')
+            app.UIAxes2.XTick = 1;
+            app.UIAxes2.XTickLabel = {'app.Offset'};
+            app.UIAxes2.Position = [439 28 568 423];
 
             % Create DelayLineConnectionPanel
             app.DelayLineConnectionPanel = uipanel(app.DelaylineTab);
             app.DelayLineConnectionPanel.Title = 'Delay Line Connection';
-            app.DelayLineConnectionPanel.Position = [118 210 260 221];
+            app.DelayLineConnectionPanel.Position = [12 235 260 221];
 
             % Create ConnectDelayLineButton
             app.ConnectDelayLineButton = uibutton(app.DelayLineConnectionPanel, 'push');
             app.ConnectDelayLineButton.ButtonPushedFcn = createCallbackFcn(app, @ConnectDelayLineButtonPushed, true);
-            app.ConnectDelayLineButton.Position = [56 23 120 22];
+            app.ConnectDelayLineButton.Position = [71 23 120 22];
             app.ConnectDelayLineButton.Text = 'Connect Delay Line';
 
             % Create StagetypeEditFieldLabel
             app.StagetypeEditFieldLabel = uilabel(app.DelayLineConnectionPanel);
             app.StagetypeEditFieldLabel.HorizontalAlignment = 'right';
-            app.StagetypeEditFieldLabel.Position = [77 162 63 22];
+            app.StagetypeEditFieldLabel.Position = [42 162 63 22];
             app.StagetypeEditFieldLabel.Text = 'Stage type';
 
             % Create StagetypeEditField
             app.StagetypeEditField = uieditfield(app.DelayLineConnectionPanel, 'text');
-            app.StagetypeEditField.Position = [155 162 100 22];
+            app.StagetypeEditField.Position = [120 162 100 22];
             app.StagetypeEditField.Value = 'M-415.2S';
 
             % Create ControllerserialnumberEditFieldLabel
@@ -2898,100 +2957,108 @@ app.ReadyLampLabel.Text = "Not Ready";
             % Create ConnectioninterfaceDropDownLabel
             app.ConnectioninterfaceDropDownLabel = uilabel(app.DelayLineConnectionPanel);
             app.ConnectioninterfaceDropDownLabel.HorizontalAlignment = 'right';
-            app.ConnectioninterfaceDropDownLabel.Position = [26 87 116 22];
+            app.ConnectioninterfaceDropDownLabel.Position = [16 87 116 22];
             app.ConnectioninterfaceDropDownLabel.Text = 'Connection interface';
 
             % Create ConnectioninterfaceDropDown
             app.ConnectioninterfaceDropDown = uidropdown(app.DelayLineConnectionPanel);
             app.ConnectioninterfaceDropDown.Items = {'USB', 'Serial'};
-            app.ConnectioninterfaceDropDown.Position = [156 87 100 22];
+            app.ConnectioninterfaceDropDown.Position = [146 87 100 22];
             app.ConnectioninterfaceDropDown.Value = 'USB';
 
             % Create PortEditFieldLabel
             app.PortEditFieldLabel = uilabel(app.DelayLineConnectionPanel);
             app.PortEditFieldLabel.HorizontalAlignment = 'right';
-            app.PortEditFieldLabel.Position = [108 52 28 22];
+            app.PortEditFieldLabel.Position = [59 52 28 22];
             app.PortEditFieldLabel.Text = 'Port';
 
             % Create PortEditField
             app.PortEditField = uieditfield(app.DelayLineConnectionPanel, 'text');
-            app.PortEditField.Position = [151 52 100 22];
+            app.PortEditField.Position = [102 52 100 22];
             app.PortEditField.Value = 'COM';
 
-            % Create PositionEditFieldLabel
-            app.PositionEditFieldLabel = uilabel(app.DelaylineTab);
-            app.PositionEditFieldLabel.HorizontalAlignment = 'right';
-            app.PositionEditFieldLabel.Position = [575 325 48 22];
-            app.PositionEditFieldLabel.Text = 'Position';
+            % Create SetOffsetmmEditFieldLabel
+            app.SetOffsetmmEditFieldLabel = uilabel(app.DelaylineTab);
+            app.SetOffsetmmEditFieldLabel.HorizontalAlignment = 'right';
+            app.SetOffsetmmEditFieldLabel.Position = [37 95 86 22];
+            app.SetOffsetmmEditFieldLabel.Text = 'Set Offset, mm';
 
-            % Create PositionEditField
-            app.PositionEditField = uieditfield(app.DelaylineTab, 'numeric');
-            app.PositionEditField.ValueDisplayFormat = '%.4f';
-            app.PositionEditField.Position = [638 325 100 22];
-            app.PositionEditField.Value = 45.4349;
+            % Create SetOffsetmmEditField
+            app.SetOffsetmmEditField = uieditfield(app.DelaylineTab, 'numeric');
+            app.SetOffsetmmEditField.ValueDisplayFormat = '%.4f';
+            app.SetOffsetmmEditField.Position = [138 95 100 22];
+            app.SetOffsetmmEditField.Value = 45.4349;
 
             % Create MoveButton
             app.MoveButton = uibutton(app.DelaylineTab, 'push');
             app.MoveButton.ButtonPushedFcn = createCallbackFcn(app, @MoveButtonPushed, true);
-            app.MoveButton.Position = [603 276 100 22];
+            app.MoveButton.Position = [103 46 100 22];
             app.MoveButton.Text = 'Move';
 
             % Create ScandelayButton
             app.ScandelayButton = uibutton(app.DelaylineTab, 'push');
             app.ScandelayButton.ButtonPushedFcn = createCallbackFcn(app, @ScandelayButtonPushed, true);
-            app.ScandelayButton.Position = [422 36 100 22];
+            app.ScandelayButton.Position = [315 37 100 22];
             app.ScandelayButton.Text = 'Scan delay';
 
             % Create OffsetmmEditFieldLabel
             app.OffsetmmEditFieldLabel = uilabel(app.DelaylineTab);
             app.OffsetmmEditFieldLabel.HorizontalAlignment = 'right';
-            app.OffsetmmEditFieldLabel.Position = [393 130 64 22];
+            app.OffsetmmEditFieldLabel.Position = [286 131 64 22];
             app.OffsetmmEditFieldLabel.Text = 'Offset, mm';
 
             % Create OffsetmmEditField
             app.OffsetmmEditField = uieditfield(app.DelaylineTab, 'numeric');
+            app.OffsetmmEditField.Limits = [0 150];
             app.OffsetmmEditField.ValueDisplayFormat = '%.4f';
-            app.OffsetmmEditField.Position = [472 130 67 22];
-            app.OffsetmmEditField.Value = 45.4349;
+            app.OffsetmmEditField.Position = [365 131 67 22];
+            app.OffsetmmEditField.Value = 45.53;
 
             % Create RangemmEditFieldLabel
             app.RangemmEditFieldLabel = uilabel(app.DelaylineTab);
             app.RangemmEditFieldLabel.HorizontalAlignment = 'right';
-            app.RangemmEditFieldLabel.Position = [393 97 68 22];
+            app.RangemmEditFieldLabel.Position = [286 98 68 22];
             app.RangemmEditFieldLabel.Text = 'Range, mm';
 
             % Create RangemmEditField
             app.RangemmEditField = uieditfield(app.DelaylineTab, 'numeric');
-            app.RangemmEditField.Position = [476 97 63 22];
+            app.RangemmEditField.Position = [369 98 63 22];
             app.RangemmEditField.Value = 0.2;
 
             % Create StepmmEditFieldLabel
             app.StepmmEditFieldLabel = uilabel(app.DelaylineTab);
             app.StepmmEditFieldLabel.HorizontalAlignment = 'right';
-            app.StepmmEditFieldLabel.Position = [393 64 57 22];
+            app.StepmmEditFieldLabel.Position = [286 65 57 22];
             app.StepmmEditFieldLabel.Text = 'Step, mm';
 
             % Create StepmmEditField
             app.StepmmEditField = uieditfield(app.DelaylineTab, 'numeric');
-            app.StepmmEditField.Position = [465 64 74 22];
+            app.StepmmEditField.Position = [358 65 74 22];
             app.StepmmEditField.Value = 0.0025;
 
-            % Create ChannelEditFieldLabel
-            app.ChannelEditFieldLabel = uilabel(app.DelaylineTab);
-            app.ChannelEditFieldLabel.HorizontalAlignment = 'right';
-            app.ChannelEditFieldLabel.Position = [528 189 50 22];
-            app.ChannelEditFieldLabel.Text = 'Channel';
+            % Create ChannelDropDown_2Label
+            app.ChannelDropDown_2Label = uilabel(app.DelaylineTab);
+            app.ChannelDropDown_2Label.HorizontalAlignment = 'right';
+            app.ChannelDropDown_2Label.Position = [323 161 50 22];
+            app.ChannelDropDown_2Label.Text = 'Channel';
 
-            % Create ChannelEditField
-            app.ChannelEditField = uieditfield(app.DelaylineTab, 'text');
-            app.ChannelEditField.Position = [593 189 100 22];
-            app.ChannelEditField.Value = 'ai0';
+            % Create ChannelDropDown_2
+            app.ChannelDropDown_2 = uidropdown(app.DelaylineTab);
+            app.ChannelDropDown_2.Items = {'1', '2', '3', '4'};
+            app.ChannelDropDown_2.ItemsData = {'1', '2', '3', '4'};
+            app.ChannelDropDown_2.Position = [388 161 44 22];
+            app.ChannelDropDown_2.Value = '1';
 
-            % Create Button2
-            app.Button2 = uibutton(app.DelaylineTab, 'push');
-            app.Button2.ButtonPushedFcn = createCallbackFcn(app, @Button2Pushed, true);
-            app.Button2.Position = [184 97 100 22];
-            app.Button2.Text = 'Button2';
+            % Create SamplesperpointEditFieldLabel
+            app.SamplesperpointEditFieldLabel = uilabel(app.DelaylineTab);
+            app.SamplesperpointEditFieldLabel.HorizontalAlignment = 'right';
+            app.SamplesperpointEditFieldLabel.Position = [215 197 102 22];
+            app.SamplesperpointEditFieldLabel.Text = 'Samples per point';
+
+            % Create SamplesperpointEditField
+            app.SamplesperpointEditField = uieditfield(app.DelaylineTab, 'numeric');
+            app.SamplesperpointEditField.Position = [332 197 100 22];
+            app.SamplesperpointEditField.Value = 100;
 
             % Create PIFOCTab
             app.PIFOCTab = uitab(app.TabGroup);
