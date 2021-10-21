@@ -1165,7 +1165,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 app.StartLiveButton.Enable = true;
                 app.ReadyLamp.Color = 'Green';
                 printLogWindow(app,"Initialization complete")
-                app.InitializeButton.Enable = false;
+%                 app.InitializeButton.Enable = false;
                 app.InitializePolarMotorButton.Enable = true;
                 app.ZoomInButton.Enable = true;
                 app.ZoomOutButton.Enable = true;
@@ -1899,7 +1899,7 @@ app.ReadyLampLabel.Text = "Not Ready";
             app.dutyCycle = app.DutyCycleEditField.Value;
             app.dwellTime = app.PixelDwellTimeusEditField.Value;
             app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter);
-            
+            app.pixFreq = 1 / (app.dwellTime / 1000000 * 2);
 %             app.updateChannels()
             [app.AOtask,app.AOwriter, app.COtask, app.AItask,app.AIreader,app.CItask,app.CIreader] = app.initChannels();
             app.PixelFrequencyHzEditField.Value = app.pixFreq;
@@ -2514,7 +2514,7 @@ app.ReadyLampLabel.Text = "Not Ready";
             app.NumberOfChannelsSlider.ValueChangedFcn = createCallbackFcn(app, @NumberOfChannelsSliderValueChanged, true);
             app.NumberOfChannelsSlider.MinorTicks = [];
             app.NumberOfChannelsSlider.Position = [169 384 57 3];
-            app.NumberOfChannelsSlider.Value = 3;
+            app.NumberOfChannelsSlider.Value = 1;
 
             % Create SecondChannelSettingsPanel
             app.SecondChannelSettingsPanel = uipanel(app.SettingsTab);
@@ -2815,15 +2815,13 @@ app.ReadyLampLabel.Text = "Not Ready";
             % Create CounterTerminalForSquarePulseGenerationLabel
             app.CounterTerminalForSquarePulseGenerationLabel = uilabel(app.SettingsTab);
             app.CounterTerminalForSquarePulseGenerationLabel.HorizontalAlignment = 'right';
-            app.CounterTerminalForSquarePulseGenerationLabel.Enable = 'off';
             app.CounterTerminalForSquarePulseGenerationLabel.Position = [718 109 98 42];
             app.CounterTerminalForSquarePulseGenerationLabel.Text = {'Counter Terminal'; ' To Receive'; 'Square Pulses'};
 
             % Create CounterTerminalToReceiveSquarePulsesEditField
             app.CounterTerminalToReceiveSquarePulsesEditField = uieditfield(app.SettingsTab, 'text');
-            app.CounterTerminalToReceiveSquarePulsesEditField.Enable = 'off';
             app.CounterTerminalToReceiveSquarePulsesEditField.Position = [835 129 49 22];
-            app.CounterTerminalToReceiveSquarePulsesEditField.Value = 'PFI15';
+            app.CounterTerminalToReceiveSquarePulsesEditField.Value = 'PFI14';
 
             % Create CounterGenerationChannelEditFieldLabel
             app.CounterGenerationChannelEditFieldLabel = uilabel(app.SettingsTab);
@@ -2861,39 +2859,35 @@ app.ReadyLampLabel.Text = "Not Ready";
             % Create ExternalCardTriggerTerminalEditFieldLabel
             app.ExternalCardTriggerTerminalEditFieldLabel = uilabel(app.SettingsTab);
             app.ExternalCardTriggerTerminalEditFieldLabel.HorizontalAlignment = 'right';
-            app.ExternalCardTriggerTerminalEditFieldLabel.Enable = 'off';
             app.ExternalCardTriggerTerminalEditFieldLabel.Position = [893 73 94 28];
             app.ExternalCardTriggerTerminalEditFieldLabel.Text = {'External Card '; 'Trigger Terminal'; ''};
 
             % Create ExternalCardTriggerTerminalEditField
             app.ExternalCardTriggerTerminalEditField = uieditfield(app.SettingsTab, 'text');
-            app.ExternalCardTriggerTerminalEditField.Enable = 'off';
             app.ExternalCardTriggerTerminalEditField.Position = [1006 79 44 22];
             app.ExternalCardTriggerTerminalEditField.Value = 'PFI11';
 
             % Create SourceCardTriggerTerminalEditFieldLabel
             app.SourceCardTriggerTerminalEditFieldLabel = uilabel(app.SettingsTab);
             app.SourceCardTriggerTerminalEditFieldLabel.HorizontalAlignment = 'right';
-            app.SourceCardTriggerTerminalEditFieldLabel.Enable = 'off';
             app.SourceCardTriggerTerminalEditFieldLabel.Position = [724 73 94 28];
             app.SourceCardTriggerTerminalEditFieldLabel.Text = {'Source Card '; 'Trigger Terminal'; ''};
 
             % Create SourceCardTriggerTerminalEditField
             app.SourceCardTriggerTerminalEditField = uieditfield(app.SettingsTab, 'text');
-            app.SourceCardTriggerTerminalEditField.Enable = 'off';
             app.SourceCardTriggerTerminalEditField.Position = [837 79 44 22];
-            app.SourceCardTriggerTerminalEditField.Value = 'PFI9';
+            app.SourceCardTriggerTerminalEditField.Value = 'PFI13';
 
             % Create ExternalCounterGenerationTerminalEditFieldLabel
             app.ExternalCounterGenerationTerminalEditFieldLabel = uilabel(app.SettingsTab);
             app.ExternalCounterGenerationTerminalEditFieldLabel.HorizontalAlignment = 'right';
-            app.ExternalCounterGenerationTerminalEditFieldLabel.Position = [933 107 65 56];
+            app.ExternalCounterGenerationTerminalEditFieldLabel.Position = [893 107 65 56];
             app.ExternalCounterGenerationTerminalEditFieldLabel.Text = {'External'; 'Counter '; 'Generation'; 'Terminal'};
 
             % Create ExternalCounterGenerationTerminalEditField
             app.ExternalCounterGenerationTerminalEditField = uieditfield(app.SettingsTab, 'text');
             app.ExternalCounterGenerationTerminalEditField.Editable = 'off';
-            app.ExternalCounterGenerationTerminalEditField.Position = [1005 125 37 22];
+            app.ExternalCounterGenerationTerminalEditField.Position = [965 125 77 22];
 
             % Create InitializeButton
             app.InitializeButton = uibutton(app.SettingsTab, 'push');
