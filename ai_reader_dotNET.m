@@ -27,7 +27,7 @@ prop.buffersize = ceil(prop.buffersize/prop.nsamples)*prop.nsamples; % to make s
            
 AItask = NationalInstruments.DAQmx.Task;
 AItask.AIChannels.CreateVoltageChannel(prop.AIchans, '', AITerminalConfiguration.Rse, prop.AIrange(1), prop.AIrange(2), AIVoltageUnits.Volts);
-AIreader = AnalogSingleChannelReader(AItask.Stream)
+AIreader = AnalogSingleChannelReader(AItask.Stream);
 data = double(AIreader.ReadMultiSample(100));
 plot(data)
 

@@ -1,0 +1,7 @@
+function readCallback(source, event,readEvery)
+global buffer;
+global AIreader
+    data1 = double(AIreader.ReadMultiSample(readEvery));
+    buffer = [buffer data1];
+    
+end
