@@ -62,6 +62,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         ScanRangeXumEditFieldLabel      matlab.ui.control.Label
         ScanSaveButton                  matlab.ui.control.Button
         LiveIntensityTab                matlab.ui.container.Tab
+        LineplotCheckBox                matlab.ui.control.CheckBox
+        BarGraphCheckBox                matlab.ui.control.CheckBox
         SamplesperpointEditField_2      matlab.ui.control.NumericEditField
         SamplesperpointEditField_2Label  matlab.ui.control.Label
         ChannelDropDown_3               matlab.ui.control.DropDown
@@ -209,7 +211,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         ConnectPIFOCButton              matlab.ui.control.Button
     end
 
-    
+
     properties (Access = private)
         calibration % Description
         ax % array of uiaxes to display measured images
@@ -221,7 +223,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         numberOfAccums % number of frames to average
         coordPoints % array of voltages to be sent to galvos for scanning
         signalData % measured data from imSession.foregroundAcquisition
-        
+
         channelsData % array that stores all the info about channel i:
         % (i,1) - is used?
         % (i,2) - is Digital?
@@ -233,7 +235,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         maxTextFields % Description
         channelPannels
         autoScales
-        
+
         digitalSwitches % Description
         analogChannelsInputFields
         counterChannelsInputFields
@@ -245,7 +247,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         DATA % Description
         ims % Description
         firstDraw % Description
-        
+
         lhIN % Description
         lhOUT
         displayFigure % Description
@@ -254,7 +256,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         Controller % Description
         ControllerPIFOC % Description
         stagePIFOC;
-        
+
         PIFOCaxis % axis name for the PIFOC. Can be different depending on
         % model. To be checked in the documentation
         Dev % daq card adress
@@ -283,9 +285,9 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         axIntensity % axes for live intensity plotting
         dataBuffer
     end
-    
+
     methods (Access = private)
-        
+
         function grabData(app,~,event)
             if ~isempty(app.AIreader)&&(app.AIreader~=-1)
                 analogBuf = app.AIreader.ReadMultiSample(-1).double;
@@ -294,23 +296,27 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 buf = zeros(app.CItask(1).EveryNSamplesReadEventInterval,app.NumberOfEnabledChannels);
             end
             j = 1; k = 1;
+            app.AOtask.Stop();
             for i=1:app.NumberOfEnabledChannels
                 if app.channelsData(i,2)>0
                     if (~isempty(app.CItask)&&(app.CItask~=-1))
-                        buf(i) = double(app.CIreader(j).ReadMultiSampleDouble( -1));
+                        bb= double(app.CIreader(j).ReadMultiSampleDouble(app.CItask(j).EveryNSamplesReadEventInterval));
+                        buf(:,i) = bb';
                         j = j + 1;
                     end
                 else
-                    buf(i) = analogBuf(k,:);
+                    buf(:,i) = analogBuf(k,:);
                     k = k + 1;
                 end
             end
-            app.dataBuffer = [app.dataBuffer buf];
+            buf = mean(buf,1);
+            app.dataBuffer = [app.dataBuffer; buf];
             if length(app.dataBuffer)>(length(buf) * 100)
-                app.dataBuffer = app.dataBuffer(:,end-length(buf) * 100:end)
+                app.dataBuffer = app.dataBuffer(:,end-length(buf) * 100:end);
             end
         end
-        
+
+
         %             function queueData(app,src,event)
         %                 app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)])
         %             end
@@ -343,40 +349,40 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             coordPoints = [repelem(X(:)*app.calibration,app.pixRep),repelem(Y(:)*app.calibration, app.pixRep)];
             app.Snake = true;
         end
-        
-        
-        
+
+
+
         function [signal] =  NLimagingCoords(app, coordPoints,accumulation, pixRep)     % obsolete, requires data acquisition toolbox
             % Acquires a single image by scanning galvo mirrors at set FOV with set
             % precision
-            
-            
+
+
             size = int32(sqrt(length(coordPoints(:,1))/pixRep));       % image size
             signal = zeros(size, size,app.NumberOfEnabledChannels);       % Array where signal data is stored
-            
+
             for images=1:accumulation
                 app.imSession.outputSingleScan([coordPoints(1,1) coordPoints(1,2)])     % if there is a time lag, this should account for it
                 app.imSession.queueOutputData([coordPoints(:,2) coordPoints(:,1)]);         % send data to the DAQ card
                 if sum(app.channelsData(1:app.NumberOfEnabledChannels,2))>0
                     resetCounters(app.imSession)
                 end
-                
+
                 buf = app.imSession.startForeground();      % perform the scan
-                
+
                 for channel=1:app.NumberOfEnabledChannels
                     if app.channelsData(channel,2)== true
                         buf2 = [buf(1,channel); buf(1,channel) + diff(buf(:,channel))];
                         if pixRep>1
                             buf2 = downSampleImage(app,buf2,pixRep);
                         end
-                        
+
                     else
                         if pixRep>1
                             buf2 = downSampleImage(app,buf(:,channel),pixRep);
                         else
                             buf2=buf(:,channel);
                         end
-                        
+
                     end
                     image = reshape(buf2,[size,size]);
                     signal(:,:,channel) = signal(:,:,channel) + image;
@@ -384,7 +390,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             end
             signal = signal / accumulation ;        % normalize over number of accumulations
             %             app.imSession.outputSingleScan([0,0]);         % return to the image center
-            
+
         end
         function [signal] =  NLimagingCoordsdotNET(app, coordPoints)
             app.AOtask.Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;     % set the timeout time 3 times longer
@@ -396,20 +402,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             else
                 signal = zeros(coordsize, coordsize,app.NumberOfEnabledChannels);       % Array where signal data is stored
             end
-            if app.COtask ~= -1
-                app.COtask.Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;
-                app.COtask.Start();
-            end      % start the square pulse production: doesn't start before AOtask
-            if app.CItask ~= -1
-                for j = 1 : sum(app.channelsData(:,2))
-                    app.CItask(j).Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;
-                    app.CItask(j).Start();
-                end
-            end      % start in the background
-            if app.AItask ~= -1
-                app.AItask.Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;
-                app.AItask.Start();
-            end      % start in the background
+            app.startTasks();
             % if there are too many samples to acquire, the live acquisition and
             % displaying lags - it complains that it cannnot acquire all the samples
             app.AOwriter.WriteMultiSample(true,coordPoints');   % write voltages to a galvo: triggers the aquisition
@@ -442,13 +435,13 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     xsize = uint16(app.scanXRange / app.scanStep + 1); ysize = uint16(app.scanYRange / app.scanStep + 1);
                     coordsize = uint16(sqrt(length(coordPoints(:,1) )/ app.pixRep));
                     if (xsize * ysize) == coordsize * coordsize
-%                         if app.Snake==true
-%                             for yy=1:ysize-1
-%                                 if mod(yy,2)
-%                                     data(:,yy*xsize+1:(yy+1)*(xsize)) = fliplr(data(:,yy*xsize+1:(yy+1)*(xsize)));
-%                                 end
-%                             end
-%                         end
+                        %                         if app.Snake==true
+                        %                             for yy=1:ysize-1
+                        %                                 if mod(yy,2)
+                        %                                     data(:,yy*xsize+1:(yy+1)*(xsize)) = fliplr(data(:,yy*xsize+1:(yy+1)*(xsize)));
+                        %                                 end
+                        %                             end
+                        %                         end
                         signal(:,:,i) = reshape(data,[xsize ysize]);
 
                     else
@@ -461,29 +454,22 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                             end
                         end
                     end
-                    
+
                 end
             catch ME
                 app.printLogWindow(ME.message)
             end
-            app.AOtask.Stop()
-            if app.CItask ~= -1
-                for j = 1 : sum(app.channelsData(:,2))
-                    app.CItask(j).Stop()
-                end
-                app.COtask.Stop()
-            end
-            if app.AItask ~=-1; app.AItask.Stop(); end
-            
+            app.stopTasks()
+
         end
-        
+
         function  printLogWindow(app, line)
             %            str = app.LogTextArea.Value+"\n" + line
             %             app.LogTextArea.Value = compose(str)
             line = datestr(now,'HH:MM')+" "+line;
             app.LogTextArea.Value =[line; app.LogTextArea.Value];
         end
-        
+
         function setAxes(app, imSize)
             app.ax = [];
             imSize = 0.45;
@@ -503,28 +489,28 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.ax =[app.ax axes(app.displayFigure,'Position',[imSize 0 imSize imSize])];
             set(app.ax,'visible','off');
             axis(app.ax,'image');
-            
+
             for axs=1:length(app.ax)
                 set(app.ax(axs), 'XTick',[], 'YTick',[]) %Fill the window
             end
         end
-        
-        
+
+
         function results = setChannelParameters(app)
             for i=1:app.NumberOfEnabledChannels
                 app.channelsData()
             end
-            
+
         end
-        
-        
+
+
         function drawImages(app,firstDraw,data)
             if ~ishandle(app.displayFigure)         % check if figure for displaying exists
                 app.displayFigure = figure('Name',app.MatMicroMain.Name,'NumberTitle','off');       % create figure if doesn't exist
                 setAxes(app,0.5)                    % create axes
                 firstDraw = true;               % complete redraw next time
             end
-            
+
             if firstDraw ==true
                 app.ims=[];
             end
@@ -538,9 +524,9 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     %                         caxis(app.ax(channel), [app.channelsData(channel,4) app.channelsData(channel,5)]);
                     %                     else
                     %caxis(app.ax(channel), [min(min(app.signalData(:,:,channel))) max(max(app.signalData(:,:,channel)))]);
-                    
+
                     %                     end
-                    
+
                 else
                     maxLim = max(data(:,:,channel),[],'all');
                     if isvalid(app.ims(channel))
@@ -550,11 +536,11 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 end
             end
             drawnow;
-            
+
         end
         function results = updateChannelInfo(app)
             for channel = 1 : app.NumberOfEnabledChannels
-                
+
                 if app.digitalSwitches(channel).Value=="Counter"
                     app.channelsData(channel,2) = true; % acquisition type: analog or counter channels
                 else
@@ -563,12 +549,12 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 app.channelsData(channel, 3) = app.autoScales(channel).Value;
                 app.channelsData(channel, 4) =  app.minTextFields(channel).Value;
                 app.channelsData(channel, 5) =  app.maxTextFields(channel).Value;
-                
-                
+
+
             end
-            
+
         end
-        
+
         function results = saveDataTiff(app, filenameComment, data)
             zcoordName="";
             if exist('stagePIFOC','var')
@@ -589,7 +575,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     end
                 end
             elseif length(size(data)) == 4
-                
+
                 for channel =1 : app.NumberOfEnabledChannels
                     fullnameImage =logfolder+string(datetime('now','TimeZone','local','Format','HH-mm'))+'_ch'+string(channel-1)+'_NLimage X='+string(app.scanXRange)+' Y='+ string(app.scanXRange)+'_'+app.scanStep+'_'+string(zcoordName);
                     printLogWindow(app,'Saving channel ' + string(channel-1))
@@ -600,20 +586,20 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                             saveTIFF32(app,(data(:,:,slice,channel)),fullnameImage+filenameComment+'_chn'+string(channel-1)+'.tiff','a')
                         end
                     end
-                    
+
                 end
             end
         end
-        
+
         function results = setPolarAngle(app, angle)        % rotates the polar motor to the provided angle
             Command = "1pa"+string(angle);
             fprintf(app.URB_Ojt,Command);% 1pann: move to nn='0' angle absolute; pause(0.5);
             pause(app.TimeLag);       % give time to the motor to reach the new position - can be optimizaed
             app.CurrentAngledegrGauge.Value = angle;
-            
+
         end
-        
-        
+
+
         function txt = localDcmFcn(~,event,ax)
             % Compute index
             idx = event.Target.CData(event.Position(2),event.Position(1));
@@ -622,7 +608,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             txt = sprintf('[X,Y] [%d %d]\nIndex %d\n[R,G,B] [%.4g %.4g %.4g]', ...
                 event.Position, idx, ax.Colormap(idx,:));
         end
-        
+
         function [xcoord,ycoord] = selectGalvoPosition(app, channelNumber)
             xcoord=-1;ycoord=-1;
             if app.SimulationmodeCheckBox.Value == true
@@ -651,33 +637,33 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.FoVcenterXumEditField.Value = -double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep+double(xcoord)*app.scanStep;
             app.FoVcenterYumEditField.Value = -double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
         end
-        
+
         function results = singleMeasurement(app)
-            
+
             if sum(app.channelsData(1:app.NumberOfEnabledChannels,2))>0
                 resetCounters(app.imSession)
             end
             results = app.imSession.inputSingleScan();
-            
+
         end
-        
+
         function results = zoomImage(app, zoomFactor)
-            
+
             app.scanXRange = app.scanXRange / zoomFactor;
             app.scanYRange = app.scanYRange / zoomFactor;
             app.scanStep = app.scanStep / zoomFactor;
             app.ScanRangeXumEditField.Value = app.scanXRange;
             app.ScanRangeYumEditField.Value = app.scanYRange;
             app.ScanResolutionumEditField.Value = app.scanStep;
-            
+
         end
-        
-        
-        
+
+
+
         function data = downSampleImage(app,rawData, pixRep)
             data = arrayfun(@(i) mean(rawData(i:i+pixRep-1)),1:pixRep:length(rawData)-pixRep+1)';
         end
-        
+
         function [] = saveTIFF32(app,data,fullFileName, mode)
             %            'r'     open Tiff file for reading.
             %            'w'     open Tiff file for writing; discard existing contents.
@@ -702,22 +688,22 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             tagstruct.BitsPerSample   = 32;
             tagstruct.SamplesPerPixel = 1;
             % tagstruct.RowsPerStrip    = 16;
-            
+
             tagstruct.PlanarConfiguration = Tiff.PlanarConfiguration.Chunky;
             tagstruct.Software        = 'MATLAB';
             t.setTag(tagstruct)
             t.write(single(data));
             t.close();
-            
-            
+
+
         end
-        
-        
-        
+
+
+
         function [stage, PIaxis, stageConnected] = StartStage(app, Controller,connectionInterface, stageType,controllerSerialNumber)
-            
+
             %Start connection (if not already connected)
-            
+
             %             if ( ~(app.stageConnected ) )
             % USB
             %stageType = 'M-415.2S';% 113013743     stageType = 'P-725.4CD'
@@ -729,37 +715,37 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             end
             stageConnected=true;
             %             end
-            
+
             % Query controller identification string
             connectedControllerName = stage.qIDN();
-            
+
             % initialize PIdevice object for use in MATLAB
             stage = stage.InitializeController ();
-            
+
             %Startup Stage
             PIaxis = '1';
-            
+
             % switch servo on for axis
             switchOn    = 1;
             % switchOff   = 0;
             stage.SVO ( PIaxis, switchOn );
-            
+
         end
-        
+
         function ReferenceStage(app,stage, PIaxis)
             printLogWindow(app,"Referencing the stage");
             stage.FRF ( PIaxis );  % find reference
-            
+
             % wait for referencing to finish
             while(0 ~= stage.qFRF ( PIaxis ) == 0 )
                 pause(0.1);
-                
+
             end
             printLogWindow(app,".. done!");
         end
-        
+
         function [stage, PIaxis, stageConnected] = StartPIStage(Controller,stageConnected)
-            
+
             %Start connection (if not already connected)
             stageConnected = false; if ( exist ( 'stage', 'var' ) ), if ( stage.IsConnected ), stageConnected = true; end; end;
             if ( ~(stageConnected ) )
@@ -770,35 +756,83 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
                 stageConnected=true;
             end
-            
+
             % Query controller identification string
             connectedControllerName = stage.qIDN();
-            
+
             % initialize PIdevice object for use in MATLAB
             stage = stage.InitializeController ();
-            
+
             %Startup Stage
             PIaxis = 'Z';
-            
+
             % switch servo on for axis
             switchOn    = 1;
             % switchOff   = 0;
             stage.SVO ( PIaxis, switchOn )
+
+
         end
+        function done = startTasks(app)
+            try
+
+                if app.COtask ~= -1
+                    app.COtask.Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;
+                    app.COtask.Start();
+                end      % start the square pulse production: doesn't start before AOtask
+                if app.CItask ~= -1
+                    for j = 1 : sum(app.channelsData(:,2))
+                        app.CItask(j).Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;
+                        app.CItask(j).Start();
+                    end
+                end      % start in the background
+                if app.AItask ~= -1
+                    app.AItask.Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;
+                    app.AItask.Start();
+                end      % start in the background
+                done = 1;
+            catch ME
+                app.printLogWindow(ME.message)
+                done = -1;
+            end
+        end
+        function done = stopTasks(app)
+            try
+                app.AOtask.Stop()
+                if app.CItask ~= -1
+                    for j = 1 : sum(app.channelsData(:,2))
+                        app.CItask(j).Stop()
+                    end
+                    app.COtask.Stop()
+                end
+                if app.AItask ~=-1; app.AItask.Stop(); end
+                done = 1;
+            catch ME
+                app.printLogWindow(ME.message)
+                done = -1;
+            end
+        end
+
+
         function [AIlistener, CIlistener] = addListeners(app, notifyEvery)
+            %             app.AOtask.EveryNSamplesWrittenEventInterval = notifyEvery;
+            %             AOlistener = addlistener(app.AItask, 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
             if (~isempty(app.AItask)&&(app.AItask~=-1))
                 app.AItask.EveryNSamplesReadEventInterval = notifyEvery;
                 AIlistener = addlistener(app.AItask, 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
+            else
+                AIlistener = -1;
             end
             if (~isempty(app.CItask)&&(app.CItask~=-1))
                 for j =1:app.CItask.Length
                     app.CItask(j).EveryNSamplesReadEventInterval = notifyEvery;
                     CIlistener(j) = addlistener(app.CItask(j), 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
                 end
+            else
+                CIlistener = -1;
             end
-            
         end
-        
+
         function delayScanSetAxes(app)
             % set delay scan axis ticks
             offset = app.OffsetmmEditField.Value;
@@ -810,9 +844,9 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.UIAxes2.XTick = delaysForTicks;
             app.UIAxes2.XTickLabel = delaysForTicks;
         end
-        
+
         function [stage, PIaxis, stageConnected] = ConnectPIFOC(app,Controller,connectionType,PIFOCStageType,controllerSerialNumber)%(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,app.PIFOCControllerSerialNumberEditField.Value);
-            
+
             %Start connection (if not already connected)
             stageConnected = false; if ( exist ( 'stage', 'var' ) ), if ( stage.IsConnected ), stageConnected = true; end; end;
             if ( ~(stageConnected ) )
@@ -823,10 +857,10 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 stage = Controller.ConnectUSB ( controllerSerialNumber ); %Or look at the label of the case of your controller
                 stageConnected=true;
             end
-            
+
             % Query controller identification string
             connectedControllerName = stage.qIDN();
-            
+
             % initialize PIdevice object for use in MATLAB
             stage = stage.InitializeController ();
             if str2double(controllerSerialNumber) == 120004758
@@ -835,15 +869,15 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 PIaxis = 'A';
             end
             %Startup Stage
-            
-            
+
+
             % switch servo on for axis
             switchOn    = 1;
             % switchOff   = 0;
             stage.SVO ( PIaxis, switchOn );
-            
+
         end
-        
+
         function results = acquireZStack(app)
             printLogWindow(app,'Acquiring Z stack, please wait')
             app.AcquireZstackButton.Enable = false;
@@ -853,11 +887,11 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             try
                 ZStart = app.StartingZumEditField.Value; ZStop = app.EndingZumEditField.Value; ZStep = app.ZStepEditField.Value;
                 Z= ZStart;
-                
+
                 saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
                 dataZCUBE = zeros(int16(app.scanXRange /  (app.scanStep))+1,int16(app.scanYRange /  app.scanStep)+1, int8((ZStop-ZStart)/ZStep)+1, app.NumberOfEnabledChannels);       % the data cube with the complete Polar stack
                 app.stagePIFOC.MOV(app.PIFOCaxis,Z)
-                
+
                 printLogWindow(app, 'Acquiring Z stack, please wait');
                 pause(0.1);
                 localIterator = 0;
@@ -866,7 +900,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     printLogWindow(app, 'Acquiring Z stack, please wait')
                     app.stagePIFOC.MOV(app.PIFOCaxis,Z)
                     app.signalData = NLimagingCoordsdotNET(app,app.coordPoints);
-                    
+
                     for channel =1 :app.NumberOfEnabledChannels
                         dataZCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);
                     end
@@ -877,21 +911,24 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 %FilenameComment='_Anlge'+num2str(AngleStart,'%03.f')+'-'+num2str(AngleStop,'%03.f')+'-'+num2str(AngleStep,'%03.f')+'-'+app.FilenameCommentEditField.Value;
                 FilenameComment= '_ZStack_'+string(ZStart)+'-'+string(ZStop)+'-'+string(ZStep)+'-'+app.FilenameCommentEditField.Value;
                 saveDataTiff(app,FilenameComment, dataZCUBE)
-                
+
             catch ME
                 printLogWindow(app,'Error, aborting..')
                 printLogWindow(app, ME.message)
             end
-            
+
             app.stagePIFOC.MOV(app.PIFOCaxis,ZStart)
             app.AcquireZstackButton.Enable = true;
             app.ScanSaveButton.Enable = true;
             app.LiveButton.Enable = true;
             printLogWindow(app, "Z stack - DONE!")
         end
-        
-        
-        function [aotask,aowriter, cotask, aitask,aireader,citask,cireader]= initChannels(app)
+
+
+        function [aotask,aowriter, cotask, aitask,aireader,citask,cireader]= initChannels(app,signalType)
+            if~exist("signalType",'var')
+                signalType = "image";
+            end
             if (~isempty(app.AOtask)&&(app.AOtask~=-1));app.AOtask.Stop();app.AOtask.Dispose();end % in case this is a REintialization
             if (~isempty(app.AItask)&&(app.AItask~=-1));app.AItask.Stop();app.AItask.Dispose();end % in case this is a REintialization
             if (~isempty(app.CItask)&&(app.CItask~=-1))
@@ -901,12 +938,16 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 end
             end
             if (~isempty(app.COtask)&&(app.COtask~=-1));app.COtask.Dispose();end
-            
+
             cotask=-1; aitask=-1;aireader=-1;citask=-1;cireader=-1;
             aotask = NationalInstruments.DAQmx.Task;        % a task to control the galvos
             aotask.AOChannels.CreateVoltageChannel(strcat(app.Dev, "ao0:1"), '',-10, 10,  NationalInstruments.DAQmx.AOVoltageUnits.Volts);    % output channels: the galvos
             % AOtask.Stream.WriteRegenerationMode = WriteRegenerationMode.AllowRegeneration;
-            aotask.Timing.ConfigureSampleClock('',app.pixFreq,  NationalInstruments.DAQmx.SampleClockActiveEdge.Rising,  NationalInstruments.DAQmx.SampleQuantityMode.FiniteSamples, app.pixRep*app.numberOfPoints)    % a clock
+            if signalType=="image"
+                aotask.Timing.ConfigureSampleClock('',app.pixFreq,  NationalInstruments.DAQmx.SampleClockActiveEdge.Rising,  NationalInstruments.DAQmx.SampleQuantityMode.FiniteSamples, app.pixRep*app.numberOfPoints)    % a clock
+            else
+                aotask.Timing.ConfigureSampleClock('',app.pixFreq,  NationalInstruments.DAQmx.SampleClockActiveEdge.Rising,  NationalInstruments.DAQmx.SampleQuantityMode.ContinuousSamples)    % a clock
+            end
             aotask.Control(NationalInstruments.DAQmx.TaskAction.Verify)   % check for task errors
             aowriter = NationalInstruments.DAQmx.AnalogMultiChannelWriter(aotask.Stream);     % create a writer
             aotask.Stream.Timeout=app.numberOfPoints  * app.pixRep/ app.pixFreq * 3 * 1000;     % set a timeout that is lager than a writing time
@@ -921,7 +962,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 aitask = NationalInstruments.DAQmx.Task;        % task for the analog input
             end
             j = 1;      % ci iterator
-            
+
             for i=1:app.NumberOfEnabledChannels
                 if app.channelsData(i,2) == true
                     CIch = citask(j).CIChannels.CreatePulseWidthChannel(strcat(app.Dev,app.counterChannelsInputFields(i).Value), '',0,2^32-1,NationalInstruments.DAQmx.CIPulseWidthStartingEdge.Rising,NationalInstruments.DAQmx.CIPulseWidthUnits.Ticks);
@@ -952,22 +993,31 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             if citask~=-1
                 cireader=NET.createArray('NationalInstruments.DAQmx.CounterReader',sum(app.channelsData(:,2)));
                 for j = 1 : sum(app.channelsData(:,2))
-                    citask(j).Timing.ConfigureImplicit(NationalInstruments.DAQmx.SampleQuantityMode.FiniteSamples,app.pixRep*app.numberOfPoints);   % clock
+                    if signalType=="image"
+                        citask(j).Timing.ConfigureImplicit(NationalInstruments.DAQmx.SampleQuantityMode.FiniteSamples,app.pixRep*app.numberOfPoints);   % clock
+                    else
+                        citask(j).Timing.ConfigureImplicit(NationalInstruments.DAQmx.SampleQuantityMode.ContinuousSamples);   % clock
+                    end
                     cireader(j) = NationalInstruments.DAQmx.CounterReader(citask(j).Stream);       % start in the background: it doesn't start before COtask and AOtask
                     citask(j).Stream.ReadWaitMode = NationalInstruments.DAQmx.ReadWaitMode.Poll;
                     citask(j).Control(NationalInstruments.DAQmx.TaskAction.Verify)
                 end
             end
             if aitask ~= -1
-                aitask.Timing.ConfigureSampleClock('',app.pixFreq, NationalInstruments.DAQmx.SampleClockActiveEdge.Rising, NationalInstruments.DAQmx.SampleQuantityMode.FiniteSamples,app.pixRep*app.numberOfPoints);   % clock
+                if signalType=="image"
+                    aitask.Timing.ConfigureSampleClock('',app.pixFreq, NationalInstruments.DAQmx.SampleClockActiveEdge.Rising, NationalInstruments.DAQmx.SampleQuantityMode.FiniteSamples,app.pixRep*app.numberOfPoints);   % clock
+                else
+                    aitask.Timing.ConfigureSampleClock('',app.pixFreq, NationalInstruments.DAQmx.SampleClockActiveEdge.Rising, NationalInstruments.DAQmx.SampleQuantityMode.ContinuousSamples);   % clock
+                end
                 aireader = NationalInstruments.DAQmx.AnalogMultiChannelReader(aitask.Stream);     % the input reader
                 aitask.Control(NationalInstruments.DAQmx.TaskAction.Verify)
-                
+
             end
+
         end
-        
-        
-        
+
+
+
         function cotask = createCOChannel(app)
             cotask='';
             if app.CounterBaseSwitch.Value == 'Internal'
@@ -1023,7 +1073,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 end
             end
         end
-        
+
         function results = readSettings(app)
             app.calibration = str2double(app.ObjectiveDropDown.Value); %choose objective lens
             app.scanXRange = app.ScanRangeXumEditField.Value; % x FoV, um
@@ -1033,7 +1083,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             %                 app.pixRepetition = app.PixelRepetitionEditField.Value;
             app.xFoVCenter = app.FoVcenterXumEditField.Value;
             app.yFoVCenter = app.FoVcenterYumEditField.Value;
-            
+
             app.NumberOfEnabledChannels = app.NumberOfChannelsSlider.Value;
             %             app.NumberOfChannelsSlider.Enable = false;
             app.NumberOfChannelsSliderValueChanged(app)
@@ -1048,9 +1098,9 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         end
     end
     methods (Access = public)
-        
-        
-        
+
+
+
         %         function results = plotLiveChannels (app, rsc, event)
         %             persistent tempData;
         %             if isempty(tempData)
@@ -1078,7 +1128,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         %             end
         %         end
     end
-    
+
 
     % Callbacks that handle component events
     methods (Access = private)
@@ -1110,9 +1160,9 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 app.readSettings()
                 setAxes(app,0.5)
                 app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter);
-                
+
                 if app.SimulationmodeCheckBox.Value==false
-                    
+
                     % Load NIDAQmx .NET assembly
                     printLogWindow(app,'Starting up: loading DAQmx...')
                     try
@@ -1123,8 +1173,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                         printLogWindow(app,'Error loading .NET assembly! Check NIDAQmx .NET installation.')
                     end
                     [app.AOtask,app.AOwriter, app.COtask, app.AItask,app.AIreader,app.CItask,app.CIreader] = app.initChannels();
-                    
-                    
+
+
                     %                     for channel=1:app.NumberOfEnabledChannels
                     %                         if app.channelsData(channel,2) == false
                     %                             chImPMT= addAnalogInputChannel(app.imSession,app.DeviceNameEditField.Value,app.analogChannelsInputFields(channel).Value,'Voltage');
@@ -1148,7 +1198,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     %                         app.lhOUT = addlistener(app.imSession,'DataRequired', @app.queueData);
                     %                         app.imSession.IsContinuous = true; %needed to provide continuous behavior
                     %                         app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,2)]); %queue the first frame
-                    
+
                     % Pull in the data when the frame has been acquired
                     %                         app.imSession.NotifyWhenDataAvailableExceeds=length(app.coordPoints(:,1)) * app.pixRepetition;
                     %                         app.lhIN = addlistener(app.imSession,'DataAvailable', @app.grabData);
@@ -1165,7 +1215,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 app.StartLiveButton.Enable = true;
                 app.ReadyLamp.Color = 'Green';
                 printLogWindow(app,"Initialization complete")
-%                 app.InitializeButton.Enable = false;
+                %                 app.InitializeButton.Enable = false;
                 app.InitializePolarMotorButton.Enable = true;
                 app.ZoomInButton.Enable = true;
                 app.ZoomOutButton.Enable = true;
@@ -1224,10 +1274,10 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
         % Callback function
         function TestbuttondontpressButtonPushed(app, event)
-app.ReadyLampLabel.Text = "Not Ready";
+            app.ReadyLampLabel.Text = "Not Ready";
 
-%             printLogWindow(app,'test')
-            
+            %             printLogWindow(app,'test')
+
 
         end
 
@@ -1246,9 +1296,9 @@ app.ReadyLampLabel.Text = "Not Ready";
                         signal = NLimagingCoordsdotNET(app ,app.coordPoints);
                         drawImages(app,app.firstDraw,signal);
                         app.firstDraw = false;
-                        
+
                     end
-                    
+
                 else
                     %                 app.imSession.stop();
                     %                 app.imSession.release();
@@ -1269,51 +1319,55 @@ app.ReadyLampLabel.Text = "Not Ready";
             switch selection
                 case 'Yes'
                     try
-                    %           if exist('var', app.imSession)
-                    %               app.imSession.stop;
-                    %               stop(app.imSession);
-                    %           end
-                    if ishandle(app.displayFigure)
-                        close(app.displayFigure)
-                    end
-                    if ~isempty(app.imSession)
-                        if app.imSession.IsRunning
-                            app.imSession.stop();
+                        %           if exist('var', app.imSession)
+                        %               app.imSession.stop;
+                        %               stop(app.imSession);
+                        %           end
+                        if ishandle(app.displayFigure)
+                            close(app.displayFigure)
                         end
-                    end
-                    if ~isempty(app.Controller)
-                        if ~isempty(app.stage)
-                            app.stage.CloseConnection();
+
+                        if ishandle(app.intensityFigure)
+                            close(app.intensityFigure)
                         end
-                        app.Controller.Destroy;
-                        clear app.stage;
-                        clear app.Controller
-                    end
-                    if ~isempty(app.ControllerPIFOC)
-                        if ~isempty(app.stagePIFOC)
-                            app.stagePIFOC.CloseConnection();
+                        if ~isempty(app.imSession)
+                            if app.imSession.IsRunning
+                                app.imSession.stop();
+                            end
                         end
-                        app.ControllerPIFOC.Destroy;
-                        clear ControllerPIFOC;
-                        clear stagePIFOC;
-                    end
-                    if (~isempty(app.AOtask)&&(app.AOtask~=-1));app.AOtask.Dispose();end % in case this is a REintialization
-                    if (~isempty(app.AItask)&&(app.AItask~=-1));app.AItask.Dispose();end % in case this is a REintialization
-                    if (~isempty(app.CItask)&&(app.CItask~=-1))
-                        for j=1 : sum(app.channelsData(:,2))
-                            app.CItask(j).Dispose();
+                        if ~isempty(app.Controller)
+                            if ~isempty(app.stage)
+                                app.stage.CloseConnection();
+                            end
+                            app.Controller.Destroy;
+                            clear app.stage;
+                            clear app.Controller
                         end
-                    end
-                    if (~isempty(app.COtask)&&(app.COtask~=-1));app.COtask.Dispose();end
+                        if ~isempty(app.ControllerPIFOC)
+                            if ~isempty(app.stagePIFOC)
+                                app.stagePIFOC.CloseConnection();
+                            end
+                            app.ControllerPIFOC.Destroy;
+                            clear ControllerPIFOC;
+                            clear stagePIFOC;
+                        end
+                        if (~isempty(app.AOtask)&&(app.AOtask~=-1));app.AOtask.Dispose();end % in case this is a REintialization
+                        if (~isempty(app.AItask)&&(app.AItask~=-1));app.AItask.Dispose();end % in case this is a REintialization
+                        if (~isempty(app.CItask)&&(app.CItask~=-1))
+                            for j=1 : sum(app.channelsData(:,2))
+                                app.CItask(j).Dispose();
+                            end
+                        end
+                        if (~isempty(app.COtask)&&(app.COtask~=-1));app.COtask.Dispose();end
                     catch
                     end
                     delete(app)
-                    
+
                 case 'No'
                     return
             end
-            
-            
+
+
         end
 
         % Value changed function: FoVcenterXumEditField, 
@@ -1331,7 +1385,7 @@ app.ReadyLampLabel.Text = "Not Ready";
             app.pixRep = app.PixelRepetitionEditField_2.Value;
             app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter);
             [app.AOtask,app.AOwriter, app.COtask, app.AItask,app.AIreader,app.CItask,app.CIreader] = app.initChannels();
-%             app.updateChannels()
+            %             app.updateChannels()
             %             app.imSession.NotifyWhenScansQueuedBelow = round(length(app.coordPoints)*0.5);
             %             app.imSession.NotifyWhenDataAvailableExceeds=length(app.coordPoints(:,1));
         end
@@ -1363,20 +1417,20 @@ app.ReadyLampLabel.Text = "Not Ready";
             for i=2:length(app.channelPannels)
                 app.channelPannels(i).Visible = 0;
             end
-            
+
             for i=1:value
                 app.channelsData(i,1) = 1;
                 app.channelPannels(i).Visible = 1;
             end
             updateChannelInfo(app)
-%             setAxes(app,350)
+            %             setAxes(app,350)
         end
 
         % Value changed function: Switch_2
         function Switch_2ValueChanged(app, event)
             updateChannelInfo(app)
             value = app.Switch_2.Value;
-            
+
             if value=="Counter"
                 value = true;
             else
@@ -1509,9 +1563,9 @@ app.ReadyLampLabel.Text = "Not Ready";
         function InitializePolarMotorButtonPushed(app, event)
             printLogWindow(app,"Waveplate motor Initialization")
             % Create a serial port object.
-            
+
             app.URB_Ojt = instrfind;
-            
+
             % Create the serial port object if it does not exist
             % otherwise use the object that was found.
             if isempty(app.URB_Ojt)==0
@@ -1520,25 +1574,25 @@ app.ReadyLampLabel.Text = "Not Ready";
                 %     URB_Ojt = URB_Ojt(1);
             end
             try
-            app.URB_Ojt=serial(app.PolarMotorPortEditField.Value,'BaudRate',57600,'DataBits',8,'FlowControl','software',...
-                'Terminator','CR/LF');
-            fopen(app.URB_Ojt);%URB100CC_PN:B141539_UD:14/10/2013:
-            fprintf(app.URB_Ojt,'1or'); %  execute 'homing' state (Changes Solid Orange to Solid Green)
-            Command = "1pa0";
-            fprintf(app.URB_Ojt,Command);
-            app.InitializePolarMotorButton.Enable = false;
-            app.TakePolarStackButton.Enable = true;
-            app.StartingAngledegrEditField.Enable = true;
-            app.EndingAngledegrEditField.Enable = true;
-            app.StepAngledegrEditField.Enable = true;
-            
-            printLogWindow(app,"Polar motor is ready")
+                app.URB_Ojt=serial(app.PolarMotorPortEditField.Value,'BaudRate',57600,'DataBits',8,'FlowControl','software',...
+                    'Terminator','CR/LF');
+                fopen(app.URB_Ojt);%URB100CC_PN:B141539_UD:14/10/2013:
+                fprintf(app.URB_Ojt,'1or'); %  execute 'homing' state (Changes Solid Orange to Solid Green)
+                Command = "1pa0";
+                fprintf(app.URB_Ojt,Command);
+                app.InitializePolarMotorButton.Enable = false;
+                app.TakePolarStackButton.Enable = true;
+                app.StartingAngledegrEditField.Enable = true;
+                app.EndingAngledegrEditField.Enable = true;
+                app.StepAngledegrEditField.Enable = true;
+
+                printLogWindow(app,"Polar motor is ready")
             catch ME
                 printLogWindow(app, "Could not initialize the motor");
                 printLogWindow(app, ME.message)
             end
-            
-            
+
+
         end
 
         % Button pushed function: TakePolarStackButton
@@ -1551,13 +1605,13 @@ app.ReadyLampLabel.Text = "Not Ready";
             try
                 AngleStart = app.StartingAngledegrEditField.Value; AngleStop = app.EndingAngledegrEditField.Value; AngleStep = app.StepAngledegrEditField.Value;
                 Angle = AngleStart;
-                
+
                 saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
                 dataPolCUBE = zeros(int16(app.scanXRange /  (app.scanStep))+1,int16(app.scanYRange /  app.scanStep)+1, int8((AngleStop-AngleStart)/AngleStep)+1, app.NumberOfEnabledChannels);       % the data cube with the complete Polar stack
-                
+
                 fprintf(app.URB_Ojt,'1or'); %  execute 'homing' state (Changes Solid Orange to Solid Green)
                 setPolarAngle(app,AngleStart);
-                
+
                 printLogWindow(app, "Acquiring Polar stack, please wait");
                 pause(app.TimeLag);
                 % if the first angle is far from 0, it is better to give time to the motor
@@ -1568,7 +1622,7 @@ app.ReadyLampLabel.Text = "Not Ready";
                     printLogWindow(app, "Acquiring Polar stack, please wait")
                     setPolarAngle(app,Angle);
                     app.signalData = NLimagingCoordsdotNET(app,app.coordPoints);
-                    
+
                     for channel =1 :app.NumberOfEnabledChannels
                         dataPolCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);
                     end
@@ -1579,12 +1633,12 @@ app.ReadyLampLabel.Text = "Not Ready";
                 %FilenameComment='_Anlge'+num2str(AngleStart,'%03.f')+'-'+num2str(AngleStop,'%03.f')+'-'+num2str(AngleStep,'%03.f')+'-'+app.FilenameCommentEditField.Value;
                 FilenameComment= '_Anlge'+string(AngleStart)+'-'+string(AngleStop)+'-'+string(AngleStep)+'-'+app.FilenameCommentEditField.Value;
                 saveDataTiff(app,FilenameComment, dataPolCUBE)
-                
+
             catch ME
                 printLogWindow(app,'Waveplate motor is off, aborting..')
                 printLogWindow(app, ME.message)
             end
-            
+
             setPolarAngle(app,AngleStart);
             app.TakePolarStackButton.Enable = true;
             app.ScanSaveButton.Enable = true;
@@ -1601,55 +1655,100 @@ app.ReadyLampLabel.Text = "Not Ready";
         % Callback function
         function ButtonPushed(app, event)
 
-            
+
         end
 
         % Value changed function: StartLiveButton
         function StartLiveButtonValueChanged(app, event)
             value = app.StartLiveButton.Value;
-            app.intensityFigure = figure('Name',strcat(app.MatMicroMain.Name,"  Intensity Profile"),'NumberTitle','off');       % create figure if doesn't exist
-            app.axIntensity = axes(app.intensityFigure,'Position',[0.025 0.025 0.95 0.95]);
+%             app.intensityFigure = figure('Name',strcat(app.MatMicroMain.Name,"  Intensity Profile"),'NumberTitle','off');       % create figure if doesn't exist
+%             app.axIntensity = axes(app.intensityFigure);%,'Position',[0.025 0.025 0.95 0.95]);
             try
                 channel  = str2num(app.ChannelDropDown_2.Value);
                 if channel > app.NumberOfEnabledChannels
                     app.printLogWindow("Selected channel is not used")
                 else
-                    %                 app.delayScanSetAxes();
-                    %                 if app.channelsData(channel,2) == true
-                    %                     CIlistener = addlistener(app.CItask, 'EveryNSamplesRead', @(~, ev) myCallback(app.CIreader.ReadMultiSample(-1).double)); % Function is executed at each 'EveryNSamplesRead' event
-                    
-                    app.numberOfPoints = app.SamplesperpointEditField.Value;
-                    app.pixRep =1;
-                    app.dwellTime = 1;
-                    app.updateChannels();
-                    
-                    optimizationPoint = [0 0];
-                    coordPointsForDelay = zeros(app.numberOfPoints,2);
-                    coordPointsForDelay(:,1) = coordPointsForDelay(:,1) + optimizationPoint(1);
-                    coordPointsForDelay(:,2) = coordPointsForDelay(:,2) + optimizationPoint(2);
-                    
-                    
-                    data = [];
-                    counter =1;
-                    if ~ishandle(app.intensityFigure)         % check if figure for displaying exists
-                        app.intensityFigure = figure('Name',strcat(app.MatMicroMain.Name,"  Intensity Profile"),'NumberTitle','off');       % create figure if doesn't exist
-                        app.axIntensity = axes(app.intensityFigure,'Position',[0.025 0.025 0.95 0.95]);             % complete redraw next time
+                    if value ==true
+                        [xcoord ,ycoord] = selectGalvoPosition(app,str2num(app.ChannelForImagePixelSelectionDropDown.Value)+1);
+                        optimizationPoint = [-double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep*app.calibration+double(xcoord)*app.scanStep*app.calibration;-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep*app.calibration+double(ycoord)*app.scanStep*app.calibration];
+                        app.numberOfPoints = app.SamplesperpointEditField.Value;
+                        app.pixRep =1;
+                        app.dwellTime = 1;
+                        [app.AOtask,app.AOwriter, app.COtask, app.AItask,app.AIreader,app.CItask,app.CIreader] = app.initChannels();
+                        coordPointsForDelay = zeros(app.numberOfPoints,2);
+                        coordPointsForDelay(:,1) = coordPointsForDelay(:,1) + optimizationPoint(1);
+                        coordPointsForDelay(:,2) = coordPointsForDelay(:,2) + optimizationPoint(2);
+                        data = [];
+                        counter =1;
+                        if app.LineplotCheckBox.Value == true
+                            app.intensityFigure = figure('Name',strcat(app.MatMicroMain.Name,"  Intensity Profile"),'NumberTitle','off');       % create figure if doesn't exist
+                            app.axIntensity = axes(app.intensityFigure);%,'Position',[0.025 0.025 0.95 0.95]);             % complete redraw next time
+                        end
+                        %                     if (~isempty(app.AOtask)&&(app.AOtask~=-1)); app.AOtask.Stop();app.AOtask.Dispose();end
+                        %                     app.AOtask =  NationalInstruments.DAQmx.Task;
+                        %                     app.AOtask.AOChannels.CreateVoltageChannel(strcat(app.Dev, "ao0:1"), '',-10, 10,  NationalInstruments.DAQmx.AOVoltageUnits.Volts);    % output channels: the galvos
+                        %                     app.AOwriter = NationalInstruments.DAQmx.AnalogMultiChannelWriter(app.AOtask.Stream);     % create a writer
+
+                        %                     app.AOtask.EveryNSamplesWrittenEventInterval = uint32(round(length(coordPointsForDelay)));
+                        %                     app.AOtask.Stream.ConfigureOutputBuffer(2 * length(coordPointsForDelay));
+                        %                     app.AOtask.Stream.WriteRegenerationMode = NationalInstruments.DAQmx.WriteRegenerationMode.AllowRegeneration;
+                        %                     AL = addlistener(app.AOtask,'EveryNSamplesWritten',@(~, ev) writeData(app.AOwriter.WriteMultiSample(false,coordPointsForDelay')));
+                        %                     [al,cl] = app.addListeners(100);
+                        %                     counter =1;
+                        %                     app.AOwriter.WriteMultiSample(false,coordPointsForDelay');
+                        %                     app.startTasks();
+                        %                     app.AOtask.Start();
+                        xdat = counter;
+                        while ishandle(app.intensityFigure)
+
+
+                            value = app.StartLiveButton.Value;
+                            if value == false
+                                break
+                            end
+                            buf = app.NLimagingCoordsdotNET(coordPointsForDelay);
+                            meanbuf = mean(mean(buf()));
+                            if app.LineplotCheckBox.Value == true
+                                data =[data meanbuf];
+                                if (~exist("pl","var"))%&&(~ishandle(pl))
+                                    pl = plot(app.axIntensity,xdat,data(channel));
+                                else
+                                    pl.XData = xdat;
+                                    pl.YData = data(:,:,channel);
+                                end
+                            end
+                            counter = counter + 1;
+                            xdat = [xdat counter];
+                            try
+                                if app.BarGraphCheckBox.Value == true
+                                    if app.AutoscaleCheckBox_5.Value == true
+                                        ylim(app.UIAxes,[min(meanbuf)-0.1 max(meanbuf)+0.1]);
+                                    else
+                                        ylim(app.UIAxes,[app.MinEditField.Value app.MaxEditField.Value]);
+                                    end
+                                    if (~exist("br","var"))%&&(~ishandle(pl))
+                                        br = bar(app.UIAxes,linspace(1,app.NumberOfEnabledChannels, app.NumberOfEnabledChannels),zeros(1,app.NumberOfEnabledChannels));
+                                    else
+                                        br.YData = meanbuf;
+                                    end
+                                end
+                            drawnow limitrate;
+                            catch ME
+
+                                printLogWindow(app, ME.message)
+                            end
+                            %                         pause(0.1);
+                        end
+
+                        %                     plot(app.axIntensity, data(1,:), data(2,:))
+                        %                 app.stage.MOV(app.PIaxis,Offset);
                     end
-                    counter =1;
-                    while ishandle(app.intensityFigure)
-                        
-                        %                     data(1,counter) = [data(1,counter)counter;
-                        buf = app.NLimagingCoordsdotNET(coordPointsForDelay);
-                        data =[data mean(mean(buf(:,:,channel)))];
-                        plot(app.axIntensity,data);
-                        counter = counter + 1;
-                    end
-                    plot(app.axIntensity, data(1,:), data(2,:))
-                    %                 app.stage.MOV(app.PIaxis,Offset);
                 end
-            catch ME
-                app.printLogWindow(ME.message);
-            end
+                catch ME
+                    app.printLogWindow(ME.message);
+                end
+            
+            app.stopTasks();
             ScanRangeXumEditFieldValueChanged(app, event);
             PixelRepetitionEditField_2ValueChanged(app, event);
             printLogWindow(app, "..done!");
@@ -1665,7 +1764,7 @@ app.ReadyLampLabel.Text = "Not Ready";
         % Button pushed function: ZoomInButton
         function ZoomInButtonPushed(app, event)
             [xcoord, ycoord] = selectGalvoPosition(app,str2num(app.ChannelDropDown.Value)+1);
-            
+
             zoomFactor = app.ZoomfactorEditField.Value;
             zoomImage(app,zoomFactor);
             app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange,app.scanYRange,app.scanStep,app.xFoVCenter,app.yFoVCenter);
@@ -1697,7 +1796,7 @@ app.ReadyLampLabel.Text = "Not Ready";
         % Value changed function: Button
         function ButtonValueChanged(app, event)
             value = app.Button.Value;
-            
+
             if value ==true
                 [xcoord ,ycoord] = selectGalvoPosition(app,str2num(app.ChannelForImagePixelSelectionDropDown.Value)+1);
                 optimizationPoint = [-double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep*app.calibration+double(xcoord)*app.scanStep*app.calibration;-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep*app.calibration+double(ycoord)*app.scanStep*app.calibration];
@@ -1718,7 +1817,7 @@ app.ReadyLampLabel.Text = "Not Ready";
                 end
             end
             app.Button.Value = false;
-            
+
         end
 
         % Button pushed function: ConnectDelayLineButton
@@ -1734,11 +1833,11 @@ app.ReadyLampLabel.Text = "Not Ready";
                 if ( isempty (app.stage) ) | ( app.stage.IsConnected )
                     [app.stage, app.PIaxis, stageConnected] = StartStage(app, app.Controller,app.ConnectioninterfaceDropDown.Value,app.StagetypeEditField.Value,app.ControllerserialnumberEditField.Value);
                 end
-                
+
                 %Set stage movement velocity
                 vel=2; %in mm/s
                 app.stage.VEL(app.PIaxis, vel);
-                
+
                 %Reference PI Stage
                 ReferenceStage(app,app.stage, app.PIaxis)
                 % RefPIStage(stage, PIaxis);
@@ -1748,8 +1847,8 @@ app.ReadyLampLabel.Text = "Not Ready";
                 printLogWindow(app,"The stage is not initialized.")
                 printLogWindow(app, ME.message)
             end
-            
-            
+
+
         end
 
         % Button pushed function: MoveButton
@@ -1784,20 +1883,20 @@ app.ReadyLampLabel.Text = "Not Ready";
                     position = Offset-Range/2;
                     data = zeros(2, int32(Range/Step));
                     counter =1;
-                    
+
                     while (position)<=(Offset+Range/2)
                         %                     app.stage.MOV(app.PIaxis,position);
                         %                     while(app.stage.IsMoving==true)
                         pause(0.1);
                         %                     end
-                        
+
                         data(1,counter) = position;
                         buf = app.NLimagingCoordsdotNET(coordPointsForDelay);
                         data(2, counter) = mean(mean(buf(:,:,channel)));
                         plot(app.UIAxes2,data(1,:),data(2,:));
                         %                 figure(fPulseOverlay); plot(data(1,:), data(2,:));axis([Offset-Range/2 Offset+Range/2 min(data(2, :))-0.05 max(data(2, :))+0.05]);title('Delay scan'); drawnow;
                         position = position + Step; counter = counter + 1;
-                        
+
                     end
                     app.UIAxes2.XTick = [Offset-Range/2:Range /9: Offset+Range/2];
                     app.UIAxes2.XTickLabelRotation = 90;
@@ -1818,7 +1917,7 @@ app.ReadyLampLabel.Text = "Not Ready";
 
         % Callback function
         function InitializePIFOCButtonPushed(app, event)
-            
+
         end
 
         % Button pushed function: ConnectPIFOCButton
@@ -1829,7 +1928,7 @@ app.ReadyLampLabel.Text = "Not Ready";
                 PIFOC_SN =(app.PIFOCControllerSerialNumberDropDown.Value);
                 if str2double(PIFOC_SN) == 120004758
                     if ( ~exist ( 'app.ControllerPIFOC', 'var' ) || ~isa ( app.ControllerPIFOC, 'PI_GCS_Controller' ) )
-                        
+
                         app.ControllerPIFOC = PI_GCS_Controller ();
                     end
                 elseif str2double(PIFOC_SN )== 12220
@@ -1837,8 +1936,8 @@ app.ReadyLampLabel.Text = "Not Ready";
                         app.ControllerPIFOC = E816_GCS_Controller ();
                     end
                 end
-                
-                
+
+
                 stagePIFOCConnected = false;
                 if ( isempty (app.stagePIFOC) ) | ( app.stagePIFOC.IsConnected )
                     [app.stagePIFOC, app.PIFOCaxis, stagePIFOCConnected] = ConnectPIFOC(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,PIFOC_SN );
@@ -1867,7 +1966,7 @@ app.ReadyLampLabel.Text = "Not Ready";
         % Button pushed function: AcquireZstackButton
         function AcquireZstackButtonPushed(app, event)
             try
-                
+
                 acquireZStack(app)
             catch ME
                 printLogWindow(app, 'Could not take a Z stack..');
@@ -1877,7 +1976,7 @@ app.ReadyLampLabel.Text = "Not Ready";
 
         % Value changed function: CounterBaseSwitch
         function CounterBaseSwitchValueChanged(app, event)
-%             value = app.CounterBaseSwitch.Value;
+            %             value = app.CounterBaseSwitch.Value;
             app.CounterTerminalToReceiveSquarePulsesEditField.Enable =  ~app.CounterTerminalToReceiveSquarePulsesEditField.Enable;
             app.CounterTerminalToReceiveSquarePulsesEditField.Enable =  ~app.CounterTerminalToReceiveSquarePulsesEditField.Enable;
             app.CounterGenerationChannelEditField.Enable = ~ app.CounterGenerationChannelEditField.Enable;
@@ -1900,17 +1999,17 @@ app.ReadyLampLabel.Text = "Not Ready";
             app.dwellTime = app.PixelDwellTimeusEditField.Value;
             app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter);
             app.pixFreq = 1 / (app.dwellTime / 1000000 * 2);
-%             app.updateChannels()
+            %             app.updateChannels()
             [app.AOtask,app.AOwriter, app.COtask, app.AItask,app.AIreader,app.CItask,app.CIreader] = app.initChannels();
             app.PixelFrequencyHzEditField.Value = app.pixFreq;
-            
-            
-            
+
+
+
         end
 
         % Button pushed function: Button2
         function Button2Pushed(app, event)
-            
+
         end
     end
 
@@ -1925,7 +2024,7 @@ app.ReadyLampLabel.Text = "Not Ready";
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.9';
+            app.MatMicroMain.Name = 'microMOSAIC v0.91';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -2363,13 +2462,24 @@ app.ReadyLampLabel.Text = "Not Ready";
             % Create SamplesperpointEditField_2Label
             app.SamplesperpointEditField_2Label = uilabel(app.LiveIntensityTab);
             app.SamplesperpointEditField_2Label.HorizontalAlignment = 'right';
-            app.SamplesperpointEditField_2Label.Position = [340 129 102 22];
+            app.SamplesperpointEditField_2Label.Position = [402 129 102 22];
             app.SamplesperpointEditField_2Label.Text = 'Samples per point';
 
             % Create SamplesperpointEditField_2
             app.SamplesperpointEditField_2 = uieditfield(app.LiveIntensityTab, 'numeric');
-            app.SamplesperpointEditField_2.Position = [457 129 100 22];
+            app.SamplesperpointEditField_2.Position = [519 129 38 22];
             app.SamplesperpointEditField_2.Value = 100;
+
+            % Create BarGraphCheckBox
+            app.BarGraphCheckBox = uicheckbox(app.LiveIntensityTab);
+            app.BarGraphCheckBox.Text = 'Bar Graph';
+            app.BarGraphCheckBox.Position = [349 422 77 22];
+
+            % Create LineplotCheckBox
+            app.LineplotCheckBox = uicheckbox(app.LiveIntensityTab);
+            app.LineplotCheckBox.Text = 'Lineplot';
+            app.LineplotCheckBox.Position = [451 422 64 22];
+            app.LineplotCheckBox.Value = true;
 
             % Create SettingsTab
             app.SettingsTab = uitab(app.TabGroup);
@@ -2413,7 +2523,7 @@ app.ReadyLampLabel.Text = "Not Ready";
             % Create DeviceNameEditField
             app.DeviceNameEditField = uieditfield(app.SettingsTab, 'text');
             app.DeviceNameEditField.Position = [773 422 100 22];
-            app.DeviceNameEditField.Value = 'Dev1';
+            app.DeviceNameEditField.Value = 'Dev2';
 
             % Create FirstChannelSettingsPanel
             app.FirstChannelSettingsPanel = uipanel(app.SettingsTab);
