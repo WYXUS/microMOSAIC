@@ -83,6 +83,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         FasterSliderLabel               matlab.ui.control.Label
         UIAxes                          matlab.ui.control.UIAxes
         SettingsTab                     matlab.ui.container.Tab
+        DeviceNameEditField_5           matlab.ui.control.EditField
+        DeviceNameEditField_5Label      matlab.ui.control.Label
         InitializeButton                matlab.ui.control.Button
         ExternalCounterGenerationTerminalEditField  matlab.ui.control.EditField
         ExternalCounterGenerationTerminalEditFieldLabel  matlab.ui.control.Label
@@ -105,6 +107,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         PolarMotorPortEditField         matlab.ui.control.EditField
         PolarMotorPortEditFieldLabel    matlab.ui.control.Label
         FourthChannelSettingsPanel      matlab.ui.container.Panel
+        DeviceNameEditField_4           matlab.ui.control.EditField
+        DeviceNameEditField_4Label      matlab.ui.control.Label
         AutoscaleCheckBox_4             matlab.ui.control.CheckBox
         minauEditField_4                matlab.ui.control.NumericEditField
         minauEditField_4Label           matlab.ui.control.Label
@@ -118,6 +122,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         AnalogChannelInputDropDown_4Label  matlab.ui.control.Label
         Switch_4                        matlab.ui.control.Switch
         ThirdChannelSettingsPanel       matlab.ui.container.Panel
+        DeviceNameEditField_3           matlab.ui.control.EditField
+        DeviceNameEditField_3Label      matlab.ui.control.Label
         AutoscaleCheckBox_3             matlab.ui.control.CheckBox
         minauEditField_3                matlab.ui.control.NumericEditField
         minauEditField_3Label           matlab.ui.control.Label
@@ -131,6 +137,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         AnalogChannelInputDropDown_3Label  matlab.ui.control.Label
         Switch_3                        matlab.ui.control.Switch
         SecondChannelSettingsPanel      matlab.ui.container.Panel
+        DeviceNameEditField_2           matlab.ui.control.EditField
+        DeviceNameEditField_2Label      matlab.ui.control.Label
         AutoscaleCheckBox_2             matlab.ui.control.CheckBox
         minauEditField_2                matlab.ui.control.NumericEditField
         minauEditField_2Label           matlab.ui.control.Label
@@ -146,6 +154,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         NumberOfChannelsSlider          matlab.ui.control.Slider
         NumberOfChannelsSliderLabel     matlab.ui.control.Label
         FirstChannelSettingsPanel       matlab.ui.container.Panel
+        DeviceNameEditField             matlab.ui.control.EditField
+        DeviceNameEditFieldLabel        matlab.ui.control.Label
         AutoscaleCheckBox               matlab.ui.control.CheckBox
         maxauEditField                  matlab.ui.control.NumericEditField
         maxauEditFieldLabel             matlab.ui.control.Label
@@ -158,8 +168,6 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         AnalogChannelInputDropDown      matlab.ui.control.DropDown
         AnalogChannelInputDropDownLabel  matlab.ui.control.Label
         Switch                          matlab.ui.control.Switch
-        DeviceNameEditField             matlab.ui.control.EditField
-        DeviceNameEditFieldLabel        matlab.ui.control.Label
         SessionUpdateRateHzEditField    matlab.ui.control.NumericEditField
         SessionUpdateRateHzEditFieldLabel  matlab.ui.control.Label
         ObjectiveDropDown               matlab.ui.control.DropDown
@@ -284,6 +292,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         intensityFigure; % a figure to draw live intensity profile
         axIntensity % axes for live intensity plotting
         dataBuffer
+        DeviceNameFileds % Description
     end
 
     methods (Access = private)
@@ -964,20 +973,26 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             j = 1;      % ci iterator
 
             for i=1:app.NumberOfEnabledChannels
+                dev = strcat('/',app.DeviceNameFileds(i).Value,'/');
                 if app.channelsData(i,2) == true
-                    CIch = citask(j).CIChannels.CreatePulseWidthChannel(strcat(app.Dev,app.counterChannelsInputFields(i).Value), '',0,2^32-1,NationalInstruments.DAQmx.CIPulseWidthStartingEdge.Rising,NationalInstruments.DAQmx.CIPulseWidthUnits.Ticks);
+                    
+                    CIch = citask(j).CIChannels.CreatePulseWidthChannel(strcat(dev,app.counterChannelsInputFields(i).Value), '',0,2^32-1,NationalInstruments.DAQmx.CIPulseWidthStartingEdge.Rising,NationalInstruments.DAQmx.CIPulseWidthUnits.Ticks);
                     j = j + 1;
                     % CIch = CItask.CIChannels.CreateCountEdgesChannel ('/Dev2/ctr2', 'CItask',CICountEdgesActiveEdge.Rising,int64(0),CICountEdgesCountDirection.Up);
+                    if dev ==app.Dev
                     CIch.PulseWidthTerminal = app.counterGateTerminal;        % a terminal, where square pulses are produced by COtask
+                    else
+                        CIch.PulseWidthTerminal = app.ExternalCounterGenerationTerminalEditField.Value;
+                    end
                     switch app.counterChannelsInputFields(i).Value
                         case "ctr0"
-                            CIch.CounterTimebaseSource = strcat(app.Dev,"PFI8");      % a terminal, where a detector is connected
+                            CIch.CounterTimebaseSource = strcat(dev,"PFI8");      % a terminal, where a detector is connected
                         case "ctr1"
-                            CIch.CounterTimebaseSource = strcat(app.Dev,"PFI3");
+                            CIch.CounterTimebaseSource = strcat(dev,"PFI3");
                         case "ctr2"
-                            CIch.CounterTimebaseSource = strcat(app.Dev,"PFI0");
+                            CIch.CounterTimebaseSource = strcat(dev,"PFI0");
                         case "ctr3"
-                            CIch.CounterTimebaseSource = strcat(app.Dev,"PFI5");
+                            CIch.CounterTimebaseSource = strcat(dev,"PFI5");
                     end
                 else
                     switch app.analogChannelConnectionType(i).Value
@@ -986,7 +1001,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                         case "Differential"
                             connType = NationalInstruments.DAQmx.AITerminalConfiguration.Differential;
                     end
-                    aitask.AIChannels.CreateVoltageChannel(strcat(app.Dev,app.analogChannelsInputFields(i).Value), '', connType, -10, 10, NationalInstruments.DAQmx.AIVoltageUnits.Volts);
+                    aitask.AIChannels.CreateVoltageChannel(strcat(dev,app.analogChannelsInputFields(i).Value), '', connType, -10, 10, NationalInstruments.DAQmx.AIVoltageUnits.Volts);
                     aitask.Stream.ReadWaitMode = NationalInstruments.DAQmx.ReadWaitMode.Poll;
                 end
             end
@@ -1023,9 +1038,10 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             if app.CounterBaseSwitch.Value == 'Internal'
                 cotask = NationalInstruments.DAQmx.Task;        % a task to generate quare pulses with 'pixFreq' and 'dutyCycle'
                 counterClockChannelNumber = app.CounterGenerationChannelEditField.Value;
-                ch = cotask.COChannels.CreatePulseChannelFrequency(strcat(app.Dev, counterClockChannelNumber), '', NationalInstruments.DAQmx.COPulseFrequencyUnits.Hertz, NationalInstruments.DAQmx.COPulseIdleState.Low, 0, app.pixFreq, app.dutyCycle ); %delay, freq, dutycycle
+                dev = strcat('/',app.DeviceNameFileds_5.Value,'/');
+                ch = cotask.COChannels.CreatePulseChannelFrequency(strcat(dev, counterClockChannelNumber), '', NationalInstruments.DAQmx.COPulseFrequencyUnits.Hertz, NationalInstruments.DAQmx.COPulseIdleState.Low, 0, app.pixFreq, app.dutyCycle ); %delay, freq, dutycycle
                 cotask.Timing.ConfigureImplicit(NationalInstruments.DAQmx.SampleQuantityMode.FiniteSamples,app.pixRep * app.numberOfPoints)
-                cotask.Triggers.ArmStartTrigger.ConfigureDigitalEdgeTrigger(strcat(app.Dev,"ao/StartTrigger"),NationalInstruments.DAQmx.DigitalEdgeArmStartTriggerEdge.Rising);   % set a trigger. The generation starts when the output writer(galvos) start writing
+                cotask.Triggers.ArmStartTrigger.ConfigureDigitalEdgeTrigger(strcat(dev,"ao/StartTrigger"),NationalInstruments.DAQmx.DigitalEdgeArmStartTriggerEdge.Rising);   % set a trigger. The generation starts when the output writer(galvos) start writing
                 cotask.Control(NationalInstruments.DAQmx.TaskAction.Verify)
                 app.counterGateTerminal = ch.PulseTerminal;     % this value will be used later in the CI channels
             elseif app.CounterBaseSwitch.Value == 'External'
@@ -1089,7 +1105,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.NumberOfChannelsSliderValueChanged(app)
             %                 app.NumberOfChannelsSlider.Enable = false;
             %                 app.Switch.Enable = false;
-            app.Dev = "/" + app.DeviceNameEditField.Value + "/";
+            app.Dev = "/" + app.DeviceNameEditField_5.Value + "/";
             app.pixRep = app.PixelRepetitionEditField_2.Value;
             app.dwellTime = app.PixelDwellTimeusEditField.Value;
             app.pixFreq = 1 / (app.dwellTime / 1000000 * 2);
@@ -1143,6 +1159,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.analogChannelsInputFields = [app.AnalogChannelInputDropDown app.AnalogChannelInputDropDown_2 app.AnalogChannelInputDropDown_3 app.AnalogChannelInputDropDown_4];
             app.analogChannelConnectionType = [app.ConnectiontypeDropDown app.ConnectiontypeDropDown_2 app.ConnectiontypeDropDown_3 app.ConnectiontypeDropDown_4];
             app.counterChannelsInputFields = [app.CounterChannelInputDropDown app.CounterChannelInputDropDown_2 app.CounterChannelInputDropDown_3 app.CounterChannelInputDropDown_4];
+            app.DeviceNameFileds = [app.DeviceNameEditField app.DeviceNameEditField_2 app.DeviceNameEditField_3 app.DeviceNameEditField_4];
+            
             app.channelsData = zeros(4,5);
             app.channelsData(1,1) = 1;
             value = app.TimeLagForPolarMotorsecEditField.Value;
@@ -2514,17 +2532,6 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.SessionUpdateRateHzEditField.Position = [578 422 100 22];
             app.SessionUpdateRateHzEditField.Value = 50000;
 
-            % Create DeviceNameEditFieldLabel
-            app.DeviceNameEditFieldLabel = uilabel(app.SettingsTab);
-            app.DeviceNameEditFieldLabel.HorizontalAlignment = 'right';
-            app.DeviceNameEditFieldLabel.Position = [680 422 78 22];
-            app.DeviceNameEditFieldLabel.Text = 'Device Name';
-
-            % Create DeviceNameEditField
-            app.DeviceNameEditField = uieditfield(app.SettingsTab, 'text');
-            app.DeviceNameEditField.Position = [773 422 100 22];
-            app.DeviceNameEditField.Value = 'Dev2';
-
             % Create FirstChannelSettingsPanel
             app.FirstChannelSettingsPanel = uipanel(app.SettingsTab);
             app.FirstChannelSettingsPanel.AutoResizeChildren = 'off';
@@ -2608,8 +2615,19 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.AutoscaleCheckBox = uicheckbox(app.FirstChannelSettingsPanel);
             app.AutoscaleCheckBox.ValueChangedFcn = createCallbackFcn(app, @AutoscaleCheckBoxValueChanged, true);
             app.AutoscaleCheckBox.Text = 'Autoscale';
-            app.AutoscaleCheckBox.Position = [463 5 75 22];
+            app.AutoscaleCheckBox.Position = [443 5 75 22];
             app.AutoscaleCheckBox.Value = true;
+
+            % Create DeviceNameEditFieldLabel
+            app.DeviceNameEditFieldLabel = uilabel(app.FirstChannelSettingsPanel);
+            app.DeviceNameEditFieldLabel.HorizontalAlignment = 'right';
+            app.DeviceNameEditFieldLabel.Position = [516 5 78 22];
+            app.DeviceNameEditFieldLabel.Text = 'Device Name';
+
+            % Create DeviceNameEditField
+            app.DeviceNameEditField = uieditfield(app.FirstChannelSettingsPanel, 'text');
+            app.DeviceNameEditField.Position = [600 5 38 22];
+            app.DeviceNameEditField.Value = 'Dev1';
 
             % Create NumberOfChannelsSliderLabel
             app.NumberOfChannelsSliderLabel = uilabel(app.SettingsTab);
@@ -2624,7 +2642,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.NumberOfChannelsSlider.ValueChangedFcn = createCallbackFcn(app, @NumberOfChannelsSliderValueChanged, true);
             app.NumberOfChannelsSlider.MinorTicks = [];
             app.NumberOfChannelsSlider.Position = [169 384 57 3];
-            app.NumberOfChannelsSlider.Value = 1;
+            app.NumberOfChannelsSlider.Value = 4;
 
             % Create SecondChannelSettingsPanel
             app.SecondChannelSettingsPanel = uipanel(app.SettingsTab);
@@ -2709,8 +2727,19 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.AutoscaleCheckBox_2 = uicheckbox(app.SecondChannelSettingsPanel);
             app.AutoscaleCheckBox_2.ValueChangedFcn = createCallbackFcn(app, @AutoscaleCheckBox_2ValueChanged, true);
             app.AutoscaleCheckBox_2.Text = 'Autoscale';
-            app.AutoscaleCheckBox_2.Position = [466 5 75 22];
+            app.AutoscaleCheckBox_2.Position = [443 5 75 22];
             app.AutoscaleCheckBox_2.Value = true;
+
+            % Create DeviceNameEditField_2Label
+            app.DeviceNameEditField_2Label = uilabel(app.SecondChannelSettingsPanel);
+            app.DeviceNameEditField_2Label.HorizontalAlignment = 'right';
+            app.DeviceNameEditField_2Label.Position = [516 5 78 22];
+            app.DeviceNameEditField_2Label.Text = 'Device Name';
+
+            % Create DeviceNameEditField_2
+            app.DeviceNameEditField_2 = uieditfield(app.SecondChannelSettingsPanel, 'text');
+            app.DeviceNameEditField_2.Position = [600 5 38 22];
+            app.DeviceNameEditField_2.Value = 'Dev1';
 
             % Create ThirdChannelSettingsPanel
             app.ThirdChannelSettingsPanel = uipanel(app.SettingsTab);
@@ -2795,8 +2824,19 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.AutoscaleCheckBox_3 = uicheckbox(app.ThirdChannelSettingsPanel);
             app.AutoscaleCheckBox_3.ValueChangedFcn = createCallbackFcn(app, @AutoscaleCheckBox_3ValueChanged, true);
             app.AutoscaleCheckBox_3.Text = 'Autoscale';
-            app.AutoscaleCheckBox_3.Position = [466 5 75 22];
+            app.AutoscaleCheckBox_3.Position = [443 5 75 22];
             app.AutoscaleCheckBox_3.Value = true;
+
+            % Create DeviceNameEditField_3Label
+            app.DeviceNameEditField_3Label = uilabel(app.ThirdChannelSettingsPanel);
+            app.DeviceNameEditField_3Label.HorizontalAlignment = 'right';
+            app.DeviceNameEditField_3Label.Position = [516 5 78 22];
+            app.DeviceNameEditField_3Label.Text = 'Device Name';
+
+            % Create DeviceNameEditField_3
+            app.DeviceNameEditField_3 = uieditfield(app.ThirdChannelSettingsPanel, 'text');
+            app.DeviceNameEditField_3.Position = [600 5 38 22];
+            app.DeviceNameEditField_3.Value = 'Dev1';
 
             % Create FourthChannelSettingsPanel
             app.FourthChannelSettingsPanel = uipanel(app.SettingsTab);
@@ -2881,8 +2921,19 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.AutoscaleCheckBox_4 = uicheckbox(app.FourthChannelSettingsPanel);
             app.AutoscaleCheckBox_4.ValueChangedFcn = createCallbackFcn(app, @AutoscaleCheckBox_4ValueChanged, true);
             app.AutoscaleCheckBox_4.Text = 'Autoscale';
-            app.AutoscaleCheckBox_4.Position = [466 5 75 22];
+            app.AutoscaleCheckBox_4.Position = [443 5 75 22];
             app.AutoscaleCheckBox_4.Value = true;
+
+            % Create DeviceNameEditField_4Label
+            app.DeviceNameEditField_4Label = uilabel(app.FourthChannelSettingsPanel);
+            app.DeviceNameEditField_4Label.HorizontalAlignment = 'right';
+            app.DeviceNameEditField_4Label.Position = [516 5 78 22];
+            app.DeviceNameEditField_4Label.Text = 'Device Name';
+
+            % Create DeviceNameEditField_4
+            app.DeviceNameEditField_4 = uieditfield(app.FourthChannelSettingsPanel, 'text');
+            app.DeviceNameEditField_4.Position = [600 5 38 22];
+            app.DeviceNameEditField_4.Value = 'Dev2';
 
             % Create PolarMotorPortEditFieldLabel
             app.PolarMotorPortEditFieldLabel = uilabel(app.SettingsTab);
@@ -2920,7 +2971,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.CounterBaseSwitch.Orientation = 'vertical';
             app.CounterBaseSwitch.ValueChangedFcn = createCallbackFcn(app, @CounterBaseSwitchValueChanged, true);
             app.CounterBaseSwitch.Position = [883 247 12 27];
-            app.CounterBaseSwitch.Value = 'Internal';
+            app.CounterBaseSwitch.Value = 'External';
 
             % Create CounterTerminalForSquarePulseGenerationLabel
             app.CounterTerminalForSquarePulseGenerationLabel = uilabel(app.SettingsTab);
@@ -3004,6 +3055,17 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.InitializeButton.ButtonPushedFcn = createCallbackFcn(app, @InitializeButtonPushed, true);
             app.InitializeButton.Position = [718 6 185 47];
             app.InitializeButton.Text = 'Initialize';
+
+            % Create DeviceNameEditField_5Label
+            app.DeviceNameEditField_5Label = uilabel(app.SettingsTab);
+            app.DeviceNameEditField_5Label.HorizontalAlignment = 'right';
+            app.DeviceNameEditField_5Label.Position = [703 303 78 22];
+            app.DeviceNameEditField_5Label.Text = 'Device Name';
+
+            % Create DeviceNameEditField_5
+            app.DeviceNameEditField_5 = uieditfield(app.SettingsTab, 'text');
+            app.DeviceNameEditField_5.Position = [787 303 38 22];
+            app.DeviceNameEditField_5.Value = 'Dev1';
 
             % Create SavingSettingsTab
             app.SavingSettingsTab = uitab(app.TabGroup);
