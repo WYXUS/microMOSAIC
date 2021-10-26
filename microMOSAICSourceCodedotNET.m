@@ -206,7 +206,6 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         PIFOCTab                        matlab.ui.container.Tab
         SetZPositionEditField           matlab.ui.control.NumericEditField
         SetZPositionEditFieldLabel      matlab.ui.control.Label
-        MoveZButton                     matlab.ui.control.Button
         PIFOCConnectionPanel            matlab.ui.container.Panel
         PIFOCControllerSerialNumberDropDown  matlab.ui.control.DropDown
         PIFOCControllerSerialNumberDropDownLabel  matlab.ui.control.Label
@@ -1972,7 +1971,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             end
         end
 
-        % Button pushed function: MoveZButton
+        % Callback function
         function MoveZButtonPushed(app, event)
             try
                 app.stagePIFOC.MOV(app.PIFOCaxis,app.SetZPositionEditField.Value);
@@ -2028,6 +2027,18 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         % Button pushed function: Button2
         function Button2Pushed(app, event)
 
+        end
+
+        % Value changed function: SetZPositionEditField
+        function SetZPositionEditFieldValueChanged(app, event)
+            value = app.SetZPositionEditField.Value;
+            if ~isempty('app.stagePIFOC.MOV')
+             try
+                app.stagePIFOC.MOV(app.PIFOCaxis,value);
+            catch ME
+                printLogWindow(app, ME.message);
+             end
+            end
         end
     end
 
@@ -2793,7 +2804,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.CounterChannelInputDropDown_3 = uidropdown(app.ThirdChannelSettingsPanel);
             app.CounterChannelInputDropDown_3.Items = {'ctr0', 'ctr1', 'ctr2', 'ctr3'};
             app.CounterChannelInputDropDown_3.Position = [584 39 61 22];
-            app.CounterChannelInputDropDown_3.Value = 'ctr3';
+            app.CounterChannelInputDropDown_3.Value = 'ctr0';
 
             % Create maxauEditField_3Label
             app.maxauEditField_3Label = uilabel(app.ThirdChannelSettingsPanel);
@@ -3304,27 +3315,22 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             % Create PIFOCControllerSerialNumberDropDown
             app.PIFOCControllerSerialNumberDropDown = uidropdown(app.PIFOCConnectionPanel);
             app.PIFOCControllerSerialNumberDropDown.Items = {'12220(Room 134b)', '120004758 (Room 22)'};
-            app.PIFOCControllerSerialNumberDropDown.ItemsData = {'12220', '', '120004758'};
+            app.PIFOCControllerSerialNumberDropDown.ItemsData = {'12220', '120004758'};
             app.PIFOCControllerSerialNumberDropDown.Editable = 'on';
             app.PIFOCControllerSerialNumberDropDown.BackgroundColor = [1 1 1];
             app.PIFOCControllerSerialNumberDropDown.Position = [239 129 173 22];
-            app.PIFOCControllerSerialNumberDropDown.Value = '12220';
-
-            % Create MoveZButton
-            app.MoveZButton = uibutton(app.PIFOCTab, 'push');
-            app.MoveZButton.ButtonPushedFcn = createCallbackFcn(app, @MoveZButtonPushed, true);
-            app.MoveZButton.Position = [816 287 100 22];
-            app.MoveZButton.Text = 'Move Z';
+            app.PIFOCControllerSerialNumberDropDown.Value = '120004758';
 
             % Create SetZPositionEditFieldLabel
             app.SetZPositionEditFieldLabel = uilabel(app.PIFOCTab);
             app.SetZPositionEditFieldLabel.HorizontalAlignment = 'right';
-            app.SetZPositionEditFieldLabel.Position = [768 322 80 22];
+            app.SetZPositionEditFieldLabel.Position = [194 176 80 22];
             app.SetZPositionEditFieldLabel.Text = 'Set Z Position';
 
             % Create SetZPositionEditField
             app.SetZPositionEditField = uieditfield(app.PIFOCTab, 'numeric');
-            app.SetZPositionEditField.Position = [863 322 100 22];
+            app.SetZPositionEditField.ValueChangedFcn = createCallbackFcn(app, @SetZPositionEditFieldValueChanged, true);
+            app.SetZPositionEditField.Position = [289 176 33 22];
             app.SetZPositionEditField.Value = 100;
 
             % Create LogTextAreaLabel
