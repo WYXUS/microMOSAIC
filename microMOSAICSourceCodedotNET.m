@@ -450,8 +450,11 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                         k = k + 1;
                     end
                     if app.pixRep>1
-                        data = arrayfun(@(ii) mean(rawData(ii:ii+app.pixRep-1)),1:app.pixRep:length(rawData)-app.pixRep+1)';   % average pixRep
-                        data = data';
+
+                        data = mean(reshape(rawData,app.pixRep,[]),1);
+%                         data = arrayfun(@(ii) mean(rawData(ii:ii+app.pixRep-1)),1:app.pixRep:length(rawData)-app.pixRep+1)';   % average pixRep
+%                         data = data';
+                           
                     else
                         data=rawData;
                     end
@@ -2152,7 +2155,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.91';
+            app.MatMicroMain.Name = 'microMOSAIC v0.92';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
