@@ -9,6 +9,10 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         LogTextAreaLabel                matlab.ui.control.Label
         TabGroup                        matlab.ui.container.TabGroup
         MainTab                         matlab.ui.container.Tab
+        ZStepumEditField                matlab.ui.control.NumericEditField
+        ZStepumEditFieldLabel           matlab.ui.control.Label
+        SetZPositionSpinner             matlab.ui.control.Spinner
+        SetZPositionSpinnerLabel        matlab.ui.control.Label
         Button2                         matlab.ui.control.Button
         PixelFrequencyHzEditField       matlab.ui.control.NumericEditField
         PixelFrequencyHzEditFieldLabel  matlab.ui.control.Label
@@ -36,9 +40,9 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         ZoomfactorEditField             matlab.ui.control.NumericEditField
         ZoomfactorEditFieldLabel        matlab.ui.control.Label
         FoVcenterYumEditField           matlab.ui.control.NumericEditField
-        FoVcenterYumEditFieldLabel      matlab.ui.control.Label
+        FoVcenterYumLabel               matlab.ui.control.Label
         FoVcenterXumEditField           matlab.ui.control.NumericEditField
-        FoVcenterXumEditFieldLabel      matlab.ui.control.Label
+        FoVcenterXumLabel               matlab.ui.control.Label
         PolarPanel                      matlab.ui.container.Panel
         StepAngledegrEditField          matlab.ui.control.NumericEditField
         StepAngledegrEditFieldLabel     matlab.ui.control.Label
@@ -59,7 +63,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         ScanRangeYumEditField           matlab.ui.control.NumericEditField
         ScanRangeYumLabel               matlab.ui.control.Label
         ScanRangeXumEditField           matlab.ui.control.NumericEditField
-        ScanRangeXumEditFieldLabel      matlab.ui.control.Label
+        ScanRangeXumLabel               matlab.ui.control.Label
         ScanSaveButton                  matlab.ui.control.Button
         LiveIntensityTab                matlab.ui.container.Tab
         LineplotCheckBox                matlab.ui.control.CheckBox
@@ -173,8 +177,14 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         ObjectiveDropDown               matlab.ui.control.DropDown
         ObjectiveDropDownLabel          matlab.ui.control.Label
         SavingSettingsTab               matlab.ui.container.Tab
-        FilenameCommentEditField        matlab.ui.control.EditField
-        FilenameCommentEditFieldLabel   matlab.ui.control.Label
+        ReferencePowerEditField         matlab.ui.control.EditField
+        ReferencePowerEditFieldLabel    matlab.ui.control.Label
+        epifwdEditField                 matlab.ui.control.EditField
+        epifwdEditFieldLabel            matlab.ui.control.Label
+        ContrastNameEditField           matlab.ui.control.EditField
+        ContrastNameEditFieldLabel      matlab.ui.control.Label
+        SampleLabelEditField            matlab.ui.control.EditField
+        SampleLabelEditFieldLabel       matlab.ui.control.Label
         SavingfolderEditField           matlab.ui.control.EditField
         SavingfolderEditFieldLabel      matlab.ui.control.Label
         DelaylineTab                    matlab.ui.container.Tab
@@ -204,8 +214,6 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         ConnectDelayLineButton          matlab.ui.control.Button
         UIAxes2                         matlab.ui.control.UIAxes
         PIFOCTab                        matlab.ui.container.Tab
-        SetZPositionEditField           matlab.ui.control.NumericEditField
-        SetZPositionEditFieldLabel      matlab.ui.control.Label
         PIFOCConnectionPanel            matlab.ui.container.Panel
         PIFOCControllerSerialNumberDropDown  matlab.ui.control.DropDown
         PIFOCControllerSerialNumberDropDownLabel  matlab.ui.control.Label
@@ -216,6 +224,15 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         PIFOCStageTypeEditField         matlab.ui.control.EditField
         PIFOCStageTypeEditFieldLabel    matlab.ui.control.Label
         ConnectPIFOCButton              matlab.ui.control.Button
+        WavefrontShapingTab             matlab.ui.container.Tab
+        AboutTab                        matlab.ui.container.Tab
+        microMOSAICLabel_7              matlab.ui.control.Label
+        microMOSAICLabel_6              matlab.ui.control.Label
+        microMOSAICLabel_5              matlab.ui.control.Label
+        microMOSAICLabel_4              matlab.ui.control.Label
+        microMOSAICLabel_3              matlab.ui.control.Label
+        microMOSAICLabel_2              matlab.ui.control.Label
+        microMOSAICLabel                matlab.ui.control.Label
     end
 
 
@@ -292,6 +309,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         axIntensity % axes for live intensity plotting
         dataBuffer
         DeviceNameFileds % Description
+        fileName % Description
     end
 
     methods (Access = private)
@@ -572,8 +590,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             if ~exist(logfolder, 'dir')
                 mkdir (logfolder); cd ..;
             end
-            fullnameImage =logfolder+string(datetime('now','TimeZone','local','Format','HH-mm'))+'NLimage X='+string(app.scanXRange)+' Y='+ string(app.scanXRange)+'_'+app.scanStep+'_'+"pixRep_"+string(app.pixRep)+"_"+zcoordName;
-            if (length(size(data)) == 3) | (length(size(data)) == 2)
+            fullnameImage =logfolder+string(datetime('now','TimeZone','local','Format','HH-mm'))+'NLimage X='+string(app.scanXRange)+' Y='+ string(app.scanXRange)+'_'+app.scanStep+'_'+"pixRep_"+string(app.pixRep)+"_"+"pixDwell_"+string(app.dwellTime)+"_"+zcoordName;
+            if ((length(size(data)) == 3)&(app.NumberOfEnabledChannels~=1)) | (length(size(data)) == 2)
                 for channel=1:app.NumberOfEnabledChannels
                     printLogWindow(app,'Saving channel '    + string(channel-1))
                     if app.channelsData(channel,2)==false
@@ -582,7 +600,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                         saveTIFF32(app,(data(:,:,channel)),fullnameImage+filenameComment+'_chn'+string(channel-1)+'.tiff','a')
                     end
                 end
-            elseif length(size(data)) == 4
+            else %if length(size(data)) == 4
 
                 for channel =1 : app.NumberOfEnabledChannels
                     fullnameImage =logfolder+string(datetime('now','TimeZone','local','Format','HH-mm'))+'_ch'+string(channel-1)+'_NLimage X='+string(app.scanXRange)+' Y='+ string(app.scanXRange)+'_'+app.scanStep+'_'+string(zcoordName);
@@ -663,7 +681,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.ScanRangeXumEditField.Value = app.scanXRange;
             app.ScanRangeYumEditField.Value = app.scanYRange;
             app.ScanResolutionumEditField.Value = app.scanStep;
-
+            app.FoVcenterXumEditField.Value = app.xFoVCenter;
+            app.FoVcenterYumEditField.Value = app.yFoVCenter;
         end
 
 
@@ -778,8 +797,15 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             switchOn    = 1;
             % switchOff   = 0;
             stage.SVO ( PIaxis, switchOn )
-
-
+        end
+        function appStateChange(app,state)  % controls the lamp color and label
+            if state=="Ready"
+                app.ReadyLampLabel.Text="Ready";
+                app.ReadyLamp.Color = 'Green';
+            else
+                app.ReadyLampLabel.Text="Busy";
+                app.ReadyLamp.Color = 'Red';
+            end
         end
         function done = startTasks(app)
             try
@@ -916,8 +942,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     firstDraw=false;
                     Z = Z+ ZStep;
                 end
-                %FilenameComment='_Anlge'+num2str(AngleStart,'%03.f')+'-'+num2str(AngleStop,'%03.f')+'-'+num2str(AngleStep,'%03.f')+'-'+app.FilenameCommentEditField.Value;
-                FilenameComment= '_ZStack_'+string(ZStart)+'-'+string(ZStop)+'-'+string(ZStep)+'-'+app.FilenameCommentEditField.Value;
+                %FilenameComment='_Anlge'+num2str(AngleStart,'%03.f')+'-'+num2str(AngleStop,'%03.f')+'-'+num2str(AngleStep,'%03.f')+'-'+app.SampleLabelEditField.Value;
+                FilenameComment= '_ZStack_'+string(ZStart)+'-'+string(ZStop)+'-'+string(ZStep)+'-'+app.fileName;
                 saveDataTiff(app,FilenameComment, dataZCUBE)
 
             catch ME
@@ -1111,6 +1137,10 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.PixelFrequencyHzEditField.Value = app.pixFreq;
             app.dutyCycle = app.DutyCycleEditField.Value;
         end
+
+        function updateFilename(app)
+            app.fileName = strcat(app.SampleLabelEditField.Value,"_", app.ContrastNameEditField.Value,"_",app.ReferencePowerEditField.Value,"_",app.epifwdEditField.Value,"_");
+        end
     end
     methods (Access = public)
 
@@ -1166,12 +1196,15 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.TimeLag = value;
             app.delayScanSetAxes();
 
+            app.SetZPositionSpinner.Step = app.ZStepumEditField.Value;
+
         end
 
         % Button pushed function: InitializeButton
         function InitializeButtonPushed(app, event)
             %             app.ax=[]
             printLogWindow(app,"Initialization..");
+            app.appStateChange("Busy");
             try
                 app.displayFigure = figure('Name',app.MatMicroMain.Name,'NumberTitle','off');
                 app.readSettings()
@@ -1242,10 +1275,12 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 printLogWindow(app,"Could not initialize NI DAQ card! So sad..")
                 printLogWindow(app, ME.message)
             end
+            app.appStateChange("Ready");
         end
 
         % Button pushed function: ScanSaveButton
         function ScanSaveButtonPushed(app, event)
+            app.appStateChange("Busy");
             try
                 saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
                 %             if app.imSession.IsRunning
@@ -1277,7 +1312,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             end
             try
                 if saveTIFF == true
-                    saveDataTiff(app,app.FilenameCommentEditField.Value,signal)
+                    saveDataTiff(app,app.fileName,signal)
 
                 elseif saveHDF5==true
 
@@ -1286,7 +1321,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 printLogWindow(app,"Could not save the image.")
                 printLogWindow(app, ME.message)
             end
-
+            app.appStateChange("Ready");
         end
 
         % Callback function
@@ -1302,9 +1337,9 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         function LiveButtonValueChanged(app, event)
             try
                 value = app.LiveButton.Value;
-                if value==true
-                    %                 app.imSession.queueOutputData([ app.coordPoints(:,1) app.coordPoints(:,1)]); %queue the first frame
+                if value==true                    
                     app.firstDraw=true;
+                    app.appStateChange("Busy");
                     while value == true
                         value = app.LiveButton.Value;
                         if app.AOtask.IsDone == false
@@ -1317,8 +1352,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     end
 
                 else
-                    %                 app.imSession.stop();
-                    %                 app.imSession.release();
+                app.stopTasks();
+                app.appStateChange("Ready");
                 end
             catch ME
                 printLogWindow(app,"Error while live imaging. Try once again or restart the software")
@@ -1614,11 +1649,13 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
         % Button pushed function: TakePolarStackButton
         function TakePolarStackButtonPushed(app, event)
+            app.appStateChange("Busy");
             printLogWindow(app,"Acquiring Polar stack, please wait")
             app.TakePolarStackButton.Enable = false;
             app.LiveButton.Enable = false;
             app.ScanSaveButton.Enable = false;
             firstDraw = true;
+            
             try
                 AngleStart = app.StartingAngledegrEditField.Value; AngleStop = app.EndingAngledegrEditField.Value; AngleStep = app.StepAngledegrEditField.Value;
                 Angle = AngleStart;
@@ -1647,8 +1684,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     firstDraw=false;
                     Angle = Angle + AngleStep;
                 end
-                %FilenameComment='_Anlge'+num2str(AngleStart,'%03.f')+'-'+num2str(AngleStop,'%03.f')+'-'+num2str(AngleStep,'%03.f')+'-'+app.FilenameCommentEditField.Value;
-                FilenameComment= '_Anlge'+string(AngleStart)+'-'+string(AngleStop)+'-'+string(AngleStep)+'-'+app.FilenameCommentEditField.Value;
+                %FilenameComment='_Anlge'+num2str(AngleStart,'%03.f')+'-'+num2str(AngleStop,'%03.f')+'-'+num2str(AngleStep,'%03.f')+'-'+app.fileName;
+                FilenameComment= '_Anlge'+string(AngleStart)+'-'+string(AngleStop)+'-'+string(AngleStep)+'-'+app.fileName;
                 saveDataTiff(app,FilenameComment, dataPolCUBE)
 
             catch ME
@@ -1661,6 +1698,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.ScanSaveButton.Enable = true;
             app.LiveButton.Enable = true;
             printLogWindow(app, "Polar stack - DONE!")
+            app.appStateChange("Ready");
         end
 
         % Value changed function: TimeLagForPolarMotorsecEditField
@@ -1677,6 +1715,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
         % Value changed function: StartLiveButton
         function StartLiveButtonValueChanged(app, event)
+           app.appStateChange("Busy");
             value = app.StartLiveButton.Value;
 %             app.intensityFigure = figure('Name',strcat(app.MatMicroMain.Name,"  Intensity Profile"),'NumberTitle','off');       % create figure if doesn't exist
 %             app.axIntensity = axes(app.intensityFigure);%,'Position',[0.025 0.025 0.95 0.95]);
@@ -1769,6 +1808,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             ScanRangeXumEditFieldValueChanged(app, event);
             PixelRepetitionEditField_2ValueChanged(app, event);
             printLogWindow(app, "..done!");
+            app.appStateChange("Ready");
         end
 
         % Value changed function: AutoscaleCheckBox_5
@@ -1780,25 +1820,38 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
         % Button pushed function: ZoomInButton
         function ZoomInButtonPushed(app, event)
+            app.appStateChange("Busy");
+            try
             [xcoord, ycoord] = selectGalvoPosition(app,str2num(app.ChannelDropDown.Value)+1);
-
+            app.xFoVCenter = -double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep+double(xcoord)*app.scanStep;
+            app.yFoVCenter = -double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
             zoomFactor = app.ZoomfactorEditField.Value;
             zoomImage(app,zoomFactor);
             app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange,app.scanYRange,app.scanStep,app.xFoVCenter,app.yFoVCenter);
             signal = NLimagingCoordsdotNET(app ,app.coordPoints);
             drawImages(app,true,signal)
+            catch ME
+                app.printLogWindow(ME.message)
+            end
+            app.appStateChange("Ready");
         end
 
         % Button pushed function: ZoomOutButton
         function ZoomOutButtonPushed(app, event)
+            app.appStateChange("Busy");
+            try
             [xcoord, ycoord] = selectGalvoPosition(app,str2num(app.ChannelDropDown.Value)+1);
-            app.FoVcenterXumEditField.Value = -double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep+double(xcoord)*app.scanStep;
-            app.FoVcenterYumEditField.Value = -double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
+            app.xFoVCenter = -double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep+double(xcoord)*app.scanStep;
+            app.yFoVCenter = -double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
             zoomFactor =1 / app.ZoomfactorEditField.Value;
             zoomImage(app,zoomFactor);
             app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange,app.scanYRange,app.scanStep,app.xFoVCenter,app.yFoVCenter);
             signal = NLimagingCoordsdotNET(app ,app.coordPoints);
             drawImages(app,true,signal)
+            catch ME
+                app.printLogWindow(ME.message)
+            end
+            app.appStateChange("Ready");
         end
 
         % Value changed function: SessionUpdateRateHzEditField
@@ -1841,6 +1894,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         function ConnectDelayLineButtonPushed(app, event)
             %% CONNECT PI translation stage
             %Load PI MATLAB Driver GCS2 (if not already loaded)
+            app.appStateChange("Busy");
             try
                 addpath ( 'C:\Users\Public\PI\PI_MATLAB_Driver_GCS2' ); % If you are still using XP, please look at the manual for the right path to include.
                 if ( ~exist ( 'app.Controller', 'var' ) || ~isa ( app.Controller, 'PI_GCS_Controller' ) )
@@ -1864,6 +1918,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 printLogWindow(app,"The stage is not initialized.")
                 printLogWindow(app, ME.message)
             end
+            app.appStateChange("Ready");
 
 
         end
@@ -1877,6 +1932,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         % Button pushed function: ScandelayButton
         function ScandelayButtonPushed(app, event)
             %% Pulse overlap for CARS signal
+            app.appStateChange("Busy");
             printLogWindow(app, "Scanning the delay");
             try
                 channel  = str2num(app.ChannelDropDown_2.Value);
@@ -1926,6 +1982,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             ScanRangeXumEditFieldValueChanged(app, event);
             PixelRepetitionEditField_2ValueChanged(app, event);
             printLogWindow(app, "..done!");
+            app.appStateChange("Ready");
             %             saveas(fPulseOverlay,"output\"+logfolder+"\delay scan"+string(datetime('now','TimeZone','local','Format','HH-mm'))+".fig");
             %             fileName = "output\"+logfolder+"\delay scan"+string(datetime('now','TimeZone','local','Format','HH-mm'));
             %             saveText(fileName, styleDelay, data'); %save total signal evolution during the optimization
@@ -1939,6 +1996,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
         % Button pushed function: ConnectPIFOCButton
         function ConnectPIFOCButtonPushed(app, event)
+            app.appStateChange("Busy");
             try
                 printLogWindow(app, 'Connecting to the PIFOC');
                 addpath ( 'C:\Users\Public\PI\PI_MATLAB_Driver_GCS2' ); % If you are still using XP, please look at the manual for the right path to include.
@@ -1959,16 +2017,20 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 if ( isempty (app.stagePIFOC) ) | ( app.stagePIFOC.IsConnected )
                     [app.stagePIFOC, app.PIFOCaxis, stagePIFOCConnected] = ConnectPIFOC(app,app.ControllerPIFOC,app.PIFOCConnectionInterfaceDropDown.Value,app.PIFOCStageTypeEditField.Value,PIFOC_SN );
                 end
+                printLogWindow(app, 'Sucessfully connected to PIFOC');
+
                 try
-                    app.stagePIFOC.MOV(app.PIFOCaxis,0);
+                    app.stagePIFOC.MOV(app.PIFOCaxis,app.SetZPositionSpinner.Value);
                 catch ME
                     printLogWindow(app, ME.message);
                 end
-                printLogWindow(app, 'Sucessfully connected to PIFOC');
+                app.SetZPositionSpinner.Enable = true;
+                app.ZStepumEditField.Enable = true;
             catch ME
                 printLogWindow(app,'Could not connect to the PIFOC');
                 printLogWindow(app, ME.message);
             end
+            app.appStateChange("Ready");
         end
 
         % Callback function
@@ -1982,6 +2044,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
         % Button pushed function: AcquireZstackButton
         function AcquireZstackButtonPushed(app, event)
+           app.appStateChange("Busy");
             try
 
                 acquireZStack(app)
@@ -1989,6 +2052,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 printLogWindow(app, 'Could not take a Z stack..');
                 printLogWindow(app, ME.message);
             end
+            app.appStateChange("Ready");
         end
 
         % Value changed function: CounterBaseSwitch
@@ -2026,10 +2090,10 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
         % Button pushed function: Button2
         function Button2Pushed(app, event)
-
+% app.MainTab.
         end
 
-        % Value changed function: SetZPositionEditField
+        % Callback function
         function SetZPositionEditFieldValueChanged(app, event)
             value = app.SetZPositionEditField.Value;
             if ~isempty('app.stagePIFOC.MOV')
@@ -2039,6 +2103,30 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 printLogWindow(app, ME.message);
              end
             end
+        end
+
+        % Value changed function: SetZPositionSpinner
+        function SetZPositionSpinnerValueChanged(app, event)
+            value = app.SetZPositionSpinner.Value;
+            if ~isempty('app.stagePIFOC.MOV')
+             try
+                app.stagePIFOC.MOV(app.PIFOCaxis,value);
+            catch ME
+                printLogWindow(app, ME.message);
+             end
+            end
+        end
+
+        % Value changed function: ZStepumEditField
+        function ZStepumEditFieldValueChanged(app, event)
+            app.SetZPositionSpinner.Step = app.ZStepumEditField.Value;
+        end
+
+        % Value changed function: ContrastNameEditField, 
+        % ReferencePowerEditField, SampleLabelEditField, epifwdEditField
+        function SampleLabelEditFieldValueChanged(app, event)
+          
+            app.updateFilename();
         end
     end
 
@@ -2074,11 +2162,11 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.ScanSaveButton.Position = [123 132 110 36];
             app.ScanSaveButton.Text = 'Scan&Save';
 
-            % Create ScanRangeXumEditFieldLabel
-            app.ScanRangeXumEditFieldLabel = uilabel(app.MainTab);
-            app.ScanRangeXumEditFieldLabel.HorizontalAlignment = 'right';
-            app.ScanRangeXumEditFieldLabel.Position = [22 421 102 22];
-            app.ScanRangeXumEditFieldLabel.Text = 'Scan Range X, um';
+            % Create ScanRangeXumLabel
+            app.ScanRangeXumLabel = uilabel(app.MainTab);
+            app.ScanRangeXumLabel.HorizontalAlignment = 'right';
+            app.ScanRangeXumLabel.Position = [14 421 110 22];
+            app.ScanRangeXumLabel.Text = 'Scan Range X [um]';
 
             % Create ScanRangeXumEditField
             app.ScanRangeXumEditField = uieditfield(app.MainTab, 'numeric');
@@ -2091,7 +2179,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.ScanRangeYumLabel = uilabel(app.MainTab);
             app.ScanRangeYumLabel.HorizontalAlignment = 'right';
             app.ScanRangeYumLabel.Position = [9 384 115 28];
-            app.ScanRangeYumLabel.Text = 'Scan Range Y, um';
+            app.ScanRangeYumLabel.Text = 'Scan Range Y [um]';
 
             % Create ScanRangeYumEditField
             app.ScanRangeYumEditField = uieditfield(app.MainTab, 'numeric');
@@ -2102,8 +2190,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             % Create ScanResolutionumLabel
             app.ScanResolutionumLabel = uilabel(app.MainTab);
             app.ScanResolutionumLabel.HorizontalAlignment = 'right';
-            app.ScanResolutionumLabel.Position = [21 349 113 28];
-            app.ScanResolutionumLabel.Text = 'Scan Resolution,um';
+            app.ScanResolutionumLabel.Position = [14 349 120 28];
+            app.ScanResolutionumLabel.Text = 'Scan Resolution [um]';
 
             % Create ScanResolutionumEditField
             app.ScanResolutionumEditField = uieditfield(app.MainTab, 'numeric');
@@ -2204,22 +2292,22 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.StepAngledegrEditField.Position = [130 126 40 22];
             app.StepAngledegrEditField.Value = 10;
 
-            % Create FoVcenterXumEditFieldLabel
-            app.FoVcenterXumEditFieldLabel = uilabel(app.MainTab);
-            app.FoVcenterXumEditFieldLabel.HorizontalAlignment = 'right';
-            app.FoVcenterXumEditFieldLabel.Position = [21 293 99 22];
-            app.FoVcenterXumEditFieldLabel.Text = 'FoV center X, um';
+            % Create FoVcenterXumLabel
+            app.FoVcenterXumLabel = uilabel(app.MainTab);
+            app.FoVcenterXumLabel.HorizontalAlignment = 'right';
+            app.FoVcenterXumLabel.Position = [18 293 102 22];
+            app.FoVcenterXumLabel.Text = 'FoV center X [um]';
 
             % Create FoVcenterXumEditField
             app.FoVcenterXumEditField = uieditfield(app.MainTab, 'numeric');
             app.FoVcenterXumEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
             app.FoVcenterXumEditField.Position = [137 293 85 22];
 
-            % Create FoVcenterYumEditFieldLabel
-            app.FoVcenterYumEditFieldLabel = uilabel(app.MainTab);
-            app.FoVcenterYumEditFieldLabel.HorizontalAlignment = 'right';
-            app.FoVcenterYumEditFieldLabel.Position = [21 267 97 22];
-            app.FoVcenterYumEditFieldLabel.Text = 'FoV center Y, um';
+            % Create FoVcenterYumLabel
+            app.FoVcenterYumLabel = uilabel(app.MainTab);
+            app.FoVcenterYumLabel.HorizontalAlignment = 'right';
+            app.FoVcenterYumLabel.Position = [16 267 102 22];
+            app.FoVcenterYumLabel.Text = 'FoV center Y [um]';
 
             % Create FoVcenterYumEditField
             app.FoVcenterYumEditField = uieditfield(app.MainTab, 'numeric');
@@ -2381,6 +2469,34 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.Button2.ButtonPushedFcn = createCallbackFcn(app, @Button2Pushed, true);
             app.Button2.Position = [478 314 100 22];
             app.Button2.Text = 'Button2';
+
+            % Create SetZPositionSpinnerLabel
+            app.SetZPositionSpinnerLabel = uilabel(app.MainTab);
+            app.SetZPositionSpinnerLabel.HorizontalAlignment = 'right';
+            app.SetZPositionSpinnerLabel.Enable = 'off';
+            app.SetZPositionSpinnerLabel.Position = [403 81 80 22];
+            app.SetZPositionSpinnerLabel.Text = 'Set Z Position';
+
+            % Create SetZPositionSpinner
+            app.SetZPositionSpinner = uispinner(app.MainTab);
+            app.SetZPositionSpinner.Limits = [0 400];
+            app.SetZPositionSpinner.ValueChangedFcn = createCallbackFcn(app, @SetZPositionSpinnerValueChanged, true);
+            app.SetZPositionSpinner.Enable = 'off';
+            app.SetZPositionSpinner.Position = [498 81 65 22];
+
+            % Create ZStepumEditFieldLabel
+            app.ZStepumEditFieldLabel = uilabel(app.MainTab);
+            app.ZStepumEditFieldLabel.HorizontalAlignment = 'right';
+            app.ZStepumEditFieldLabel.Enable = 'off';
+            app.ZStepumEditFieldLabel.Position = [431 49 68 22];
+            app.ZStepumEditFieldLabel.Text = 'Z Step [um]';
+
+            % Create ZStepumEditField
+            app.ZStepumEditField = uieditfield(app.MainTab, 'numeric');
+            app.ZStepumEditField.ValueChangedFcn = createCallbackFcn(app, @ZStepumEditFieldValueChanged, true);
+            app.ZStepumEditField.Enable = 'off';
+            app.ZStepumEditField.Position = [514 49 22 22];
+            app.ZStepumEditField.Value = 1;
 
             % Create LiveIntensityTab
             app.LiveIntensityTab = uitab(app.TabGroup);
@@ -3064,7 +3180,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             % Create InitializeButton
             app.InitializeButton = uibutton(app.SettingsTab, 'push');
             app.InitializeButton.ButtonPushedFcn = createCallbackFcn(app, @InitializeButtonPushed, true);
-            app.InitializeButton.Position = [718 6 185 47];
+            app.InitializeButton.Position = [279 359 185 47];
             app.InitializeButton.Text = 'Initialize';
 
             % Create DeviceNameEditField_5Label
@@ -3094,16 +3210,53 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.SavingfolderEditField.Position = [91 429 483 22];
             app.SavingfolderEditField.Value = 'C:\Users\User\Pictures\Dmitry\versions test\';
 
-            % Create FilenameCommentEditFieldLabel
-            app.FilenameCommentEditFieldLabel = uilabel(app.SavingSettingsTab);
-            app.FilenameCommentEditFieldLabel.HorizontalAlignment = 'right';
-            app.FilenameCommentEditFieldLabel.Position = [10 395 110 22];
-            app.FilenameCommentEditFieldLabel.Text = 'Filename Comment';
+            % Create SampleLabelEditFieldLabel
+            app.SampleLabelEditFieldLabel = uilabel(app.SavingSettingsTab);
+            app.SampleLabelEditFieldLabel.HorizontalAlignment = 'right';
+            app.SampleLabelEditFieldLabel.Position = [262 395 79 22];
+            app.SampleLabelEditFieldLabel.Text = 'Sample Label';
 
-            % Create FilenameCommentEditField
-            app.FilenameCommentEditField = uieditfield(app.SavingSettingsTab, 'text');
-            app.FilenameCommentEditField.Position = [133 395 441 22];
-            app.FilenameCommentEditField.Value = '_';
+            % Create SampleLabelEditField
+            app.SampleLabelEditField = uieditfield(app.SavingSettingsTab, 'text');
+            app.SampleLabelEditField.ValueChangedFcn = createCallbackFcn(app, @SampleLabelEditFieldValueChanged, true);
+            app.SampleLabelEditField.Position = [354 395 677 22];
+            app.SampleLabelEditField.Value = '_';
+
+            % Create ContrastNameEditFieldLabel
+            app.ContrastNameEditFieldLabel = uilabel(app.SavingSettingsTab);
+            app.ContrastNameEditFieldLabel.HorizontalAlignment = 'right';
+            app.ContrastNameEditFieldLabel.Position = [255 363 86 22];
+            app.ContrastNameEditFieldLabel.Text = 'Contrast Name';
+
+            % Create ContrastNameEditField
+            app.ContrastNameEditField = uieditfield(app.SavingSettingsTab, 'text');
+            app.ContrastNameEditField.ValueChangedFcn = createCallbackFcn(app, @SampleLabelEditFieldValueChanged, true);
+            app.ContrastNameEditField.Position = [354 363 677 22];
+            app.ContrastNameEditField.Value = 'SHG400nm';
+
+            % Create epifwdEditFieldLabel
+            app.epifwdEditFieldLabel = uilabel(app.SavingSettingsTab);
+            app.epifwdEditFieldLabel.HorizontalAlignment = 'right';
+            app.epifwdEditFieldLabel.Position = [297 301 44 22];
+            app.epifwdEditFieldLabel.Text = 'epi/fwd';
+
+            % Create epifwdEditField
+            app.epifwdEditField = uieditfield(app.SavingSettingsTab, 'text');
+            app.epifwdEditField.ValueChangedFcn = createCallbackFcn(app, @SampleLabelEditFieldValueChanged, true);
+            app.epifwdEditField.Position = [354 301 677 22];
+            app.epifwdEditField.Value = 'epi';
+
+            % Create ReferencePowerEditFieldLabel
+            app.ReferencePowerEditFieldLabel = uilabel(app.SavingSettingsTab);
+            app.ReferencePowerEditFieldLabel.HorizontalAlignment = 'right';
+            app.ReferencePowerEditFieldLabel.Position = [243 332 98 22];
+            app.ReferencePowerEditFieldLabel.Text = 'Reference Power';
+
+            % Create ReferencePowerEditField
+            app.ReferencePowerEditField = uieditfield(app.SavingSettingsTab, 'text');
+            app.ReferencePowerEditField.ValueChangedFcn = createCallbackFcn(app, @SampleLabelEditFieldValueChanged, true);
+            app.ReferencePowerEditField.Position = [354 332 677 22];
+            app.ReferencePowerEditField.Value = '20mW';
 
             % Create DelaylineTab
             app.DelaylineTab = uitab(app.TabGroup);
@@ -3321,17 +3474,56 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.PIFOCControllerSerialNumberDropDown.Position = [239 129 173 22];
             app.PIFOCControllerSerialNumberDropDown.Value = '120004758';
 
-            % Create SetZPositionEditFieldLabel
-            app.SetZPositionEditFieldLabel = uilabel(app.PIFOCTab);
-            app.SetZPositionEditFieldLabel.HorizontalAlignment = 'right';
-            app.SetZPositionEditFieldLabel.Position = [194 176 80 22];
-            app.SetZPositionEditFieldLabel.Text = 'Set Z Position';
+            % Create WavefrontShapingTab
+            app.WavefrontShapingTab = uitab(app.TabGroup);
+            app.WavefrontShapingTab.Title = 'Wavefront Shaping';
 
-            % Create SetZPositionEditField
-            app.SetZPositionEditField = uieditfield(app.PIFOCTab, 'numeric');
-            app.SetZPositionEditField.ValueChangedFcn = createCallbackFcn(app, @SetZPositionEditFieldValueChanged, true);
-            app.SetZPositionEditField.Position = [289 176 33 22];
-            app.SetZPositionEditField.Value = 100;
+            % Create AboutTab
+            app.AboutTab = uitab(app.TabGroup);
+            app.AboutTab.Title = 'About';
+
+            % Create microMOSAICLabel
+            app.microMOSAICLabel = uilabel(app.AboutTab);
+            app.microMOSAICLabel.FontSize = 25;
+            app.microMOSAICLabel.Position = [117 396 165 31];
+            app.microMOSAICLabel.Text = 'microMOSAIC';
+
+            % Create microMOSAICLabel_2
+            app.microMOSAICLabel_2 = uilabel(app.AboutTab);
+            app.microMOSAICLabel_2.WordWrap = 'on';
+            app.microMOSAICLabel_2.Position = [117 128 225 238];
+            app.microMOSAICLabel_2.Text = {'Raster scan microscope control software that uses NI DAQ acquisition card to control galvanometric scanners and acquire data form detectors via analog or counter channels. '; ''; 'Polarimetric data is acquierd by rotating a halfwave plate at the excitation path by a Newport SMC100 motor.'; ''; 'Z position is controlled by a Physik Instrumente Piezomotor.'; ''; 'MATLAB 2021b is used for the developement.'; ''; 'Driver version DAQmx 18.0.0f0'};
+
+            % Create microMOSAICLabel_3
+            app.microMOSAICLabel_3 = uilabel(app.AboutTab);
+            app.microMOSAICLabel_3.WordWrap = 'on';
+            app.microMOSAICLabel_3.FontSize = 24;
+            app.microMOSAICLabel_3.Position = [607 220 306 54];
+            app.microMOSAICLabel_3.Text = {'Dmitry NUZHDIN, PhD'; ''};
+
+            % Create microMOSAICLabel_4
+            app.microMOSAICLabel_4 = uilabel(app.AboutTab);
+            app.microMOSAICLabel_4.WordWrap = 'on';
+            app.microMOSAICLabel_4.Position = [117 374 225 22];
+            app.microMOSAICLabel_4.Text = {'2019-2022'; ''};
+
+            % Create microMOSAICLabel_5
+            app.microMOSAICLabel_5 = uilabel(app.AboutTab);
+            app.microMOSAICLabel_5.WordWrap = 'on';
+            app.microMOSAICLabel_5.Position = [610 199 225 28];
+            app.microMOSAICLabel_5.Text = 'Specially for MOSAIC research group, Institut Fresnel, 13013 - Marseille,  France';
+
+            % Create microMOSAICLabel_6
+            app.microMOSAICLabel_6 = uilabel(app.AboutTab);
+            app.microMOSAICLabel_6.WordWrap = 'on';
+            app.microMOSAICLabel_6.Position = [610 155 225 28];
+            app.microMOSAICLabel_6.Text = 'Specially for MOSAIC research group, Institut Fresnel, 13013 - Marseille,  France';
+
+            % Create microMOSAICLabel_7
+            app.microMOSAICLabel_7 = uilabel(app.AboutTab);
+            app.microMOSAICLabel_7.WordWrap = 'on';
+            app.microMOSAICLabel_7.Position = [611 45 225 70];
+            app.microMOSAICLabel_7.Text = {'Contact information:'; ''; 'github.com/WYXUS'; ''; 'dmitry.s.nuzhdin@gmail.com'};
 
             % Create LogTextAreaLabel
             app.LogTextAreaLabel = uilabel(app.MatMicroMain);
