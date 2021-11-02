@@ -587,10 +587,20 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 zcoordName ='Z='+string(stagePIFOC.qPOS('A'));
             end
             logfolder  = app.SavingfolderEditField.Value;
-            if ~exist(logfolder, 'dir')
-                mkdir (logfolder); cd ..;
+            if logfolder(end)~="\"
+                logfolder = strcat(logfolder,"\")
+                app.SavingfolderEditField.Value = logfolder;
             end
-            fullnameImage =logfolder+string(datetime('now','TimeZone','local','Format','HH-mm'))+'NLimage X='+string(app.scanXRange)+' Y='+ string(app.scanXRange)+'_'+app.scanStep+'_'+"pixRep_"+string(app.pixRep)+"_"+"pixDwell_"+string(app.dwellTime)+"_"+zcoordName;
+
+%             if ~exist(logfolder, 'dir')
+%                 mkdir (logfolder); 
+%             end
+            dateFolder =string(datetime('now','TimeZone','local','Format','uuuu-MM-dd'));
+            logfolder = strcat(logfolder,dateFolder,"\")
+            if ~exist(logfolder, 'dir')
+                mkdir (logfolder); 
+            end
+            fullnameImage =logfolder+string(datetime('now','TimeZone','local','Format','HH-mm'))+'NLimage_X'+string(app.scanXRange)+'_Y'+ string(app.scanXRange)+'_'+app.scanStep+'_'+"pixRep_"+string(app.pixRep)+"_"+"pixDwell_"+string(app.dwellTime)+"_"+zcoordName;
             if ((length(size(data)) == 3)&(app.NumberOfEnabledChannels~=1)) | (length(size(data)) == 2)
                 for channel=1:app.NumberOfEnabledChannels
                     printLogWindow(app,'Saving channel '    + string(channel-1))
@@ -1139,7 +1149,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         end
 
         function updateFilename(app)
-            app.fileName = strcat(app.SampleLabelEditField.Value,"_", app.ContrastNameEditField.Value,"_",app.ReferencePowerEditField.Value,"_",app.epifwdEditField.Value,"_");
+            app.fileName = strcat(app.SampleLabelEditField.Value,"_", app.ContrastNameEditField.Value,"_",app.ReferencePowerEditField.Value,"_",app.epifwdEditField.Value);
         end
     end
     methods (Access = public)
@@ -1197,6 +1207,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.delayScanSetAxes();
 
             app.SetZPositionSpinner.Step = app.ZStepumEditField.Value;
+            app.updateFilename();
 
         end
 
