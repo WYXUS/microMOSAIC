@@ -1960,7 +1960,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     app.numberOfPoints = app.SamplesperpointEditField.Value;
                     app.pixRep =1;
                     app.dwellTime = 1;
-                    app.updateChannels();
+                    app.numberOfPoints = app.SamplesperpointEditField.Value;
+                    [app.AOtask,app.AOwriter, app.COtask, app.AItask,app.AIreader,app.CItask,app.CIreader] = app.initChannels();
                     Range = app.RangemmEditField.Value; %mm
                     optimizationPoint = [0 0];
                     coordPointsForDelay = zeros(app.numberOfPoints,2);
@@ -1972,7 +1973,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     counter =1;
 
                     while (position)<=(Offset+Range/2)
-                        %                     app.stage.MOV(app.PIaxis,position);
+                                            app.stage.MOV(app.PIaxis,position);
                         %                     while(app.stage.IsMoving==true)
                         pause(0.1);
                         %                     end
@@ -2155,7 +2156,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.92';
+            app.MatMicroMain.Name = 'microMOSAIC v0.93';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -3316,7 +3317,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             % Create ControllerserialnumberEditField
             app.ControllerserialnumberEditField = uieditfield(app.DelayLineConnectionPanel, 'text');
             app.ControllerserialnumberEditField.Position = [155 124 100 22];
-            app.ControllerserialnumberEditField.Value = '0125500210';
+            app.ControllerserialnumberEditField.Value = '0185500127';
 
             % Create ConnectioninterfaceDropDownLabel
             app.ConnectioninterfaceDropDownLabel = uilabel(app.DelayLineConnectionPanel);
