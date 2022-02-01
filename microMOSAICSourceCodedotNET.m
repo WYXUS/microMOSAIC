@@ -1740,7 +1740,10 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 else
                     if value ==true
                         [xcoord ,ycoord] = selectGalvoPosition(app,str2num(app.ChannelForImagePixelSelectionDropDown.Value)+1);
-                        optimizationPoint = [-double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep*app.calibration+double(xcoord)*app.scanStep*app.calibration;-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep*app.calibration+double(ycoord)*app.scanStep*app.calibration];
+s
+                        optimizationPoint = [(-double(int16(app.scanXRange / app.scanStep)/2 )*app.scanStep+app.xFoVCenter)*app.calibration+double(xcoord)*app.scanStep*app.calibration;(-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep + app.yFoVCenter)*app.calibration+double(ycoord)*app.scanStep*app.calibration];
+                        app.xFoVCenter = app.xFoVCenter-double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep+double(xcoord)*app.scanStep;
+                        app.yFoVCenter = app.yFoVCenter-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
                         app.numberOfPoints = app.SamplesperpointEditField.Value;
                         app.pixRep =1;
                         app.dwellTime = 1;
@@ -1837,8 +1840,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.appStateChange("Busy");
             try
             [xcoord, ycoord] = selectGalvoPosition(app,str2num(app.ChannelDropDown.Value)+1);
-            app.xFoVCenter = -double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep+double(xcoord)*app.scanStep;
-            app.yFoVCenter = -double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
+            app.xFoVCenter = app.xFoVCenter-double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep+double(xcoord)*app.scanStep;
+            app.yFoVCenter = app.yFoVCenter-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
             zoomFactor = app.ZoomfactorEditField.Value;
             zoomImage(app,zoomFactor);
             app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange,app.scanYRange,app.scanStep,app.xFoVCenter,app.yFoVCenter);
@@ -2143,6 +2146,12 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
           
             app.updateFilename();
         end
+
+        % Value changed function: SamplesperpointEditField_2
+        function SamplesperpointEditField_2ValueChanged(app, event)
+            value = app.SamplesperpointEditField_2.Value;
+            
+        end
     end
 
     % Component initialization
@@ -2156,7 +2165,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.93';
+            app.MatMicroMain.Name = 'microMOSAIC v0.931';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -2627,6 +2636,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
             % Create SamplesperpointEditField_2
             app.SamplesperpointEditField_2 = uieditfield(app.LiveIntensityTab, 'numeric');
+            app.SamplesperpointEditField_2.ValueChangedFcn = createCallbackFcn(app, @SamplesperpointEditField_2ValueChanged, true);
             app.SamplesperpointEditField_2.Position = [519 129 38 22];
             app.SamplesperpointEditField_2.Value = 100;
 
@@ -2672,7 +2682,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.SessionUpdateRateHzEditField.ValueDisplayFormat = '%.0f';
             app.SessionUpdateRateHzEditField.ValueChangedFcn = createCallbackFcn(app, @SessionUpdateRateHzEditFieldValueChanged, true);
             app.SessionUpdateRateHzEditField.Position = [578 422 100 22];
-            app.SessionUpdateRateHzEditField.Value = 50000;
+            app.SessionUpdateRateHzEditField.Value = 200000;
 
             % Create FirstChannelSettingsPanel
             app.FirstChannelSettingsPanel = uipanel(app.SettingsTab);
@@ -2726,7 +2736,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.CounterChannelInputDropDown = uidropdown(app.FirstChannelSettingsPanel);
             app.CounterChannelInputDropDown.Items = {'ctr0', 'ctr1', 'ctr2', 'ctr3'};
             app.CounterChannelInputDropDown.Position = [582 39 62 22];
-            app.CounterChannelInputDropDown.Value = 'ctr2';
+            app.CounterChannelInputDropDown.Value = 'ctr0';
 
             % Create minauEditFieldLabel
             app.minauEditFieldLabel = uilabel(app.FirstChannelSettingsPanel);
@@ -2935,7 +2945,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.CounterChannelInputDropDown_3 = uidropdown(app.ThirdChannelSettingsPanel);
             app.CounterChannelInputDropDown_3.Items = {'ctr0', 'ctr1', 'ctr2', 'ctr3'};
             app.CounterChannelInputDropDown_3.Position = [584 39 61 22];
-            app.CounterChannelInputDropDown_3.Value = 'ctr0';
+            app.CounterChannelInputDropDown_3.Value = 'ctr2';
 
             % Create maxauEditField_3Label
             app.maxauEditField_3Label = uilabel(app.ThirdChannelSettingsPanel);
