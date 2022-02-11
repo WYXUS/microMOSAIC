@@ -631,7 +631,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         end
 
         function results = setPolarAngle(app, angle)        % rotates the polar motor to the provided angle
-            Command = "1pa"+string(angle);
+            Command = "1pa"+string(angle/2);
             fprintf(app.URB_Ojt,Command);% 1pann: move to nn='0' angle absolute; pause(0.5);
             pause(app.TimeLag);       % give time to the motor to reach the new position - can be optimizaed
             app.CurrentAngledegrGauge.Value = angle;
@@ -2165,7 +2165,7 @@ s
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.931';
+            app.MatMicroMain.Name = 'microMOSAIC v0.93';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
