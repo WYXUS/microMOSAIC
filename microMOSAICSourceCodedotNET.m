@@ -648,33 +648,36 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 event.Position, idx, ax.Colormap(idx,:));
         end
 
-        function [xcoord,ycoord] = selectGalvoPosition(app, channelNumber)
-            xcoord=-1;ycoord=-1;
+        function [xcoord,ycoord] = selectGalvoPosition(app, channelNumber)      % select a pixel position from a galvo scan
+            xcoord=-1;ycoord=-1;    % default values
             if app.SimulationmodeCheckBox.Value == true
                 image = magic(256);
             else
-                app.signalData =NLimagingCoordsdotNET(app ,app.coordPoints);
-                image = app.signalData(:,:,channelNumber);
+                app.signalData =NLimagingCoordsdotNET(app ,app.coordPoints); % get the images for all channels
+                image = app.signalData(:,:,channelNumber);      % select one channel
             end
-            hFigForplotting = figure;
-            tempAx = axes(hFigForplotting);
-            imagesc(tempAx,image);axis(tempAx,'image')
+            hFigForplotting = figure;       % make a figure to plot the data and select a pixel
+            tempAx = axes(hFigForplotting);         % draw axes
+            imagesc(tempAx,image);axis(tempAx,'image') % plot image
             title(tempAx,"Select where to park the galvos");
-            s = size(image);
-            exitVar = (xcoord<0)|(xcoord>s(1))|(ycoord<0)|(ycoord>s(2));
-            while exitVar==true
-                [xcoord,ycoord] = ginput(1);
-                xcoord = round(xcoord); ycoord = round(ycoord);
-                printLogWindow(app,string(xcoord)+" "+string(ycoord));
-                exitVar = (xcoord<0)|(xcoord>s(1))|(ycoord<0)|(ycoord>s(2));
+            s = size(image);        % image size
+            exitVar = (xcoord<0)|(xcoord>s(1))|(ycoord<0)|(ycoord>s(2));        % check if the selected pixel is not in the image
+            while exitVar==true % loop while you don't have coorrect coords
+                [xcoord,ycoord] = ginput(1);        % actually get pix coords
+                xcoord = round(xcoord); ycoord = round(ycoord);         % make the coords integer
+                printLogWindow(app,string(xcoord)+" "+string(ycoord));      % print the coords
+                exitVar = (xcoord<0)|(xcoord>s(1))|(ycoord<0)|(ycoord>s(2)); % check if the selected pixel is not in the image
                 if exitVar ==false
-                    break
+                    break       % once the correct coords are selected, quite the loop
                 end
                 printLogWindow(app,"Wrong input")
             end
-            close(hFigForplotting)
-            app.FoVcenterXumEditField.Value = -double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep+double(xcoord)*app.scanStep;
-            app.FoVcenterYumEditField.Value = -double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
+            close(hFigForplotting)      % close fig
+            % update the FoV values 
+            app.xFoVCenter= app.xFoVCenter-double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep+double(xcoord)*app.scanStep;
+            app.yFoVCenter =app.yFoVCenter-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
+            app.FoVcenterXumEditField.Value = app.xFoVCenter;
+            app.FoVcenterYumEditField.Value = app.yFoVCenter;
         end
 
         function results = singleMeasurement(app)
@@ -1729,25 +1732,32 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
         % Value changed function: StartLiveButton
         function StartLiveButtonValueChanged(app, event)
-           app.appStateChange("Busy");
+            app.appStateChange("Busy");
             value = app.StartLiveButton.Value;
-%             app.intensityFigure = figure('Name',strcat(app.MatMicroMain.Name,"  Intensity Profile"),'NumberTitle','off');       % create figure if doesn't exist
-%             app.axIntensity = axes(app.intensityFigure);%,'Position',[0.025 0.025 0.95 0.95]);
+            %             app.intensityFigure = figure('Name',strcat(app.MatMicroMain.Name,"  Intensity Profile"),'NumberTitle','off');       % create figure if doesn't exist
+            %             app.axIntensity = axes(app.intensityFigure);%,'Position',[0.025 0.025 0.95 0.95]);
             try
                 channel  = str2num(app.ChannelDropDown_2.Value);
                 if channel > app.NumberOfEnabledChannels
                     app.printLogWindow("Selected channel is not used")
                 else
-                    if value ==true
+                    if value ==true         % if live is started
+                        % get pixel coord
                         [xcoord ,ycoord] = selectGalvoPosition(app,str2num(app.ChannelForImagePixelSelectionDropDown.Value)+1);
-s
+                        % calculate the optimization point
                         optimizationPoint = [(-double(int16(app.scanXRange / app.scanStep)/2 )*app.scanStep+app.xFoVCenter)*app.calibration+double(xcoord)*app.scanStep*app.calibration;(-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep + app.yFoVCenter)*app.calibration+double(ycoord)*app.scanStep*app.calibration];
-                        app.xFoVCenter = app.xFoVCenter-double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep+double(xcoord)*app.scanStep;
-                        app.yFoVCenter = app.yFoVCenter-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
+                        % next two lines are redundant since they are
+                        % already implemented inside  "selectGalvoScan"
+%                         app.xFoVCenter = app.xFoVCenter-double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep+double(xcoord)*app.scanStep;
+%                         app.yFoVCenter = app.yFoVCenter-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
+                        % update acquisition paramters and reinitialize the
+                        % channels
                         app.numberOfPoints = app.SamplesperpointEditField.Value;
                         app.pixRep =1;
                         app.dwellTime = 1;
                         [app.AOtask,app.AOwriter, app.COtask, app.AItask,app.AIreader,app.CItask,app.CIreader] = app.initChannels();
+                        % an array that is sent to the galvos: all the same
+                        % values everywhere
                         coordPointsForDelay = zeros(app.numberOfPoints,2);
                         coordPointsForDelay(:,1) = coordPointsForDelay(:,1) + optimizationPoint(1);
                         coordPointsForDelay(:,2) = coordPointsForDelay(:,2) + optimizationPoint(2);
@@ -1757,24 +1767,8 @@ s
                             app.intensityFigure = figure('Name',strcat(app.MatMicroMain.Name,"  Intensity Profile"),'NumberTitle','off');       % create figure if doesn't exist
                             app.axIntensity = axes(app.intensityFigure);%,'Position',[0.025 0.025 0.95 0.95]);             % complete redraw next time
                         end
-                        %                     if (~isempty(app.AOtask)&&(app.AOtask~=-1)); app.AOtask.Stop();app.AOtask.Dispose();end
-                        %                     app.AOtask =  NationalInstruments.DAQmx.Task;
-                        %                     app.AOtask.AOChannels.CreateVoltageChannel(strcat(app.Dev, "ao0:1"), '',-10, 10,  NationalInstruments.DAQmx.AOVoltageUnits.Volts);    % output channels: the galvos
-                        %                     app.AOwriter = NationalInstruments.DAQmx.AnalogMultiChannelWriter(app.AOtask.Stream);     % create a writer
-
-                        %                     app.AOtask.EveryNSamplesWrittenEventInterval = uint32(round(length(coordPointsForDelay)));
-                        %                     app.AOtask.Stream.ConfigureOutputBuffer(2 * length(coordPointsForDelay));
-                        %                     app.AOtask.Stream.WriteRegenerationMode = NationalInstruments.DAQmx.WriteRegenerationMode.AllowRegeneration;
-                        %                     AL = addlistener(app.AOtask,'EveryNSamplesWritten',@(~, ev) writeData(app.AOwriter.WriteMultiSample(false,coordPointsForDelay')));
-                        %                     [al,cl] = app.addListeners(100);
-                        %                     counter =1;
-                        %                     app.AOwriter.WriteMultiSample(false,coordPointsForDelay');
-                        %                     app.startTasks();
-                        %                     app.AOtask.Start();
                         xdat = counter;
                         while ishandle(app.intensityFigure)
-
-
                             value = app.StartLiveButton.Value;
                             if value == false
                                 break
@@ -1805,7 +1799,7 @@ s
                                         br.YData = meanbuf;
                                     end
                                 end
-                            drawnow limitrate;
+                                drawnow limitrate;
                             catch ME
 
                                 printLogWindow(app, ME.message)
@@ -1817,10 +1811,10 @@ s
                         %                 app.stage.MOV(app.PIaxis,Offset);
                     end
                 end
-                catch ME
-                    app.printLogWindow(ME.message);
-                end
-            
+            catch ME
+                app.printLogWindow(ME.message);
+            end
+
             app.stopTasks();
             ScanRangeXumEditFieldValueChanged(app, event);
             PixelRepetitionEditField_2ValueChanged(app, event);
@@ -1858,8 +1852,8 @@ s
             app.appStateChange("Busy");
             try
             [xcoord, ycoord] = selectGalvoPosition(app,str2num(app.ChannelDropDown.Value)+1);
-            app.xFoVCenter = -double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep+double(xcoord)*app.scanStep;
-            app.yFoVCenter = -double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
+            app.xFoVCenter = app.xFoVCenter-double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep+double(xcoord)*app.scanStep;
+            app.yFoVCenter = app.yFoVCenter-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
             zoomFactor =1 / app.ZoomfactorEditField.Value;
             zoomImage(app,zoomFactor);
             app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange,app.scanYRange,app.scanStep,app.xFoVCenter,app.yFoVCenter);
