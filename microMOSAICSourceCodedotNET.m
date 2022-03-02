@@ -70,8 +70,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         BarGraphCheckBox                matlab.ui.control.CheckBox
         SamplesperpointEditField_2      matlab.ui.control.NumericEditField
         SamplesperpointEditField_2Label  matlab.ui.control.Label
-        ChannelDropDown_3               matlab.ui.control.DropDown
-        ChannelDropDown_3Label          matlab.ui.control.Label
+        LiveChannelDropDown             matlab.ui.control.DropDown
+        LiveChannelDropDownLabel        matlab.ui.control.Label
         Button                          matlab.ui.control.StateButton
         MinEditField                    matlab.ui.control.NumericEditField
         MinEditFieldLabel               matlab.ui.control.Label
@@ -774,8 +774,9 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
         function ReferenceStage(app,stage, PIaxis)
             printLogWindow(app,"Referencing the stage");
-            stage.FRF ( PIaxis );  % find reference
-
+%             stage.FRF ( PIaxis );  % find reference
+            stage.FPL ( PIaxis );  % find reference
+            stage.FNL ( PIaxis );  % find reference
             % wait for referencing to finish
             while(0 ~= stage.qFRF ( PIaxis ) == 0 )
                 pause(0.1);
@@ -1734,13 +1735,12 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 %             app.intensityFigure = figure('Name',strcat(app.MatMicroMain.Name,"  Intensity Profile"),'NumberTitle','off');       % create figure if doesn't exist
 %             app.axIntensity = axes(app.intensityFigure);%,'Position',[0.025 0.025 0.95 0.95]);
             try
-                channel  = str2num(app.ChannelDropDown_2.Value);
+                channel  = str2num(app.LiveChannelDropDown.Value)+1;
                 if channel > app.NumberOfEnabledChannels
                     app.printLogWindow("Selected channel is not used")
                 else
                     if value ==true
                         [xcoord ,ycoord] = selectGalvoPosition(app,str2num(app.ChannelForImagePixelSelectionDropDown.Value)+1);
-s
                         optimizationPoint = [(-double(int16(app.scanXRange / app.scanStep)/2 )*app.scanStep+app.xFoVCenter)*app.calibration+double(xcoord)*app.scanStep*app.calibration;(-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep + app.yFoVCenter)*app.calibration+double(ycoord)*app.scanStep*app.calibration];
                         app.xFoVCenter = app.xFoVCenter-double(int16(app.scanXRange / app.scanStep)/2)*app.scanStep+double(xcoord)*app.scanStep;
                         app.yFoVCenter = app.yFoVCenter-double(int16(app.scanYRange / app.scanStep)/2)*app.scanStep+double(ycoord)*app.scanStep;
@@ -1977,9 +1977,9 @@ s
 
                     while (position)<=(Offset+Range/2)
                                             app.stage.MOV(app.PIaxis,position);
-                        %                     while(app.stage.IsMoving==true)
+                                            while(app.stage.IsMoving==true)
                         pause(0.1);
-                        %                     end
+                                            end
 
                         data(1,counter) = position;
                         buf = app.NLimagingCoordsdotNET(coordPointsForDelay);
@@ -2165,7 +2165,7 @@ s
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.931';
+            app.MatMicroMain.Name = 'microMOSAIC v0.933';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -2221,7 +2221,7 @@ s
             app.ScanResolutionumEditField = uieditfield(app.MainTab, 'numeric');
             app.ScanResolutionumEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
             app.ScanResolutionumEditField.Position = [142 355 80 22];
-            app.ScanResolutionumEditField.Value = 0.1;
+            app.ScanResolutionumEditField.Value = 0.4;
 
             % Create NumberOfAccumulationsEditFieldLabel
             app.NumberOfAccumulationsEditFieldLabel = uilabel(app.MainTab);
@@ -2448,7 +2448,7 @@ s
             app.PixelDwellTimeusEditField.Limits = [0 Inf];
             app.PixelDwellTimeusEditField.ValueChangedFcn = createCallbackFcn(app, @PixelRepetitionEditField_2ValueChanged, true);
             app.PixelDwellTimeusEditField.Position = [132 241 35 22];
-            app.PixelDwellTimeusEditField.Value = 2;
+            app.PixelDwellTimeusEditField.Value = 8;
 
             % Create PixelRepetitionEditField_2Label
             app.PixelRepetitionEditField_2Label = uilabel(app.MainTab);
@@ -2552,7 +2552,7 @@ s
             app.StartLiveButton.ValueChangedFcn = createCallbackFcn(app, @StartLiveButtonValueChanged, true);
             app.StartLiveButton.Enable = 'off';
             app.StartLiveButton.Text = 'Start Live';
-            app.StartLiveButton.Position = [347 171 138 113];
+            app.StartLiveButton.Position = [367 105 138 113];
 
             % Create SlowerLabel
             app.SlowerLabel = uilabel(app.LiveIntensityTab);
@@ -2613,31 +2613,31 @@ s
             app.Button = uibutton(app.LiveIntensityTab, 'state');
             app.Button.ValueChangedFcn = createCallbackFcn(app, @ButtonValueChanged, true);
             app.Button.Text = 'Button';
-            app.Button.Position = [641 228 100 22];
+            app.Button.Position = [880 214 100 22];
 
-            % Create ChannelDropDown_3Label
-            app.ChannelDropDown_3Label = uilabel(app.LiveIntensityTab);
-            app.ChannelDropDown_3Label.HorizontalAlignment = 'right';
-            app.ChannelDropDown_3Label.Position = [448 93 50 22];
-            app.ChannelDropDown_3Label.Text = 'Channel';
+            % Create LiveChannelDropDownLabel
+            app.LiveChannelDropDownLabel = uilabel(app.LiveIntensityTab);
+            app.LiveChannelDropDownLabel.HorizontalAlignment = 'right';
+            app.LiveChannelDropDownLabel.Position = [494 266 76 22];
+            app.LiveChannelDropDownLabel.Text = 'Live Channel';
 
-            % Create ChannelDropDown_3
-            app.ChannelDropDown_3 = uidropdown(app.LiveIntensityTab);
-            app.ChannelDropDown_3.Items = {'1', '2', '3', '4'};
-            app.ChannelDropDown_3.ItemsData = {'1', '2', '3', '4'};
-            app.ChannelDropDown_3.Position = [513 93 44 22];
-            app.ChannelDropDown_3.Value = '1';
+            % Create LiveChannelDropDown
+            app.LiveChannelDropDown = uidropdown(app.LiveIntensityTab);
+            app.LiveChannelDropDown.Items = {'0', '1', '2', '3'};
+            app.LiveChannelDropDown.ItemsData = {'0', '1', '2', '3'};
+            app.LiveChannelDropDown.Position = [585 266 44 22];
+            app.LiveChannelDropDown.Value = '0';
 
             % Create SamplesperpointEditField_2Label
             app.SamplesperpointEditField_2Label = uilabel(app.LiveIntensityTab);
             app.SamplesperpointEditField_2Label.HorizontalAlignment = 'right';
-            app.SamplesperpointEditField_2Label.Position = [402 129 102 22];
+            app.SamplesperpointEditField_2Label.Position = [359 235 102 22];
             app.SamplesperpointEditField_2Label.Text = 'Samples per point';
 
             % Create SamplesperpointEditField_2
             app.SamplesperpointEditField_2 = uieditfield(app.LiveIntensityTab, 'numeric');
             app.SamplesperpointEditField_2.ValueChangedFcn = createCallbackFcn(app, @SamplesperpointEditField_2ValueChanged, true);
-            app.SamplesperpointEditField_2.Position = [519 129 38 22];
+            app.SamplesperpointEditField_2.Position = [476 235 38 22];
             app.SamplesperpointEditField_2.Value = 100;
 
             % Create BarGraphCheckBox
@@ -3362,7 +3362,7 @@ s
             app.SetOffsetmmEditField = uieditfield(app.DelaylineTab, 'numeric');
             app.SetOffsetmmEditField.ValueDisplayFormat = '%.4f';
             app.SetOffsetmmEditField.Position = [138 95 100 22];
-            app.SetOffsetmmEditField.Value = 45.4349;
+            app.SetOffsetmmEditField.Value = 139.5;
 
             % Create MoveButton
             app.MoveButton = uibutton(app.DelaylineTab, 'push');
@@ -3387,7 +3387,7 @@ s
             app.OffsetmmEditField.Limits = [0 150];
             app.OffsetmmEditField.ValueDisplayFormat = '%.4f';
             app.OffsetmmEditField.Position = [365 131 67 22];
-            app.OffsetmmEditField.Value = 45.53;
+            app.OffsetmmEditField.Value = 139.5;
 
             % Create RangemmEditFieldLabel
             app.RangemmEditFieldLabel = uilabel(app.DelaylineTab);
