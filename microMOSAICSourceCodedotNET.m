@@ -70,8 +70,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         BarGraphCheckBox                matlab.ui.control.CheckBox
         SamplesperpointEditField_2      matlab.ui.control.NumericEditField
         SamplesperpointEditField_2Label  matlab.ui.control.Label
-        ChannelDropDown_3               matlab.ui.control.DropDown
-        ChannelDropDown_3Label          matlab.ui.control.Label
+        LiveChannelDropDown             matlab.ui.control.DropDown
+        LiveChannelDropDownLabel        matlab.ui.control.Label
         Button                          matlab.ui.control.StateButton
         MinEditField                    matlab.ui.control.NumericEditField
         MinEditFieldLabel               matlab.ui.control.Label
@@ -780,7 +780,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             stage.FRF ( PIaxis );  % find reference
 
             % wait for referencing to finish
-            while(0 ~= stage.qFRF ( PIaxis ) == 0 )
+            while(0 ~= stage.qFPL ( PIaxis ) == 0 )
                 pause(0.1);
 
             end
@@ -2215,7 +2215,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.ScanResolutionumEditField = uieditfield(app.MainTab, 'numeric');
             app.ScanResolutionumEditField.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
             app.ScanResolutionumEditField.Position = [142 355 80 22];
-            app.ScanResolutionumEditField.Value = 0.1;
+            app.ScanResolutionumEditField.Value = 0.4;
 
             % Create NumberOfAccumulationsEditFieldLabel
             app.NumberOfAccumulationsEditFieldLabel = uilabel(app.MainTab);
@@ -2442,7 +2442,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.PixelDwellTimeusEditField.Limits = [0 Inf];
             app.PixelDwellTimeusEditField.ValueChangedFcn = createCallbackFcn(app, @PixelRepetitionEditField_2ValueChanged, true);
             app.PixelDwellTimeusEditField.Position = [132 241 35 22];
-            app.PixelDwellTimeusEditField.Value = 2;
+            app.PixelDwellTimeusEditField.Value = 8;
 
             % Create PixelRepetitionEditField_2Label
             app.PixelRepetitionEditField_2Label = uilabel(app.MainTab);
@@ -2546,7 +2546,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.StartLiveButton.ValueChangedFcn = createCallbackFcn(app, @StartLiveButtonValueChanged, true);
             app.StartLiveButton.Enable = 'off';
             app.StartLiveButton.Text = 'Start Live';
-            app.StartLiveButton.Position = [347 171 138 113];
+            app.StartLiveButton.Position = [352 134 138 113];
 
             % Create SlowerLabel
             app.SlowerLabel = uilabel(app.LiveIntensityTab);
@@ -2568,7 +2568,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.ChannelForImagePixelSelectionDropDown = uidropdown(app.LiveIntensityTab);
             app.ChannelForImagePixelSelectionDropDown.Items = {'0', '1', '2', '3'};
             app.ChannelForImagePixelSelectionDropDown.ItemsData = {'0', '1', '2', '3'};
-            app.ChannelForImagePixelSelectionDropDown.Position = [545 293 100 22];
+            app.ChannelForImagePixelSelectionDropDown.Position = [545 293 56 22];
             app.ChannelForImagePixelSelectionDropDown.Value = '0';
 
             % Create AutoscaleCheckBox_5
@@ -2609,29 +2609,29 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.Button.Text = 'Button';
             app.Button.Position = [641 228 100 22];
 
-            % Create ChannelDropDown_3Label
-            app.ChannelDropDown_3Label = uilabel(app.LiveIntensityTab);
-            app.ChannelDropDown_3Label.HorizontalAlignment = 'right';
-            app.ChannelDropDown_3Label.Position = [448 93 50 22];
-            app.ChannelDropDown_3Label.Text = 'Channel';
+            % Create LiveChannelDropDownLabel
+            app.LiveChannelDropDownLabel = uilabel(app.LiveIntensityTab);
+            app.LiveChannelDropDownLabel.HorizontalAlignment = 'right';
+            app.LiveChannelDropDownLabel.Position = [454 262 76 22];
+            app.LiveChannelDropDownLabel.Text = 'Live Channel';
 
-            % Create ChannelDropDown_3
-            app.ChannelDropDown_3 = uidropdown(app.LiveIntensityTab);
-            app.ChannelDropDown_3.Items = {'1', '2', '3', '4'};
-            app.ChannelDropDown_3.ItemsData = {'1', '2', '3', '4'};
-            app.ChannelDropDown_3.Position = [513 93 44 22];
-            app.ChannelDropDown_3.Value = '1';
+            % Create LiveChannelDropDown
+            app.LiveChannelDropDown = uidropdown(app.LiveIntensityTab);
+            app.LiveChannelDropDown.Items = {'0', '1', '2', '3'};
+            app.LiveChannelDropDown.ItemsData = {'0', '1', '2', '3'};
+            app.LiveChannelDropDown.Position = [545 262 56 22];
+            app.LiveChannelDropDown.Value = '0';
 
             % Create SamplesperpointEditField_2Label
             app.SamplesperpointEditField_2Label = uilabel(app.LiveIntensityTab);
             app.SamplesperpointEditField_2Label.HorizontalAlignment = 'right';
-            app.SamplesperpointEditField_2Label.Position = [402 129 102 22];
+            app.SamplesperpointEditField_2Label.Position = [645 262 102 22];
             app.SamplesperpointEditField_2Label.Text = 'Samples per point';
 
             % Create SamplesperpointEditField_2
             app.SamplesperpointEditField_2 = uieditfield(app.LiveIntensityTab, 'numeric');
             app.SamplesperpointEditField_2.ValueChangedFcn = createCallbackFcn(app, @SamplesperpointEditField_2ValueChanged, true);
-            app.SamplesperpointEditField_2.Position = [519 129 38 22];
+            app.SamplesperpointEditField_2.Position = [762 262 38 22];
             app.SamplesperpointEditField_2.Value = 100;
 
             % Create BarGraphCheckBox
