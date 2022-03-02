@@ -777,10 +777,10 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
         function ReferenceStage(app,stage, PIaxis)
             printLogWindow(app,"Referencing the stage");
-            stage.FRF ( PIaxis );  % find reference
+            stage.FPL ( PIaxis );  % find reference
 
             % wait for referencing to finish
-            while(0 ~= stage.qFPL ( PIaxis ) == 0 )
+            while(0 ~= stage.qFRF ( PIaxis ) == 0 )
                 pause(0.1);
 
             end
@@ -1936,6 +1936,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
         % Button pushed function: MoveButton
         function MoveButtonPushed(app, event)
+            
             app.stage.MOV(app.PIaxis,app.SetOffsetmmEditField.Value);
             printLogWindow(app, "Stage moved to "+app.SetOffsetmmEditField.Value);
         end
@@ -1971,9 +1972,9 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
                     while (position)<=(Offset+Range/2)
                                             app.stage.MOV(app.PIaxis,position);
-                        %                     while(app.stage.IsMoving==true)
+                                            while(app.stage.IsMoving==true)
                         pause(0.1);
-                        %                     end
+                                            end
 
                         data(1,counter) = position;
                         buf = app.NLimagingCoordsdotNET(coordPointsForDelay);
@@ -2159,7 +2160,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.93';
+            app.MatMicroMain.Name = 'microMOSAIC v0.934';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -3356,7 +3357,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.SetOffsetmmEditField = uieditfield(app.DelaylineTab, 'numeric');
             app.SetOffsetmmEditField.ValueDisplayFormat = '%.4f';
             app.SetOffsetmmEditField.Position = [138 95 100 22];
-            app.SetOffsetmmEditField.Value = 45.4349;
+            app.SetOffsetmmEditField.Value = 139.88;
 
             % Create MoveButton
             app.MoveButton = uibutton(app.DelaylineTab, 'push');
@@ -3381,7 +3382,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.OffsetmmEditField.Limits = [0 150];
             app.OffsetmmEditField.ValueDisplayFormat = '%.4f';
             app.OffsetmmEditField.Position = [365 131 67 22];
-            app.OffsetmmEditField.Value = 45.53;
+            app.OffsetmmEditField.Value = 139.88;
 
             % Create RangemmEditFieldLabel
             app.RangemmEditFieldLabel = uilabel(app.DelaylineTab);
