@@ -9,6 +9,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         LogTextAreaLabel                matlab.ui.control.Label
         TabGroup                        matlab.ui.container.TabGroup
         MainTab                         matlab.ui.container.Tab
+        PolarZstackButton               matlab.ui.control.Button
         ZStepumEditField                matlab.ui.control.NumericEditField
         ZStepumEditFieldLabel           matlab.ui.control.Label
         SetZPositionSpinner             matlab.ui.control.Spinner
@@ -813,7 +814,47 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             switchOn    = 1;
             % switchOff   = 0;
             stage.SVO ( PIaxis, switchOn )
+
         end
+        function acquirePolarStack(app)
+            AngleStart = app.StartingAngledegrEditField.Value; AngleStop = app.EndingAngledegrEditField.Value; AngleStep = app.StepAngledegrEditField.Value;
+            Angle = AngleStart;
+            firstDraw = true;
+            saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
+            dataPolCUBE = zeros(int16(app.scanXRange /  (app.scanStep))+1,int16(app.scanYRange /  app.scanStep)+1, int8((AngleStop-AngleStart)/AngleStep)+1, app.NumberOfEnabledChannels);       % the data cube with the complete Polar stack
+
+            fprintf(app.URB_Ojt,'1or'); %  execute 'homing' state (Changes Solid Orange to Solid Green)
+            setPolarAngle(app,AngleStart);
+
+            printLogWindow(app, "Acquiring Polar stack, please wait");
+            pause(app.TimeLag);
+            % if the first angle is far from 0, it is better to give time to the motor
+            % to rotate to this position
+            localIterator = 0;
+            while Angle<=AngleStop
+                localIterator = localIterator +1;
+                printLogWindow(app, "Acquiring Polar stack, please wait")
+                setPolarAngle(app,Angle);
+                app.signalData = NLimagingCoordsdotNET(app,app.coordPoints);
+
+                for channel =1 :app.NumberOfEnabledChannels
+                    dataPolCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);
+                end
+                drawImages(app,firstDraw,app.signalData);
+                firstDraw=false;
+                Angle = Angle + AngleStep;
+            end
+            %FilenameComment='_Anlge'+num2str(AngleStart,'%03.f')+'-'+num2str(AngleStop,'%03.f')+'-'+num2str(AngleStep,'%03.f')+'-'+app.fileName;
+            if ~isempty(app.stagePIFOC)
+                    zcoordName ='-Z='+string(app.stagePIFOC.qPOS(app.PIFOCaxis));
+            else
+                zcoordName = ''; 
+            end
+            FilenameComment= '_Anlge'+string(AngleStart)+'-'+string(AngleStop)+'-'+string(AngleStep)+'-'+zcoordName+'-'+app.fileName;
+            saveDataTiff(app,FilenameComment, dataPolCUBE)
+
+        end
+
         function appStateChange(app,state)  % controls the lamp color and label
             if state=="Ready"
                 app.ReadyLampLabel.Text="Ready";
@@ -973,7 +1014,51 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.LiveButton.Enable = true;
             printLogWindow(app, "Z stack - DONE!")
         end
+        
+        function acquireZPolarStack(app)
+            printLogWindow(app,'Acquiring Z stack, please wait')
+            app.AcquireZstackButton.Enable = false;
+            app.LiveButton.Enable = false;
+            app.ScanSaveButton.Enable = false;
+            firstDraw = true;
+            try
+                ZStart = app.StartingZumEditField.Value; ZStop = app.EndingZumEditField.Value; ZStep = app.ZStepEditField.Value;
+                Z= ZStart;
 
+                saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
+                dataZCUBE = zeros(int16(app.scanXRange /  (app.scanStep))+1,int16(app.scanYRange /  app.scanStep)+1, int8((ZStop-ZStart)/ZStep)+1, app.NumberOfEnabledChannels);       % the data cube with the complete Polar stack
+                app.stagePIFOC.MOV(app.PIFOCaxis,Z)
+
+                printLogWindow(app, 'Acquiring Z stack, please wait');
+                pause(0.1);
+                localIterator = 0;
+                while Z<=ZStop
+                    localIterator = localIterator +1;
+                    printLogWindow(app, 'Acquiring Z stack, please wait')
+                    app.stagePIFOC.MOV(app.PIFOCaxis,Z)
+%                     app.signalData = NLimagingCoordsdotNET(app,app.coordPoints);
+% 
+%                     for channel =1 :app.NumberOfEnabledChannels
+%                         dataZCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);
+%                     end
+                    app.acquirePolarStack()
+                    Z = Z+ ZStep;
+                end
+                %FilenameComment='_Anlge'+num2str(AngleStart,'%03.f')+'-'+num2str(AngleStop,'%03.f')+'-'+num2str(AngleStep,'%03.f')+'-'+app.SampleLabelEditField.Value;
+%                 FilenameComment= '_ZStack_'+string(ZStart)+'-'+string(ZStop)+'-'+string(ZStep)+'-'+app.fileName;
+%                 saveDataTiff(app,FilenameComment, dataZCUBE)
+
+            catch ME
+                printLogWindow(app,'Error, aborting..')
+                printLogWindow(app, ME.message)
+            end
+
+            app.stagePIFOC.MOV(app.PIFOCaxis,ZStart)
+            app.AcquireZstackButton.Enable = true;
+            app.ScanSaveButton.Enable = true;
+            app.LiveButton.Enable = true;
+            printLogWindow(app, "Z stack - DONE!")
+        end
 
         function [aotask,aowriter, cotask, aitask,aireader,citask,cireader]= initChannels(app,signalType)
             if~exist("signalType",'var')
@@ -1674,43 +1759,14 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             firstDraw = true;
             
             try
-                AngleStart = app.StartingAngledegrEditField.Value; AngleStop = app.EndingAngledegrEditField.Value; AngleStep = app.StepAngledegrEditField.Value;
-                Angle = AngleStart;
-
-                saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
-                dataPolCUBE = zeros(int16(app.scanXRange /  (app.scanStep))+1,int16(app.scanYRange /  app.scanStep)+1, int8((AngleStop-AngleStart)/AngleStep)+1, app.NumberOfEnabledChannels);       % the data cube with the complete Polar stack
-
-                fprintf(app.URB_Ojt,'1or'); %  execute 'homing' state (Changes Solid Orange to Solid Green)
-                setPolarAngle(app,AngleStart);
-
-                printLogWindow(app, "Acquiring Polar stack, please wait");
-                pause(app.TimeLag);
-                % if the first angle is far from 0, it is better to give time to the motor
-                % to rotate to this position
-                localIterator = 0;
-                while Angle<=AngleStop
-                    localIterator = localIterator +1;
-                    printLogWindow(app, "Acquiring Polar stack, please wait")
-                    setPolarAngle(app,Angle);
-                    app.signalData = NLimagingCoordsdotNET(app,app.coordPoints);
-
-                    for channel =1 :app.NumberOfEnabledChannels
-                        dataPolCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);
-                    end
-                    drawImages(app,firstDraw,app.signalData);
-                    firstDraw=false;
-                    Angle = Angle + AngleStep;
-                end
-                %FilenameComment='_Anlge'+num2str(AngleStart,'%03.f')+'-'+num2str(AngleStop,'%03.f')+'-'+num2str(AngleStep,'%03.f')+'-'+app.fileName;
-                FilenameComment= '_Anlge'+string(AngleStart)+'-'+string(AngleStop)+'-'+string(AngleStep)+'-'+app.fileName;
-                saveDataTiff(app,FilenameComment, dataPolCUBE)
+                app.acquirePolarStack()
 
             catch ME
                 printLogWindow(app,'Waveplate motor is off, aborting..')
                 printLogWindow(app, ME.message)
             end
 
-            setPolarAngle(app,AngleStart);
+            setPolarAngle(app,app.StartingAngledegrEditField.Value);
             app.TakePolarStackButton.Enable = true;
             app.ScanSaveButton.Enable = true;
             app.LiveButton.Enable = true;
@@ -2147,6 +2203,65 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             value = app.SamplesperpointEditField_2.Value;
             
         end
+
+        % Callback function
+        function Button3Pushed(app, event)
+            app.appStateChange("Busy");
+            printLogWindow(app,"Acquiring Polar stack, please wait")
+            app.TakePolarStackButton.Enable = false;
+            app.LiveButton.Enable = false;
+            app.ScanSaveButton.Enable = false;
+            firstDraw = true;
+            
+            try
+                AngleStart = app.StartingAngledegrEditField.Value; AngleStop = app.EndingAngledegrEditField.Value; AngleStep = app.StepAngledegrEditField.Value;
+                Angle = AngleStart;
+
+                saveTIFF = true; saveHDF5 = false;      % define in what formats the data will be saved
+                dataPolCUBE = zeros(int16(app.scanXRange /  (app.scanStep))+1,int16(app.scanYRange /  app.scanStep)+1, int8((AngleStop-AngleStart)/AngleStep)+1, app.NumberOfEnabledChannels);       % the data cube with the complete Polar stack
+
+                fprintf(app.URB_Ojt,'1or'); %  execute 'homing' state (Changes Solid Orange to Solid Green)
+                setPolarAngle(app,AngleStart);
+
+                printLogWindow(app, "Acquiring Polar stack, please wait");
+                pause(app.TimeLag);
+                % if the first angle is far from 0, it is better to give time to the motor
+                % to rotate to this position
+                localIterator = 0;
+                while Angle<=AngleStop
+                    localIterator = localIterator +1;
+                    printLogWindow(app, "Acquiring Polar stack, please wait")
+                    setPolarAngle(app,Angle);
+                    app.signalData = NLimagingCoordsdotNET(app,app.coordPoints);
+
+                    for channel =1 :app.NumberOfEnabledChannels
+                        dataPolCUBE(:, :, localIterator,channel) =  app.signalData(:,:,channel);
+                    end
+                    drawImages(app,firstDraw,app.signalData);
+                    firstDraw=false;
+                    Angle = Angle + AngleStep;
+                end
+                %FilenameComment='_Anlge'+num2str(AngleStart,'%03.f')+'-'+num2str(AngleStop,'%03.f')+'-'+num2str(AngleStep,'%03.f')+'-'+app.fileName;
+                FilenameComment= '_Anlge'+string(AngleStart)+'-'+string(AngleStop)+'-'+string(AngleStep)+'-'+app.fileName;
+                saveDataTiff(app,FilenameComment, dataPolCUBE)
+
+            catch ME
+                printLogWindow(app,'Waveplate motor is off, aborting..')
+                printLogWindow(app, ME.message)
+            end
+
+            setPolarAngle(app,AngleStart);
+            app.TakePolarStackButton.Enable = true;
+            app.ScanSaveButton.Enable = true;
+            app.LiveButton.Enable = true;
+            printLogWindow(app, "Polar stack - DONE!")
+            app.appStateChange("Ready");
+        end
+
+        % Button pushed function: PolarZstackButton
+        function PolarZstackButtonPushed(app, event)
+            app.acquireZPolarStack()
+        end
     end
 
     % Component initialization
@@ -2160,7 +2275,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.934';
+            app.MatMicroMain.Name = 'microMOSAIC v0.937';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -2517,6 +2632,12 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.ZStepumEditField.Position = [514 49 22 22];
             app.ZStepumEditField.Value = 1;
 
+            % Create PolarZstackButton
+            app.PolarZstackButton = uibutton(app.MainTab, 'push');
+            app.PolarZstackButton.ButtonPushedFcn = createCallbackFcn(app, @PolarZstackButtonPushed, true);
+            app.PolarZstackButton.Position = [906 122 100 192];
+            app.PolarZstackButton.Text = 'Polar Z stack';
+
             % Create LiveIntensityTab
             app.LiveIntensityTab = uitab(app.TabGroup);
             app.LiveIntensityTab.Title = 'Live Intensity';
@@ -2715,11 +2836,11 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
             % Create ConnectiontypeDropDown
             app.ConnectiontypeDropDown = uidropdown(app.FirstChannelSettingsPanel);
-            app.ConnectiontypeDropDown.Items = {'Single Ended (RSE)'};
-            app.ConnectiontypeDropDown.ItemsData = {'SingleEnded'};
+            app.ConnectiontypeDropDown.Items = {'Single Ended (RSE)', 'Differential'};
+            app.ConnectiontypeDropDown.ItemsData = {'SingleEnded', 'Differential'};
             app.ConnectiontypeDropDown.Enable = 'off';
             app.ConnectiontypeDropDown.Position = [110 35 142 22];
-            app.ConnectiontypeDropDown.Value = 'SingleEnded';
+            app.ConnectiontypeDropDown.Value = 'Differential';
 
             % Create CounterChannelInputDropDownLabel
             app.CounterChannelInputDropDownLabel = uilabel(app.FirstChannelSettingsPanel);
@@ -2827,8 +2948,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
             % Create ConnectiontypeDropDown_2
             app.ConnectiontypeDropDown_2 = uidropdown(app.SecondChannelSettingsPanel);
-            app.ConnectiontypeDropDown_2.Items = {'Single Ended (RSE)'};
-            app.ConnectiontypeDropDown_2.ItemsData = {'SingleEnded'};
+            app.ConnectiontypeDropDown_2.Items = {'Single Ended (RSE)', 'Differential'};
+            app.ConnectiontypeDropDown_2.ItemsData = {'SingleEnded', 'Differential'};
             app.ConnectiontypeDropDown_2.Enable = 'off';
             app.ConnectiontypeDropDown_2.Position = [111 35 142 22];
             app.ConnectiontypeDropDown_2.Value = 'SingleEnded';
@@ -2924,8 +3045,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
             % Create ConnectiontypeDropDown_3
             app.ConnectiontypeDropDown_3 = uidropdown(app.ThirdChannelSettingsPanel);
-            app.ConnectiontypeDropDown_3.Items = {'Single Ended (RSE)'};
-            app.ConnectiontypeDropDown_3.ItemsData = {'SingleEnded'};
+            app.ConnectiontypeDropDown_3.Items = {'Single Ended (RSE)', 'Differential'};
+            app.ConnectiontypeDropDown_3.ItemsData = {'SingleEnded', 'Differential'};
             app.ConnectiontypeDropDown_3.Enable = 'off';
             app.ConnectiontypeDropDown_3.Position = [109 35 142 22];
             app.ConnectiontypeDropDown_3.Value = 'SingleEnded';
@@ -3021,8 +3142,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
             % Create ConnectiontypeDropDown_4
             app.ConnectiontypeDropDown_4 = uidropdown(app.FourthChannelSettingsPanel);
-            app.ConnectiontypeDropDown_4.Items = {'Single Ended (RSE)'};
-            app.ConnectiontypeDropDown_4.ItemsData = {'SingleEnded'};
+            app.ConnectiontypeDropDown_4.Items = {'Single Ended (RSE),', 'Differential'};
+            app.ConnectiontypeDropDown_4.ItemsData = {'SingleEnded', 'Differential'};
             app.ConnectiontypeDropDown_4.Enable = 'off';
             app.ConnectiontypeDropDown_4.Position = [109 35 142 22];
             app.ConnectiontypeDropDown_4.Value = 'SingleEnded';
