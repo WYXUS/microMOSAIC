@@ -3,237 +3,239 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
     % Properties that correspond to app components
     properties (Access = public)
         MatMicroMain                    matlab.ui.Figure
+        ReadyLamp                       matlab.ui.control.Lamp
+        ReadyLampLabel                  matlab.ui.control.Label
+        LogTextArea                     matlab.ui.control.TextArea
+        LogTextAreaLabel                matlab.ui.control.Label
         TabGroup                        matlab.ui.container.TabGroup
         MainTab                         matlab.ui.container.Tab
-        ScanSaveButton                  matlab.ui.control.Button
-        ScanRangeXumLabel               matlab.ui.control.Label
-        ScanRangeXumEditField           matlab.ui.control.NumericEditField
-        ScanRangeYumLabel               matlab.ui.control.Label
-        ScanRangeYumEditField           matlab.ui.control.NumericEditField
-        ScanResolutionumLabel           matlab.ui.control.Label
-        ScanResolutionumEditField       matlab.ui.control.NumericEditField
-        NumberOfAccumulationsEditFieldLabel  matlab.ui.control.Label
-        NumberOfAccumulationsEditField  matlab.ui.control.NumericEditField
-        LiveButton                      matlab.ui.control.StateButton
-        SimulationmodeCheckBox          matlab.ui.control.CheckBox
-        PolarPanel                      matlab.ui.container.Panel
-        InitializePolarMotorButton      matlab.ui.control.Button
-        CurrentAngledegrGaugeLabel      matlab.ui.control.Label
-        CurrentAngledegrGauge           matlab.ui.control.SemicircularGauge
-        StartingAngledegrEditFieldLabel  matlab.ui.control.Label
-        StartingAngledegrEditField      matlab.ui.control.NumericEditField
-        EndingAngledegrEditFieldLabel   matlab.ui.control.Label
-        EndingAngledegrEditField        matlab.ui.control.NumericEditField
-        TakePolarStackButton            matlab.ui.control.Button
-        StepAngledegrEditFieldLabel     matlab.ui.control.Label
-        StepAngledegrEditField          matlab.ui.control.NumericEditField
-        FoVcenterXumLabel               matlab.ui.control.Label
-        FoVcenterXumEditField           matlab.ui.control.NumericEditField
-        FoVcenterYumLabel               matlab.ui.control.Label
-        FoVcenterYumEditField           matlab.ui.control.NumericEditField
-        ZoomPanel                       matlab.ui.container.Panel
-        ZoomfactorEditFieldLabel        matlab.ui.control.Label
-        ZoomfactorEditField             matlab.ui.control.NumericEditField
-        ZoomInButton                    matlab.ui.control.Button
-        ZoomOutButton                   matlab.ui.control.Button
-        ChannelDropDownLabel            matlab.ui.control.Label
-        ChannelDropDown                 matlab.ui.control.DropDown
-        ZstackPanel                     matlab.ui.container.Panel
-        StartingZumEditFieldLabel       matlab.ui.control.Label
-        StartingZumEditField            matlab.ui.control.NumericEditField
-        EndingZumEditFieldLabel         matlab.ui.control.Label
-        EndingZumEditField              matlab.ui.control.NumericEditField
-        ZStepEditFieldLabel             matlab.ui.control.Label
-        ZStepEditField                  matlab.ui.control.NumericEditField
-        ZGaugeLabel                     matlab.ui.control.Label
-        ZGauge                          matlab.ui.control.LinearGauge
-        AcquireZstackButton             matlab.ui.control.Button
-        PixelDwellTimeusEditFieldLabel  matlab.ui.control.Label
-        PixelDwellTimeusEditField       matlab.ui.control.NumericEditField
-        PixelRepetitionEditField_2Label  matlab.ui.control.Label
-        PixelRepetitionEditField_2      matlab.ui.control.NumericEditField
-        DutyCycleEditFieldLabel         matlab.ui.control.Label
-        DutyCycleEditField              matlab.ui.control.NumericEditField
-        PixelFrequencyHzEditFieldLabel  matlab.ui.control.Label
-        PixelFrequencyHzEditField       matlab.ui.control.NumericEditField
-        Button2                         matlab.ui.control.Button
-        SetZPositionSpinnerLabel        matlab.ui.control.Label
-        SetZPositionSpinner             matlab.ui.control.Spinner
-        ZStepumEditFieldLabel           matlab.ui.control.Label
-        ZStepumEditField                matlab.ui.control.NumericEditField
+        FlipXYglavosSwitch              matlab.ui.control.RockerSwitch
+        FlipXYglavosSwitchLabel         matlab.ui.control.Label
         PolarZstackButton               matlab.ui.control.Button
+        ZStepumEditField                matlab.ui.control.NumericEditField
+        ZStepumEditFieldLabel           matlab.ui.control.Label
+        SetZPositionSpinner             matlab.ui.control.Spinner
+        SetZPositionSpinnerLabel        matlab.ui.control.Label
+        Button2                         matlab.ui.control.Button
+        PixelFrequencyHzEditField       matlab.ui.control.NumericEditField
+        PixelFrequencyHzEditFieldLabel  matlab.ui.control.Label
+        DutyCycleEditField              matlab.ui.control.NumericEditField
+        DutyCycleEditFieldLabel         matlab.ui.control.Label
+        PixelRepetitionEditField_2      matlab.ui.control.NumericEditField
+        PixelRepetitionEditField_2Label  matlab.ui.control.Label
+        PixelDwellTimeusEditField       matlab.ui.control.NumericEditField
+        PixelDwellTimeusEditFieldLabel  matlab.ui.control.Label
+        ZstackPanel                     matlab.ui.container.Panel
+        AcquireZstackButton             matlab.ui.control.Button
+        ZGauge                          matlab.ui.control.LinearGauge
+        ZGaugeLabel                     matlab.ui.control.Label
+        ZStepEditField                  matlab.ui.control.NumericEditField
+        ZStepEditFieldLabel             matlab.ui.control.Label
+        EndingZumEditField              matlab.ui.control.NumericEditField
+        EndingZumEditFieldLabel         matlab.ui.control.Label
+        StartingZumEditField            matlab.ui.control.NumericEditField
+        StartingZumEditFieldLabel       matlab.ui.control.Label
+        ZoomPanel                       matlab.ui.container.Panel
+        ChannelDropDown                 matlab.ui.control.DropDown
+        ChannelDropDownLabel            matlab.ui.control.Label
+        ZoomOutButton                   matlab.ui.control.Button
+        ZoomInButton                    matlab.ui.control.Button
+        ZoomfactorEditField             matlab.ui.control.NumericEditField
+        ZoomfactorEditFieldLabel        matlab.ui.control.Label
+        FoVcenterYumEditField           matlab.ui.control.NumericEditField
+        FoVcenterYumLabel               matlab.ui.control.Label
+        FoVcenterXumEditField           matlab.ui.control.NumericEditField
+        FoVcenterXumLabel               matlab.ui.control.Label
+        PolarPanel                      matlab.ui.container.Panel
+        StepAngledegrEditField          matlab.ui.control.NumericEditField
+        StepAngledegrEditFieldLabel     matlab.ui.control.Label
+        TakePolarStackButton            matlab.ui.control.Button
+        EndingAngledegrEditField        matlab.ui.control.NumericEditField
+        EndingAngledegrEditFieldLabel   matlab.ui.control.Label
+        StartingAngledegrEditField      matlab.ui.control.NumericEditField
+        StartingAngledegrEditFieldLabel  matlab.ui.control.Label
+        CurrentAngledegrGauge           matlab.ui.control.SemicircularGauge
+        CurrentAngledegrGaugeLabel      matlab.ui.control.Label
+        InitializePolarMotorButton      matlab.ui.control.Button
+        SimulationmodeCheckBox          matlab.ui.control.CheckBox
+        LiveButton                      matlab.ui.control.StateButton
+        NumberOfAccumulationsEditField  matlab.ui.control.NumericEditField
+        NumberOfAccumulationsEditFieldLabel  matlab.ui.control.Label
+        ScanResolutionumEditField       matlab.ui.control.NumericEditField
+        ScanResolutionumLabel           matlab.ui.control.Label
+        ScanRangeYumEditField           matlab.ui.control.NumericEditField
+        ScanRangeYumLabel               matlab.ui.control.Label
+        ScanRangeXumEditField           matlab.ui.control.NumericEditField
+        ScanRangeXumLabel               matlab.ui.control.Label
+        ScanSaveButton                  matlab.ui.control.Button
         LiveIntensityTab                matlab.ui.container.Tab
-        UIAxes                          matlab.ui.control.UIAxes
-        FasterSliderLabel               matlab.ui.control.Label
-        FasterSlider                    matlab.ui.control.Slider
-        StartLiveButton                 matlab.ui.control.StateButton
-        SlowerLabel                     matlab.ui.control.Label
-        RefreshrateLabel                matlab.ui.control.Label
-        ChannelForImagePixelSelectionDropDownLabel  matlab.ui.control.Label
-        ChannelForImagePixelSelectionDropDown  matlab.ui.control.DropDown
-        AutoscaleCheckBox_5             matlab.ui.control.CheckBox
-        MaxEditFieldLabel               matlab.ui.control.Label
-        MaxEditField                    matlab.ui.control.NumericEditField
-        MinEditFieldLabel               matlab.ui.control.Label
-        MinEditField                    matlab.ui.control.NumericEditField
-        Button                          matlab.ui.control.StateButton
-        LiveChannelDropDownLabel        matlab.ui.control.Label
-        LiveChannelDropDown             matlab.ui.control.DropDown
-        SamplesperpointEditField_2Label  matlab.ui.control.Label
-        SamplesperpointEditField_2      matlab.ui.control.NumericEditField
-        BarGraphCheckBox                matlab.ui.control.CheckBox
         LineplotCheckBox                matlab.ui.control.CheckBox
+        BarGraphCheckBox                matlab.ui.control.CheckBox
+        SamplesperpointEditField_2      matlab.ui.control.NumericEditField
+        SamplesperpointEditField_2Label  matlab.ui.control.Label
+        LiveChannelDropDown             matlab.ui.control.DropDown
+        LiveChannelDropDownLabel        matlab.ui.control.Label
+        Button                          matlab.ui.control.StateButton
+        MinEditField                    matlab.ui.control.NumericEditField
+        MinEditFieldLabel               matlab.ui.control.Label
+        MaxEditField                    matlab.ui.control.NumericEditField
+        MaxEditFieldLabel               matlab.ui.control.Label
+        AutoscaleCheckBox_5             matlab.ui.control.CheckBox
+        ChannelForImagePixelSelectionDropDown  matlab.ui.control.DropDown
+        ChannelForImagePixelSelectionDropDownLabel  matlab.ui.control.Label
+        RefreshrateLabel                matlab.ui.control.Label
+        SlowerLabel                     matlab.ui.control.Label
+        StartLiveButton                 matlab.ui.control.StateButton
+        FasterSlider                    matlab.ui.control.Slider
+        FasterSliderLabel               matlab.ui.control.Label
+        UIAxes                          matlab.ui.control.UIAxes
         SettingsTab                     matlab.ui.container.Tab
-        ObjectiveDropDownLabel          matlab.ui.control.Label
-        ObjectiveDropDown               matlab.ui.control.DropDown
-        SessionUpdateRateHzEditFieldLabel  matlab.ui.control.Label
-        SessionUpdateRateHzEditField    matlab.ui.control.NumericEditField
-        FirstChannelSettingsPanel       matlab.ui.container.Panel
-        Switch                          matlab.ui.control.Switch
-        AnalogChannelInputDropDownLabel  matlab.ui.control.Label
-        AnalogChannelInputDropDown      matlab.ui.control.DropDown
-        ConnectiontypeDropDownLabel     matlab.ui.control.Label
-        ConnectiontypeDropDown          matlab.ui.control.DropDown
-        CounterChannelInputDropDownLabel  matlab.ui.control.Label
-        CounterChannelInputDropDown     matlab.ui.control.DropDown
-        minauEditFieldLabel             matlab.ui.control.Label
-        minauEditField                  matlab.ui.control.NumericEditField
-        maxauEditFieldLabel             matlab.ui.control.Label
-        maxauEditField                  matlab.ui.control.NumericEditField
-        AutoscaleCheckBox               matlab.ui.control.CheckBox
-        DeviceNameEditFieldLabel        matlab.ui.control.Label
-        DeviceNameEditField             matlab.ui.control.EditField
-        NumberOfChannelsSliderLabel     matlab.ui.control.Label
-        NumberOfChannelsSlider          matlab.ui.control.Slider
-        SecondChannelSettingsPanel      matlab.ui.container.Panel
-        Switch_2                        matlab.ui.control.Switch
-        AnalogChannelInputDropDown_2Label  matlab.ui.control.Label
-        AnalogChannelInputDropDown_2    matlab.ui.control.DropDown
-        ConnectiontypeDropDown_2Label   matlab.ui.control.Label
-        ConnectiontypeDropDown_2        matlab.ui.control.DropDown
-        CounterChannelInputDropDown_2Label  matlab.ui.control.Label
-        CounterChannelInputDropDown_2   matlab.ui.control.DropDown
-        maxauEditField_2Label           matlab.ui.control.Label
-        maxauEditField_2                matlab.ui.control.NumericEditField
-        minauEditField_2Label           matlab.ui.control.Label
-        minauEditField_2                matlab.ui.control.NumericEditField
-        AutoscaleCheckBox_2             matlab.ui.control.CheckBox
-        DeviceNameEditField_2Label      matlab.ui.control.Label
-        DeviceNameEditField_2           matlab.ui.control.EditField
-        ThirdChannelSettingsPanel       matlab.ui.container.Panel
-        Switch_3                        matlab.ui.control.Switch
-        AnalogChannelInputDropDown_3Label  matlab.ui.control.Label
-        AnalogChannelInputDropDown_3    matlab.ui.control.DropDown
-        ConnectiontypeDropDown_3Label   matlab.ui.control.Label
-        ConnectiontypeDropDown_3        matlab.ui.control.DropDown
-        CounterChannelInputDropDown_3Label  matlab.ui.control.Label
-        CounterChannelInputDropDown_3   matlab.ui.control.DropDown
-        maxauEditField_3Label           matlab.ui.control.Label
-        maxauEditField_3                matlab.ui.control.NumericEditField
-        minauEditField_3Label           matlab.ui.control.Label
-        minauEditField_3                matlab.ui.control.NumericEditField
-        AutoscaleCheckBox_3             matlab.ui.control.CheckBox
-        DeviceNameEditField_3Label      matlab.ui.control.Label
-        DeviceNameEditField_3           matlab.ui.control.EditField
-        FourthChannelSettingsPanel      matlab.ui.container.Panel
-        Switch_4                        matlab.ui.control.Switch
-        AnalogChannelInputDropDown_4Label  matlab.ui.control.Label
-        AnalogChannelInputDropDown_4    matlab.ui.control.DropDown
-        ConnectiontypeDropDown_4Label   matlab.ui.control.Label
-        ConnectiontypeDropDown_4        matlab.ui.control.DropDown
-        CounterChannelInputDropDown_4Label  matlab.ui.control.Label
-        CounterChannelInputDropDown_4   matlab.ui.control.DropDown
-        maxauEditField_4Label           matlab.ui.control.Label
-        maxauEditField_4                matlab.ui.control.NumericEditField
-        minauEditField_4Label           matlab.ui.control.Label
-        minauEditField_4                matlab.ui.control.NumericEditField
-        AutoscaleCheckBox_4             matlab.ui.control.CheckBox
-        DeviceNameEditField_4Label      matlab.ui.control.Label
-        DeviceNameEditField_4           matlab.ui.control.EditField
-        PolarMotorPortEditFieldLabel    matlab.ui.control.Label
-        PolarMotorPortEditField         matlab.ui.control.EditField
-        TimeLagForPolarMotorsecEditFieldLabel  matlab.ui.control.Label
-        TimeLagForPolarMotorsecEditField  matlab.ui.control.NumericEditField
-        CounterBaseSwitchLabel          matlab.ui.control.Label
-        CounterBaseSwitch               matlab.ui.control.Switch
-        CounterTerminalForSquarePulseGenerationLabel  matlab.ui.control.Label
-        CounterTerminalToReceiveSquarePulsesEditField  matlab.ui.control.EditField
-        CounterGenerationChannelEditFieldLabel  matlab.ui.control.Label
-        CounterGenerationChannelEditField  matlab.ui.control.EditField
-        DeviceNameLabel                 matlab.ui.control.Label
-        ExternalCounterDeviceNameEditField  matlab.ui.control.EditField
-        ExternalCounterGenerationChannelEditFieldLabel  matlab.ui.control.Label
-        ExternalCounterGenerationChannelEditField  matlab.ui.control.EditField
-        ExternalCardTriggerTerminalEditFieldLabel  matlab.ui.control.Label
-        ExternalCardTriggerTerminalEditField  matlab.ui.control.EditField
-        SourceCardTriggerTerminalEditFieldLabel  matlab.ui.control.Label
-        SourceCardTriggerTerminalEditField  matlab.ui.control.EditField
-        ExternalCounterGenerationTerminalEditFieldLabel  matlab.ui.control.Label
-        ExternalCounterGenerationTerminalEditField  matlab.ui.control.EditField
-        InitializeButton                matlab.ui.control.Button
-        DeviceNameEditField_5Label      matlab.ui.control.Label
         DeviceNameEditField_5           matlab.ui.control.EditField
+        DeviceNameEditField_5Label      matlab.ui.control.Label
+        InitializeButton                matlab.ui.control.Button
+        ExternalCounterGenerationTerminalEditField  matlab.ui.control.EditField
+        ExternalCounterGenerationTerminalEditFieldLabel  matlab.ui.control.Label
+        SourceCardTriggerTerminalEditField  matlab.ui.control.EditField
+        SourceCardTriggerTerminalEditFieldLabel  matlab.ui.control.Label
+        ExternalCardTriggerTerminalEditField  matlab.ui.control.EditField
+        ExternalCardTriggerTerminalEditFieldLabel  matlab.ui.control.Label
+        ExternalCounterGenerationChannelEditField  matlab.ui.control.EditField
+        ExternalCounterGenerationChannelEditFieldLabel  matlab.ui.control.Label
+        ExternalCounterDeviceNameEditField  matlab.ui.control.EditField
+        DeviceNameLabel                 matlab.ui.control.Label
+        CounterGenerationChannelEditField  matlab.ui.control.EditField
+        CounterGenerationChannelEditFieldLabel  matlab.ui.control.Label
+        CounterTerminalToReceiveSquarePulsesEditField  matlab.ui.control.EditField
+        CounterTerminalForSquarePulseGenerationLabel  matlab.ui.control.Label
+        CounterBaseSwitch               matlab.ui.control.Switch
+        CounterBaseSwitchLabel          matlab.ui.control.Label
+        TimeLagForPolarMotorsecEditField  matlab.ui.control.NumericEditField
+        TimeLagForPolarMotorsecEditFieldLabel  matlab.ui.control.Label
+        PolarMotorPortEditField         matlab.ui.control.EditField
+        PolarMotorPortEditFieldLabel    matlab.ui.control.Label
+        FourthChannelSettingsPanel      matlab.ui.container.Panel
+        DeviceNameEditField_4           matlab.ui.control.EditField
+        DeviceNameEditField_4Label      matlab.ui.control.Label
+        AutoscaleCheckBox_4             matlab.ui.control.CheckBox
+        minauEditField_4                matlab.ui.control.NumericEditField
+        minauEditField_4Label           matlab.ui.control.Label
+        maxauEditField_4                matlab.ui.control.NumericEditField
+        maxauEditField_4Label           matlab.ui.control.Label
+        CounterChannelInputDropDown_4   matlab.ui.control.DropDown
+        CounterChannelInputDropDown_4Label  matlab.ui.control.Label
+        ConnectiontypeDropDown_4        matlab.ui.control.DropDown
+        ConnectiontypeDropDown_4Label   matlab.ui.control.Label
+        AnalogChannelInputDropDown_4    matlab.ui.control.DropDown
+        AnalogChannelInputDropDown_4Label  matlab.ui.control.Label
+        Switch_4                        matlab.ui.control.Switch
+        ThirdChannelSettingsPanel       matlab.ui.container.Panel
+        DeviceNameEditField_3           matlab.ui.control.EditField
+        DeviceNameEditField_3Label      matlab.ui.control.Label
+        AutoscaleCheckBox_3             matlab.ui.control.CheckBox
+        minauEditField_3                matlab.ui.control.NumericEditField
+        minauEditField_3Label           matlab.ui.control.Label
+        maxauEditField_3                matlab.ui.control.NumericEditField
+        maxauEditField_3Label           matlab.ui.control.Label
+        CounterChannelInputDropDown_3   matlab.ui.control.DropDown
+        CounterChannelInputDropDown_3Label  matlab.ui.control.Label
+        ConnectiontypeDropDown_3        matlab.ui.control.DropDown
+        ConnectiontypeDropDown_3Label   matlab.ui.control.Label
+        AnalogChannelInputDropDown_3    matlab.ui.control.DropDown
+        AnalogChannelInputDropDown_3Label  matlab.ui.control.Label
+        Switch_3                        matlab.ui.control.Switch
+        SecondChannelSettingsPanel      matlab.ui.container.Panel
+        DeviceNameEditField_2           matlab.ui.control.EditField
+        DeviceNameEditField_2Label      matlab.ui.control.Label
+        AutoscaleCheckBox_2             matlab.ui.control.CheckBox
+        minauEditField_2                matlab.ui.control.NumericEditField
+        minauEditField_2Label           matlab.ui.control.Label
+        maxauEditField_2                matlab.ui.control.NumericEditField
+        maxauEditField_2Label           matlab.ui.control.Label
+        CounterChannelInputDropDown_2   matlab.ui.control.DropDown
+        CounterChannelInputDropDown_2Label  matlab.ui.control.Label
+        ConnectiontypeDropDown_2        matlab.ui.control.DropDown
+        ConnectiontypeDropDown_2Label   matlab.ui.control.Label
+        AnalogChannelInputDropDown_2    matlab.ui.control.DropDown
+        AnalogChannelInputDropDown_2Label  matlab.ui.control.Label
+        Switch_2                        matlab.ui.control.Switch
+        NumberOfChannelsSlider          matlab.ui.control.Slider
+        NumberOfChannelsSliderLabel     matlab.ui.control.Label
+        FirstChannelSettingsPanel       matlab.ui.container.Panel
+        DeviceNameEditField             matlab.ui.control.EditField
+        DeviceNameEditFieldLabel        matlab.ui.control.Label
+        AutoscaleCheckBox               matlab.ui.control.CheckBox
+        maxauEditField                  matlab.ui.control.NumericEditField
+        maxauEditFieldLabel             matlab.ui.control.Label
+        minauEditField                  matlab.ui.control.NumericEditField
+        minauEditFieldLabel             matlab.ui.control.Label
+        CounterChannelInputDropDown     matlab.ui.control.DropDown
+        CounterChannelInputDropDownLabel  matlab.ui.control.Label
+        ConnectiontypeDropDown          matlab.ui.control.DropDown
+        ConnectiontypeDropDownLabel     matlab.ui.control.Label
+        AnalogChannelInputDropDown      matlab.ui.control.DropDown
+        AnalogChannelInputDropDownLabel  matlab.ui.control.Label
+        Switch                          matlab.ui.control.Switch
+        SessionUpdateRateHzEditField    matlab.ui.control.NumericEditField
+        SessionUpdateRateHzEditFieldLabel  matlab.ui.control.Label
+        ObjectiveDropDown               matlab.ui.control.DropDown
+        ObjectiveDropDownLabel          matlab.ui.control.Label
         SavingSettingsTab               matlab.ui.container.Tab
-        SavingfolderEditFieldLabel      matlab.ui.control.Label
-        SavingfolderEditField           matlab.ui.control.EditField
-        SampleLabelEditFieldLabel       matlab.ui.control.Label
-        SampleLabelEditField            matlab.ui.control.EditField
-        ContrastNameEditFieldLabel      matlab.ui.control.Label
-        ContrastNameEditField           matlab.ui.control.EditField
-        epifwdEditFieldLabel            matlab.ui.control.Label
-        epifwdEditField                 matlab.ui.control.EditField
-        ReferencePowerEditFieldLabel    matlab.ui.control.Label
         ReferencePowerEditField         matlab.ui.control.EditField
+        ReferencePowerEditFieldLabel    matlab.ui.control.Label
+        epifwdEditField                 matlab.ui.control.EditField
+        epifwdEditFieldLabel            matlab.ui.control.Label
+        ContrastNameEditField           matlab.ui.control.EditField
+        ContrastNameEditFieldLabel      matlab.ui.control.Label
+        SampleLabelEditField            matlab.ui.control.EditField
+        SampleLabelEditFieldLabel       matlab.ui.control.Label
+        SavingfolderEditField           matlab.ui.control.EditField
+        SavingfolderEditFieldLabel      matlab.ui.control.Label
         DelaylineTab                    matlab.ui.container.Tab
-        UIAxes2                         matlab.ui.control.UIAxes
-        DelayLineConnectionPanel        matlab.ui.container.Panel
-        ConnectDelayLineButton          matlab.ui.control.Button
-        StagetypeEditFieldLabel         matlab.ui.control.Label
-        StagetypeEditField              matlab.ui.control.EditField
-        ControllerserialnumberEditFieldLabel  matlab.ui.control.Label
-        ControllerserialnumberEditField  matlab.ui.control.EditField
-        ConnectioninterfaceDropDownLabel  matlab.ui.control.Label
-        ConnectioninterfaceDropDown     matlab.ui.control.DropDown
-        PortEditFieldLabel              matlab.ui.control.Label
-        PortEditField                   matlab.ui.control.EditField
-        SetOffsetmmEditFieldLabel       matlab.ui.control.Label
-        SetOffsetmmEditField            matlab.ui.control.NumericEditField
-        MoveButton                      matlab.ui.control.Button
-        ScandelayButton                 matlab.ui.control.Button
-        OffsetmmEditFieldLabel          matlab.ui.control.Label
-        OffsetmmEditField               matlab.ui.control.NumericEditField
-        RangemmEditFieldLabel           matlab.ui.control.Label
-        RangemmEditField                matlab.ui.control.NumericEditField
-        StepmmEditFieldLabel            matlab.ui.control.Label
-        StepmmEditField                 matlab.ui.control.NumericEditField
-        ChannelDropDown_2Label          matlab.ui.control.Label
-        ChannelDropDown_2               matlab.ui.control.DropDown
-        SamplesperpointEditFieldLabel   matlab.ui.control.Label
         SamplesperpointEditField        matlab.ui.control.NumericEditField
+        SamplesperpointEditFieldLabel   matlab.ui.control.Label
+        ChannelDropDown_2               matlab.ui.control.DropDown
+        ChannelDropDown_2Label          matlab.ui.control.Label
+        StepmmEditField                 matlab.ui.control.NumericEditField
+        StepmmEditFieldLabel            matlab.ui.control.Label
+        RangemmEditField                matlab.ui.control.NumericEditField
+        RangemmEditFieldLabel           matlab.ui.control.Label
+        OffsetmmEditField               matlab.ui.control.NumericEditField
+        OffsetmmEditFieldLabel          matlab.ui.control.Label
+        ScandelayButton                 matlab.ui.control.Button
+        MoveButton                      matlab.ui.control.Button
+        SetOffsetmmEditField            matlab.ui.control.NumericEditField
+        SetOffsetmmEditFieldLabel       matlab.ui.control.Label
+        DelayLineConnectionPanel        matlab.ui.container.Panel
+        PortEditField                   matlab.ui.control.EditField
+        PortEditFieldLabel              matlab.ui.control.Label
+        ConnectioninterfaceDropDown     matlab.ui.control.DropDown
+        ConnectioninterfaceDropDownLabel  matlab.ui.control.Label
+        ControllerserialnumberEditField  matlab.ui.control.EditField
+        ControllerserialnumberEditFieldLabel  matlab.ui.control.Label
+        StagetypeEditField              matlab.ui.control.EditField
+        StagetypeEditFieldLabel         matlab.ui.control.Label
+        ConnectDelayLineButton          matlab.ui.control.Button
+        UIAxes2                         matlab.ui.control.UIAxes
         PIFOCTab                        matlab.ui.container.Tab
         PIFOCConnectionPanel            matlab.ui.container.Panel
-        ConnectPIFOCButton              matlab.ui.control.Button
-        PIFOCStageTypeEditFieldLabel    matlab.ui.control.Label
-        PIFOCStageTypeEditField         matlab.ui.control.EditField
-        PIFOCConnectionInterfaceDropDownLabel  matlab.ui.control.Label
-        PIFOCConnectionInterfaceDropDown  matlab.ui.control.DropDown
-        PortEditField_2Label            matlab.ui.control.Label
-        PortEditField_2                 matlab.ui.control.EditField
-        PIFOCControllerSerialNumberDropDownLabel  matlab.ui.control.Label
         PIFOCControllerSerialNumberDropDown  matlab.ui.control.DropDown
+        PIFOCControllerSerialNumberDropDownLabel  matlab.ui.control.Label
+        PortEditField_2                 matlab.ui.control.EditField
+        PortEditField_2Label            matlab.ui.control.Label
+        PIFOCConnectionInterfaceDropDown  matlab.ui.control.DropDown
+        PIFOCConnectionInterfaceDropDownLabel  matlab.ui.control.Label
+        PIFOCStageTypeEditField         matlab.ui.control.EditField
+        PIFOCStageTypeEditFieldLabel    matlab.ui.control.Label
+        ConnectPIFOCButton              matlab.ui.control.Button
         WavefrontShapingTab             matlab.ui.container.Tab
         AboutTab                        matlab.ui.container.Tab
-        microMOSAICLabel                matlab.ui.control.Label
-        microMOSAICLabel_2              matlab.ui.control.Label
-        microMOSAICLabel_3              matlab.ui.control.Label
-        microMOSAICLabel_4              matlab.ui.control.Label
-        microMOSAICLabel_5              matlab.ui.control.Label
-        microMOSAICLabel_6              matlab.ui.control.Label
         microMOSAICLabel_7              matlab.ui.control.Label
-        LogTextAreaLabel                matlab.ui.control.Label
-        LogTextArea                     matlab.ui.control.TextArea
-        ReadyLampLabel                  matlab.ui.control.Label
-        ReadyLamp                       matlab.ui.control.Lamp
+        microMOSAICLabel_6              matlab.ui.control.Label
+        microMOSAICLabel_5              matlab.ui.control.Label
+        microMOSAICLabel_4              matlab.ui.control.Label
+        microMOSAICLabel_3              matlab.ui.control.Label
+        microMOSAICLabel_2              matlab.ui.control.Label
+        microMOSAICLabel                matlab.ui.control.Label
     end
 
 
@@ -311,6 +313,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         dataBuffer
         DeviceNameFileds % Description
         fileName % Description
+        flipXY % defines if X and Y galvos should be flipped
     end
 
     methods (Access = private)
@@ -356,7 +359,11 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             x = x + XCenter;
             y = y + YCenter;
             [X,Y] = meshgrid(x,y);
-            coordPoints = [repelem(X(:)*app.calibration,app.pixRep),repelem(Y(:)*app.calibration, app.pixRep)];
+            if app.flipXY==0
+                coordPoints = [repelem(X(:)*app.calibration,app.pixRep),repelem(Y(:)*app.calibration, app.pixRep)];
+            elseif app.flipXY==1
+                coordPoints = [repelem(Y(:)*app.calibration,app.pixRep),repelem(X(:)*app.calibration, app.pixRep)];
+            end
             app.Snake = false;
         end
         function [coordPoints] = GalvoCoordinatesForImageSnake(app, scanXRange, scanYRange, scanStep, XCenter, YCenter)
@@ -373,7 +380,11 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     Y(:,i) = flipud( Y(:,i));
                 end
             end
-            coordPoints = [repelem(X(:)*app.calibration,app.pixRep),repelem(Y(:)*app.calibration, app.pixRep)];
+            if app.flipXY==0
+                coordPoints = [repelem(X(:)*app.calibration,app.pixRep),repelem(Y(:)*app.calibration, app.pixRep)];
+            elseif app.flipXY==0
+                coordPoints = [repelem(Y(:)*app.calibration,app.pixRep),repelem(X(:)*app.calibration, app.pixRep)];
+            end
             app.Snake = true;
         end
 
@@ -430,6 +441,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 signal = zeros(coordsize, coordsize,app.NumberOfEnabledChannels);       % Array where signal data is stored
             end
             app.startTasks();
+            
             % if there are too many samples to acquire, the live acquisition and
             % displaying lags - it complains that it cannnot acquire all the samples
             app.AOwriter.WriteMultiSample(true,coordPoints');   % write voltages to a galvo: triggers the aquisition
@@ -447,7 +459,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                         rawData = double(app.CIreader(j).ReadMultiSampleDouble( app.pixRep*app.numberOfPoints)); % get the data from the buffer
                         j = j + 1;
                     elseif (app.channelsData(i,2) == 0)
-                        rawData = analogData(k,:);  % select the data according to AI cnahhel number
+                        rawData = squeeze( analogData(k,:));  % select the data according to AI cnahhel number
                         k = k + 1;
                     end
                     if app.pixRep>1
@@ -489,6 +501,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             catch ME
                 app.printLogWindow(ME.message)
             end
+%             app.AOwriter.WriteSingleSample(true,[coordPoints(1,1) coordPoints(1,2)]);
             app.stopTasks()
 
         end
@@ -592,7 +605,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             end
             logfolder  = app.SavingfolderEditField.Value;
             if logfolder(end)~="\"
-                logfolder = strcat(logfolder,"\")
+                logfolder = strcat(logfolder,"\");
                 app.SavingfolderEditField.Value = logfolder;
             end
 
@@ -600,7 +613,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 %                 mkdir (logfolder); 
 %             end
             dateFolder =string(datetime('now','TimeZone','local','Format','uuuu-MM-dd'));
-            logfolder = strcat(logfolder,dateFolder,"\")
+            logfolder = strcat(logfolder,dateFolder,"\");
             if ~exist(logfolder, 'dir')
                 mkdir (logfolder); 
             end
@@ -1164,7 +1177,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             if app.CounterBaseSwitch.Value == 'Internal'
                 cotask = NationalInstruments.DAQmx.Task;        % a task to generate quare pulses with 'pixFreq' and 'dutyCycle'
                 counterClockChannelNumber = app.CounterGenerationChannelEditField.Value;
-                dev = strcat('/',app.DeviceNameFileds_5.Value,'/');
+                dev = strcat('/',app.DeviceNameEditField.Value,'/');
                 ch = cotask.COChannels.CreatePulseChannelFrequency(strcat(dev, counterClockChannelNumber), '', NationalInstruments.DAQmx.COPulseFrequencyUnits.Hertz, NationalInstruments.DAQmx.COPulseIdleState.Low, 0, app.pixFreq, app.dutyCycle ); %delay, freq, dutycycle
                 cotask.Timing.ConfigureImplicit(NationalInstruments.DAQmx.SampleQuantityMode.FiniteSamples,app.pixRep * app.numberOfPoints)
                 cotask.Triggers.ArmStartTrigger.ConfigureDigitalEdgeTrigger(strcat(dev,"ao/StartTrigger"),NationalInstruments.DAQmx.DigitalEdgeArmStartTriggerEdge.Rising);   % set a trigger. The generation starts when the output writer(galvos) start writing
@@ -1276,6 +1289,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
     end
 
 
+    % Callbacks that handle component events
     methods (Access = private)
 
         % Code that executes after component creation
@@ -1309,9 +1323,10 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             try
                 app.displayFigure = figure('Name',app.MatMicroMain.Name,'NumberTitle','off');
                 app.readSettings()
+                app.flipXY =str2num(app.FlipXYglavosSwitch.Value);
                 setAxes(app,0.5)
                 app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter);
-
+                
                 if app.SimulationmodeCheckBox.Value==false
 
                     % Load NIDAQmx .NET assembly
@@ -1523,10 +1538,10 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
         end
 
-        % Value changed function: FoVcenterXumEditField, 
-        % FoVcenterYumEditField, NumberOfAccumulationsEditField, 
-        % ScanRangeXumEditField, ScanRangeYumEditField, 
-        % ScanResolutionumEditField
+        % Value changed function: FlipXYglavosSwitch, 
+        % FoVcenterXumEditField, FoVcenterYumEditField, 
+        % NumberOfAccumulationsEditField, ScanRangeXumEditField, 
+        % ScanRangeYumEditField, ScanResolutionumEditField
         function ScanRangeXumEditFieldValueChanged(app, event)
             %             value = app.ScanRangeXumEditField.Value;
             app.scanXRange = app.ScanRangeXumEditField.Value; % um
@@ -1536,6 +1551,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.xFoVCenter = app.FoVcenterXumEditField.Value;
             app.yFoVCenter = app.FoVcenterYumEditField.Value;
             app.pixRep = app.PixelRepetitionEditField_2.Value;
+            app.flipXY = str2num(app.FlipXYglavosSwitch.Value);
             app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter);
             [app.AOtask,app.AOwriter, app.COtask, app.AItask,app.AIreader,app.CItask,app.CIreader] = app.initChannels();
             %             app.updateChannels()
@@ -2191,8 +2207,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         end
 
         % Value changed function: ContrastNameEditField, 
-        % ReferencePowerEditField, SampleLabelEditField, 
-        % epifwdEditField
+        % ReferencePowerEditField, SampleLabelEditField, epifwdEditField
         function SampleLabelEditFieldValueChanged(app, event)
           
             app.updateFilename();
@@ -2262,16 +2277,21 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         function PolarZstackButtonPushed(app, event)
             app.acquireZPolarStack()
         end
+
+        % Callback function
+        function FlipXYglavosSwitchValueChanged(app, event)
+            
+        end
     end
 
-    % App initialization and construction
+    % Component initialization
     methods (Access = private)
 
         % Create UIFigure and components
         function createComponents(app)
 
-            % Create MatMicroMain
-            app.MatMicroMain = uifigure;
+            % Create MatMicroMain and hide until all components are created
+            app.MatMicroMain = uifigure('Visible', 'off');
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
@@ -2638,17 +2658,31 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.PolarZstackButton.Position = [906 122 100 192];
             app.PolarZstackButton.Text = 'Polar Z stack';
 
+            % Create FlipXYglavosSwitchLabel
+            app.FlipXYglavosSwitchLabel = uilabel(app.MainTab);
+            app.FlipXYglavosSwitchLabel.HorizontalAlignment = 'center';
+            app.FlipXYglavosSwitchLabel.Position = [289 89 86 22];
+            app.FlipXYglavosSwitchLabel.Text = 'Flip X-Y glavos';
+
+            % Create FlipXYglavosSwitch
+            app.FlipXYglavosSwitch = uiswitch(app.MainTab, 'rocker');
+            app.FlipXYglavosSwitch.Items = {'No', 'Yes'};
+            app.FlipXYglavosSwitch.ItemsData = {'0', '1'};
+            app.FlipXYglavosSwitch.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
+            app.FlipXYglavosSwitch.Position = [321 147 20 45];
+            app.FlipXYglavosSwitch.Value = '0';
+
             % Create LiveIntensityTab
             app.LiveIntensityTab = uitab(app.TabGroup);
             app.LiveIntensityTab.Title = 'Live Intensity';
 
             % Create UIAxes
             app.UIAxes = uiaxes(app.LiveIntensityTab);
-            title(app.UIAxes, '')
             xlabel(app.UIAxes, 'Channel')
             ylabel(app.UIAxes, 'Signal')
             app.UIAxes.XTick = [0 1 2 3];
             app.UIAxes.XTickLabel = {'0'; '1'; '2'; '3'};
+            app.UIAxes.FontSize = 16;
             app.UIAxes.Position = [20 86 288 354];
 
             % Create FasterSliderLabel
@@ -2781,7 +2815,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
             % Create ObjectiveDropDown
             app.ObjectiveDropDown = uidropdown(app.SettingsTab);
-            app.ObjectiveDropDown.Items = {'Nikon 20X NA0.75 (room134b)', 'Nikon 40X NA1.15 (room134b)', 'Nikon 20X NA0.7 (room134b)', 'Nikon 40X NA1.15 (room 22)', 'Olympus 40X NA0.6 (room 22b)'};
+            app.ObjectiveDropDown.Items = {'Nikon 20X NA0.75 (room134b)', 'Nikon 40X NA1.15 (room134b)', 'Nikon 20X NA0.7 (room134b)', 'Nikon 40X NA1.15 (room 22)', 'Olympus 40X NA0.6 (room 22)'};
             app.ObjectiveDropDown.ItemsData = {'0.00484', '0.00968', '0.00462', '0.0220', '0.0206', ''};
             app.ObjectiveDropDown.ValueChangedFcn = createCallbackFcn(app, @ObjectiveDropDownValueChanged, true);
             app.ObjectiveDropDown.Position = [85 422 197 22];
@@ -3415,6 +3449,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             ylabel(app.UIAxes2, 'Intensity')
             app.UIAxes2.XTick = 1;
             app.UIAxes2.XTickLabel = {'app.Offset'};
+            app.UIAxes2.FontSize = 16;
             app.UIAxes2.Position = [439 28 568 423];
 
             % Create DelayLineConnectionPanel
@@ -3685,15 +3720,19 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.ReadyLamp = uilamp(app.MatMicroMain);
             app.ReadyLamp.Position = [11 616 20 20];
             app.ReadyLamp.Color = [1 0 0];
+
+            % Show the figure after all components are created
+            app.MatMicroMain.Visible = 'on';
         end
     end
 
+    % App creation and deletion
     methods (Access = public)
 
         % Construct app
         function app = microMOSAICdotNET
 
-            % Create and configure components
+            % Create UIFigure and components
             createComponents(app)
 
             % Register the app with App Designer
