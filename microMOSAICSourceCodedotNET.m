@@ -318,33 +318,33 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
     methods (Access = private)
 
-        function grabData(app,~,event)
-            if ~isempty(app.AIreader)&&(app.AIreader~=-1)
-                analogBuf = app.AIreader.ReadMultiSample(-1).double;
-                buf = zeros(app.AItask.EveryNSamplesReadEventInterval,app.NumberOfEnabledChannels);
-            elseif (~isempty(app.CItask)&&(app.CItask~=-1))
-                buf = zeros(app.CItask(1).EveryNSamplesReadEventInterval,app.NumberOfEnabledChannels);
-            end
-            j = 1; k = 1;
-            app.AOtask.Stop();
-            for i=1:app.NumberOfEnabledChannels
-                if app.channelsData(i,2)>0
-                    if (~isempty(app.CItask)&&(app.CItask~=-1))
-                        bb= double(app.CIreader(j).ReadMultiSampleDouble(app.CItask(j).EveryNSamplesReadEventInterval));
-                        buf(:,i) = bb';
-                        j = j + 1;
-                    end
-                else
-                    buf(:,i) = analogBuf(k,:);
-                    k = k + 1;
-                end
-            end
-            buf = mean(buf,1);
-            app.dataBuffer = [app.dataBuffer; buf];
-            if length(app.dataBuffer)>(length(buf) * 100)
-                app.dataBuffer = app.dataBuffer(:,end-length(buf) * 100:end);
-            end
-        end
+%         function grabData(app,~,event)
+%             if ~isempty(app.AIreader)&&(app.AIreader~=-1)
+%                 analogBuf = app.AIreader.ReadMultiSample(-1).double;
+%                 buf = zeros(app.AItask.EveryNSamplesReadEventInterval,app.NumberOfEnabledChannels);
+%             elseif (~isempty(app.CItask)&&(app.CItask~=-1))
+%                 buf = zeros(app.CItask(1).EveryNSamplesReadEventInterval,app.NumberOfEnabledChannels);
+%             end
+%             j = 1; k = 1;
+%             app.AOtask.Stop();
+%             for i=1:app.NumberOfEnabledChannels
+%                 if app.channelsData(i,2)>0
+%                     if (~isempty(app.CItask)&&(app.CItask~=-1))
+%                         bb= double(app.CIreader(j).ReadMultiSampleDouble(app.CItask(j).EveryNSamplesReadEventInterval));
+%                         buf(:,i) = bb';
+%                         j = j + 1;
+%                     end
+%                 else
+%                     buf(:,i) = analogBuf(k,:);
+%                     k = k + 1;
+%                 end
+%             end
+%             buf = mean(buf,1);
+%             app.dataBuffer = [app.dataBuffer; buf];
+%             if length(app.dataBuffer)>(length(buf) * 100)
+%                 app.dataBuffer = app.dataBuffer(:,end-length(buf) * 100:end);
+%             end
+%         end
 
 
         %             function queueData(app,src,event)
@@ -444,15 +444,18 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             
             % if there are too many samples to acquire, the live acquisition and
             % displaying lags - it complains that it cannnot acquire all the samples
+            sampleLag = 100;
+
             app.AOwriter.WriteMultiSample(true,coordPoints');   % write voltages to a galvo: triggers the aquisition
             j = 1;      % ci reader iterator
             k = 1;      % ai reader iterator
             %             if app.AOtask.IsDone == false
-            %                 app.AOtask.WaitUntilDone() ;
+                            app.AOtask.WaitUntilDone() ;
             %             end
             try
                 if app.AItask ~= -1
                     analogData = double(app.AIreader.ReadMultiSample( app.pixRep*app.numberOfPoints));% get the AI data from the buffer
+%                     analogData = double(app.AIreader.MemoryOptimizedReadMultiSample( app.pixRep*app.numberOfPoints, zeros(1,app.pixRep*app.numberOfPoints),NationalInstruments.DAQmx.ReallocationPolicy.DoNotReallocate));% get the AI data from the buffer
                 end
                 for i = 1 : app.NumberOfEnabledChannels
                     if (app.channelsData(i,2) > 0)  % if it is a counter reader
@@ -918,24 +921,24 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         end
 
 
-        function [AIlistener, CIlistener] = addListeners(app, notifyEvery)
-            %             app.AOtask.EveryNSamplesWrittenEventInterval = notifyEvery;
-            %             AOlistener = addlistener(app.AItask, 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
-            if (~isempty(app.AItask)&&(app.AItask~=-1))
-                app.AItask.EveryNSamplesReadEventInterval = notifyEvery;
-                AIlistener = addlistener(app.AItask, 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
-            else
-                AIlistener = -1;
-            end
-            if (~isempty(app.CItask)&&(app.CItask~=-1))
-                for j =1:app.CItask.Length
-                    app.CItask(j).EveryNSamplesReadEventInterval = notifyEvery;
-                    CIlistener(j) = addlistener(app.CItask(j), 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
-                end
-            else
-                CIlistener = -1;
-            end
-        end
+%         function [AIlistener, CIlistener] = addListeners(app, notifyEvery)
+%             %             app.AOtask.EveryNSamplesWrittenEventInterval = notifyEvery;
+%             %             AOlistener = addlistener(app.AItask, 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
+%             if (~isempty(app.AItask)&&(app.AItask~=-1))
+%                 app.AItask.EveryNSamplesReadEventInterval = notifyEvery;
+%                 AIlistener = addlistener(app.AItask, 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
+%             else
+%                 AIlistener = -1;
+%             end
+%             if (~isempty(app.CItask)&&(app.CItask~=-1))
+%                 for j =1:app.CItask.Length
+%                     app.CItask(j).EveryNSamplesReadEventInterval = notifyEvery;
+%                     CIlistener(j) = addlistener(app.CItask(j), 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
+%                 end
+%             else
+%                 CIlistener = -1;
+%             end
+%         end
 
         function delayScanSetAxes(app)
             % set delay scan axis ticks
@@ -1141,7 +1144,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                             connType = NationalInstruments.DAQmx.AITerminalConfiguration.Differential;
                     end
                     aitask.AIChannels.CreateVoltageChannel(strcat(dev,app.analogChannelsInputFields(i).Value), '', connType, -10, 10, NationalInstruments.DAQmx.AIVoltageUnits.Volts);
-                    aitask.Stream.ReadWaitMode = NationalInstruments.DAQmx.ReadWaitMode.Poll;
+%                     aitask.Stream.ReadWaitMode = NationalInstruments.DAQmx.ReadWaitMode.Poll;
                 end
             end
             if citask~=-1
@@ -1164,6 +1167,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     aitask.Timing.ConfigureSampleClock('',app.pixFreq, NationalInstruments.DAQmx.SampleClockActiveEdge.Rising, NationalInstruments.DAQmx.SampleQuantityMode.ContinuousSamples);   % clock
                 end
                 aireader = NationalInstruments.DAQmx.AnalogMultiChannelReader(aitask.Stream);     % the input reader
+                aitask.Triggers.StartTrigger.ConfigureDigitalEdgeTrigger(strcat(dev,"ao/StartTrigger"),NationalInstruments.DAQmx.DigitalEdgeStartTriggerEdge.Rising);
                 aitask.Control(NationalInstruments.DAQmx.TaskAction.Verify)
 
             end
@@ -2295,7 +2299,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.937';
+            app.MatMicroMain.Name = 'microMOSAIC v0.94';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -3294,13 +3298,15 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             % Create CounterGenerationChannelEditFieldLabel
             app.CounterGenerationChannelEditFieldLabel = uilabel(app.SettingsTab);
             app.CounterGenerationChannelEditFieldLabel.HorizontalAlignment = 'right';
+            app.CounterGenerationChannelEditFieldLabel.Enable = 'off';
             app.CounterGenerationChannelEditFieldLabel.Position = [828 293 65 42];
             app.CounterGenerationChannelEditFieldLabel.Text = {'Counter '; 'Generation'; 'Channel'};
 
             % Create CounterGenerationChannelEditField
             app.CounterGenerationChannelEditField = uieditfield(app.SettingsTab, 'text');
+            app.CounterGenerationChannelEditField.Enable = 'off';
             app.CounterGenerationChannelEditField.Position = [908 313 39 22];
-            app.CounterGenerationChannelEditField.Value = 'ctr0';
+            app.CounterGenerationChannelEditField.Value = 'ctr3';
 
             % Create DeviceNameLabel
             app.DeviceNameLabel = uilabel(app.SettingsTab);
@@ -3366,11 +3372,13 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             % Create DeviceNameEditField_5Label
             app.DeviceNameEditField_5Label = uilabel(app.SettingsTab);
             app.DeviceNameEditField_5Label.HorizontalAlignment = 'right';
+            app.DeviceNameEditField_5Label.Enable = 'off';
             app.DeviceNameEditField_5Label.Position = [703 303 78 22];
             app.DeviceNameEditField_5Label.Text = 'Device Name';
 
             % Create DeviceNameEditField_5
             app.DeviceNameEditField_5 = uieditfield(app.SettingsTab, 'text');
+            app.DeviceNameEditField_5.Enable = 'off';
             app.DeviceNameEditField_5.Position = [787 303 38 22];
             app.DeviceNameEditField_5.Value = 'Dev1';
 
