@@ -9,6 +9,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         LogTextAreaLabel                matlab.ui.control.Label
         TabGroup                        matlab.ui.container.TabGroup
         MainTab                         matlab.ui.container.Tab
+        FlipXYglavosSwitch              matlab.ui.control.RockerSwitch
+        FlipXYglavosSwitchLabel         matlab.ui.control.Label
         PolarZstackButton               matlab.ui.control.Button
         ZStepumEditField                matlab.ui.control.NumericEditField
         ZStepumEditFieldLabel           matlab.ui.control.Label
@@ -311,37 +313,38 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         dataBuffer
         DeviceNameFileds % Description
         fileName % Description
+        flipXY % defines if X and Y galvos should be flipped
     end
 
     methods (Access = private)
 
-        function grabData(app,~,event)
-            if ~isempty(app.AIreader)&&(app.AIreader~=-1)
-                analogBuf = app.AIreader.ReadMultiSample(-1).double;
-                buf = zeros(app.AItask.EveryNSamplesReadEventInterval,app.NumberOfEnabledChannels);
-            elseif (~isempty(app.CItask)&&(app.CItask~=-1))
-                buf = zeros(app.CItask(1).EveryNSamplesReadEventInterval,app.NumberOfEnabledChannels);
-            end
-            j = 1; k = 1;
-            app.AOtask.Stop();
-            for i=1:app.NumberOfEnabledChannels
-                if app.channelsData(i,2)>0
-                    if (~isempty(app.CItask)&&(app.CItask~=-1))
-                        bb= double(app.CIreader(j).ReadMultiSampleDouble(app.CItask(j).EveryNSamplesReadEventInterval));
-                        buf(:,i) = bb';
-                        j = j + 1;
-                    end
-                else
-                    buf(:,i) = analogBuf(k,:);
-                    k = k + 1;
-                end
-            end
-            buf = mean(buf,1);
-            app.dataBuffer = [app.dataBuffer; buf];
-            if length(app.dataBuffer)>(length(buf) * 100)
-                app.dataBuffer = app.dataBuffer(:,end-length(buf) * 100:end);
-            end
-        end
+%         function grabData(app,~,event)
+%             if ~isempty(app.AIreader)&&(app.AIreader~=-1)
+%                 analogBuf = app.AIreader.ReadMultiSample(-1).double;
+%                 buf = zeros(app.AItask.EveryNSamplesReadEventInterval,app.NumberOfEnabledChannels);
+%             elseif (~isempty(app.CItask)&&(app.CItask~=-1))
+%                 buf = zeros(app.CItask(1).EveryNSamplesReadEventInterval,app.NumberOfEnabledChannels);
+%             end
+%             j = 1; k = 1;
+%             app.AOtask.Stop();
+%             for i=1:app.NumberOfEnabledChannels
+%                 if app.channelsData(i,2)>0
+%                     if (~isempty(app.CItask)&&(app.CItask~=-1))
+%                         bb= double(app.CIreader(j).ReadMultiSampleDouble(app.CItask(j).EveryNSamplesReadEventInterval));
+%                         buf(:,i) = bb';
+%                         j = j + 1;
+%                     end
+%                 else
+%                     buf(:,i) = analogBuf(k,:);
+%                     k = k + 1;
+%                 end
+%             end
+%             buf = mean(buf,1);
+%             app.dataBuffer = [app.dataBuffer; buf];
+%             if length(app.dataBuffer)>(length(buf) * 100)
+%                 app.dataBuffer = app.dataBuffer(:,end-length(buf) * 100:end);
+%             end
+%         end
 
 
         %             function queueData(app,src,event)
@@ -356,7 +359,11 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             x = x + XCenter;
             y = y + YCenter;
             [X,Y] = meshgrid(x,y);
-            coordPoints = [repelem(X(:)*app.calibration,app.pixRep),repelem(Y(:)*app.calibration, app.pixRep)];
+            if app.flipXY==0
+                coordPoints = [repelem(X(:)*app.calibration,app.pixRep),repelem(Y(:)*app.calibration, app.pixRep)];
+            elseif app.flipXY==1
+                coordPoints = [repelem(Y(:)*app.calibration,app.pixRep),repelem(X(:)*app.calibration, app.pixRep)];
+            end
             app.Snake = false;
         end
         function [coordPoints] = GalvoCoordinatesForImageSnake(app, scanXRange, scanYRange, scanStep, XCenter, YCenter)
@@ -373,7 +380,11 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     Y(:,i) = flipud( Y(:,i));
                 end
             end
-            coordPoints = [repelem(X(:)*app.calibration,app.pixRep),repelem(Y(:)*app.calibration, app.pixRep)];
+            if app.flipXY==0
+                coordPoints = [repelem(X(:)*app.calibration,app.pixRep),repelem(Y(:)*app.calibration, app.pixRep)];
+            elseif app.flipXY==0
+                coordPoints = [repelem(Y(:)*app.calibration,app.pixRep),repelem(X(:)*app.calibration, app.pixRep)];
+            end
             app.Snake = true;
         end
 
@@ -430,24 +441,28 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                 signal = zeros(coordsize, coordsize,app.NumberOfEnabledChannels);       % Array where signal data is stored
             end
             app.startTasks();
+            
             % if there are too many samples to acquire, the live acquisition and
             % displaying lags - it complains that it cannnot acquire all the samples
+            sampleLag = 100;
+
             app.AOwriter.WriteMultiSample(true,coordPoints');   % write voltages to a galvo: triggers the aquisition
             j = 1;      % ci reader iterator
             k = 1;      % ai reader iterator
             %             if app.AOtask.IsDone == false
-            %                 app.AOtask.WaitUntilDone() ;
+                            app.AOtask.WaitUntilDone() ;
             %             end
             try
                 if app.AItask ~= -1
                     analogData = double(app.AIreader.ReadMultiSample( app.pixRep*app.numberOfPoints));% get the AI data from the buffer
+%                     analogData = double(app.AIreader.MemoryOptimizedReadMultiSample( app.pixRep*app.numberOfPoints, zeros(1,app.pixRep*app.numberOfPoints),NationalInstruments.DAQmx.ReallocationPolicy.DoNotReallocate));% get the AI data from the buffer
                 end
                 for i = 1 : app.NumberOfEnabledChannels
                     if (app.channelsData(i,2) > 0)  % if it is a counter reader
                         rawData = double(app.CIreader(j).ReadMultiSampleDouble( app.pixRep*app.numberOfPoints)); % get the data from the buffer
                         j = j + 1;
                     elseif (app.channelsData(i,2) == 0)
-                        rawData = analogData(k,:);  % select the data according to AI cnahhel number
+                        rawData = squeeze( analogData(k,:));  % select the data according to AI cnahhel number
                         k = k + 1;
                     end
                     if app.pixRep>1
@@ -489,6 +504,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             catch ME
                 app.printLogWindow(ME.message)
             end
+%             app.AOwriter.WriteSingleSample(true,[coordPoints(1,1) coordPoints(1,2)]);
             app.stopTasks()
 
         end
@@ -592,7 +608,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             end
             logfolder  = app.SavingfolderEditField.Value;
             if logfolder(end)~="\"
-                logfolder = strcat(logfolder,"\")
+                logfolder = strcat(logfolder,"\");
                 app.SavingfolderEditField.Value = logfolder;
             end
 
@@ -600,7 +616,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 %                 mkdir (logfolder); 
 %             end
             dateFolder =string(datetime('now','TimeZone','local','Format','uuuu-MM-dd'));
-            logfolder = strcat(logfolder,dateFolder,"\")
+            logfolder = strcat(logfolder,dateFolder,"\");
             if ~exist(logfolder, 'dir')
                 mkdir (logfolder); 
             end
@@ -905,24 +921,24 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         end
 
 
-        function [AIlistener, CIlistener] = addListeners(app, notifyEvery)
-            %             app.AOtask.EveryNSamplesWrittenEventInterval = notifyEvery;
-            %             AOlistener = addlistener(app.AItask, 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
-            if (~isempty(app.AItask)&&(app.AItask~=-1))
-                app.AItask.EveryNSamplesReadEventInterval = notifyEvery;
-                AIlistener = addlistener(app.AItask, 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
-            else
-                AIlistener = -1;
-            end
-            if (~isempty(app.CItask)&&(app.CItask~=-1))
-                for j =1:app.CItask.Length
-                    app.CItask(j).EveryNSamplesReadEventInterval = notifyEvery;
-                    CIlistener(j) = addlistener(app.CItask(j), 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
-                end
-            else
-                CIlistener = -1;
-            end
-        end
+%         function [AIlistener, CIlistener] = addListeners(app, notifyEvery)
+%             %             app.AOtask.EveryNSamplesWrittenEventInterval = notifyEvery;
+%             %             AOlistener = addlistener(app.AItask, 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
+%             if (~isempty(app.AItask)&&(app.AItask~=-1))
+%                 app.AItask.EveryNSamplesReadEventInterval = notifyEvery;
+%                 AIlistener = addlistener(app.AItask, 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
+%             else
+%                 AIlistener = -1;
+%             end
+%             if (~isempty(app.CItask)&&(app.CItask~=-1))
+%                 for j =1:app.CItask.Length
+%                     app.CItask(j).EveryNSamplesReadEventInterval = notifyEvery;
+%                     CIlistener(j) = addlistener(app.CItask(j), 'EveryNSamplesRead', @(~, ev) app.grabData); % Function is executed at each 'EveryNSamplesRead' event
+%                 end
+%             else
+%                 CIlistener = -1;
+%             end
+%         end
 
         function delayScanSetAxes(app)
             % set delay scan axis ticks
@@ -1128,7 +1144,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                             connType = NationalInstruments.DAQmx.AITerminalConfiguration.Differential;
                     end
                     aitask.AIChannels.CreateVoltageChannel(strcat(dev,app.analogChannelsInputFields(i).Value), '', connType, -10, 10, NationalInstruments.DAQmx.AIVoltageUnits.Volts);
-                    aitask.Stream.ReadWaitMode = NationalInstruments.DAQmx.ReadWaitMode.Poll;
+%                     aitask.Stream.ReadWaitMode = NationalInstruments.DAQmx.ReadWaitMode.Poll;
                 end
             end
             if citask~=-1
@@ -1151,6 +1167,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
                     aitask.Timing.ConfigureSampleClock('',app.pixFreq, NationalInstruments.DAQmx.SampleClockActiveEdge.Rising, NationalInstruments.DAQmx.SampleQuantityMode.ContinuousSamples);   % clock
                 end
                 aireader = NationalInstruments.DAQmx.AnalogMultiChannelReader(aitask.Stream);     % the input reader
+                aitask.Triggers.StartTrigger.ConfigureDigitalEdgeTrigger(strcat(dev,"ao/StartTrigger"),NationalInstruments.DAQmx.DigitalEdgeStartTriggerEdge.Rising);
                 aitask.Control(NationalInstruments.DAQmx.TaskAction.Verify)
 
             end
@@ -1164,7 +1181,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             if app.CounterBaseSwitch.Value == 'Internal'
                 cotask = NationalInstruments.DAQmx.Task;        % a task to generate quare pulses with 'pixFreq' and 'dutyCycle'
                 counterClockChannelNumber = app.CounterGenerationChannelEditField.Value;
-                dev = strcat('/',app.DeviceNameFileds_5.Value,'/');
+                dev = strcat('/',app.DeviceNameEditField.Value,'/');
                 ch = cotask.COChannels.CreatePulseChannelFrequency(strcat(dev, counterClockChannelNumber), '', NationalInstruments.DAQmx.COPulseFrequencyUnits.Hertz, NationalInstruments.DAQmx.COPulseIdleState.Low, 0, app.pixFreq, app.dutyCycle ); %delay, freq, dutycycle
                 cotask.Timing.ConfigureImplicit(NationalInstruments.DAQmx.SampleQuantityMode.FiniteSamples,app.pixRep * app.numberOfPoints)
                 cotask.Triggers.ArmStartTrigger.ConfigureDigitalEdgeTrigger(strcat(dev,"ao/StartTrigger"),NationalInstruments.DAQmx.DigitalEdgeArmStartTriggerEdge.Rising);   % set a trigger. The generation starts when the output writer(galvos) start writing
@@ -1310,9 +1327,10 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             try
                 app.displayFigure = figure('Name',app.MatMicroMain.Name,'NumberTitle','off');
                 app.readSettings()
+                app.flipXY =str2num(app.FlipXYglavosSwitch.Value);
                 setAxes(app,0.5)
                 app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter);
-
+                
                 if app.SimulationmodeCheckBox.Value==false
 
                     % Load NIDAQmx .NET assembly
@@ -1524,10 +1542,10 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
         end
 
-        % Value changed function: FoVcenterXumEditField, 
-        % FoVcenterYumEditField, NumberOfAccumulationsEditField, 
-        % ScanRangeXumEditField, ScanRangeYumEditField, 
-        % ScanResolutionumEditField
+        % Value changed function: FlipXYglavosSwitch, 
+        % FoVcenterXumEditField, FoVcenterYumEditField, 
+        % NumberOfAccumulationsEditField, ScanRangeXumEditField, 
+        % ScanRangeYumEditField, ScanResolutionumEditField
         function ScanRangeXumEditFieldValueChanged(app, event)
             %             value = app.ScanRangeXumEditField.Value;
             app.scanXRange = app.ScanRangeXumEditField.Value; % um
@@ -1537,6 +1555,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.xFoVCenter = app.FoVcenterXumEditField.Value;
             app.yFoVCenter = app.FoVcenterYumEditField.Value;
             app.pixRep = app.PixelRepetitionEditField_2.Value;
+            app.flipXY = str2num(app.FlipXYglavosSwitch.Value);
             app.coordPoints = GalvoCoordinatesForImage(app,app.scanXRange, app.scanYRange, app.scanStep,app.xFoVCenter,app.yFoVCenter);
             [app.AOtask,app.AOwriter, app.COtask, app.AItask,app.AIreader,app.CItask,app.CIreader] = app.initChannels();
             %             app.updateChannels()
@@ -2060,7 +2079,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
         % Callback function
         function InitializePIFOCButtonPushed(app, event)
-
+            
         end
 
         % Button pushed function: ConnectPIFOCButton
@@ -2262,6 +2281,11 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
         function PolarZstackButtonPushed(app, event)
             app.acquireZPolarStack()
         end
+
+        % Callback function
+        function FlipXYglavosSwitchValueChanged(app, event)
+            
+        end
     end
 
     % Component initialization
@@ -2275,7 +2299,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.MatMicroMain.IntegerHandle = 'on';
             app.MatMicroMain.AutoResizeChildren = 'off';
             app.MatMicroMain.Position = [100 -100 1060 640];
-            app.MatMicroMain.Name = 'microMOSAIC v0.937';
+            app.MatMicroMain.Name = 'microMOSAIC v0.94';
             app.MatMicroMain.Resize = 'off';
             app.MatMicroMain.CloseRequestFcn = createCallbackFcn(app, @MatMicroMainCloseRequest, true);
 
@@ -2638,6 +2662,20 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             app.PolarZstackButton.Position = [906 122 100 192];
             app.PolarZstackButton.Text = 'Polar Z stack';
 
+            % Create FlipXYglavosSwitchLabel
+            app.FlipXYglavosSwitchLabel = uilabel(app.MainTab);
+            app.FlipXYglavosSwitchLabel.HorizontalAlignment = 'center';
+            app.FlipXYglavosSwitchLabel.Position = [289 89 86 22];
+            app.FlipXYglavosSwitchLabel.Text = 'Flip X-Y glavos';
+
+            % Create FlipXYglavosSwitch
+            app.FlipXYglavosSwitch = uiswitch(app.MainTab, 'rocker');
+            app.FlipXYglavosSwitch.Items = {'No', 'Yes'};
+            app.FlipXYglavosSwitch.ItemsData = {'0', '1'};
+            app.FlipXYglavosSwitch.ValueChangedFcn = createCallbackFcn(app, @ScanRangeXumEditFieldValueChanged, true);
+            app.FlipXYglavosSwitch.Position = [321 147 20 45];
+            app.FlipXYglavosSwitch.Value = '0';
+
             % Create LiveIntensityTab
             app.LiveIntensityTab = uitab(app.TabGroup);
             app.LiveIntensityTab.Title = 'Live Intensity';
@@ -2648,6 +2686,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             ylabel(app.UIAxes, 'Signal')
             app.UIAxes.XTick = [0 1 2 3];
             app.UIAxes.XTickLabel = {'0'; '1'; '2'; '3'};
+            app.UIAxes.FontSize = 16;
             app.UIAxes.Position = [20 86 288 354];
 
             % Create FasterSliderLabel
@@ -2780,11 +2819,11 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
             % Create ObjectiveDropDown
             app.ObjectiveDropDown = uidropdown(app.SettingsTab);
-            app.ObjectiveDropDown.Items = {'Nikon 20X NA0.75 (room134b)', 'Nikon 40X NA1.15 (room134b)', 'Nikon 20X NA0.7 (room134b)', 'Nikon 40X NA1.15 (room 22)'};
-            app.ObjectiveDropDown.ItemsData = {'0.00484', '0.00968', '0.00462', '0.0220', ''};
+            app.ObjectiveDropDown.Items = {'Nikon 20X NA0.75 (room134b)', 'Nikon 40X NA1.15 (room134b)', 'Nikon 20X NA0.7 (room134b)', 'Nikon 40X NA1.15 (room 22)', 'Olympus 40X NA0.6 (room 22)'};
+            app.ObjectiveDropDown.ItemsData = {'0.00484', '0.00968', '0.00462', '0.0220', '0.0206', ''};
             app.ObjectiveDropDown.ValueChangedFcn = createCallbackFcn(app, @ObjectiveDropDownValueChanged, true);
             app.ObjectiveDropDown.Position = [85 422 197 22];
-            app.ObjectiveDropDown.Value = '0.0220';
+            app.ObjectiveDropDown.Value = '0.00484';
 
             % Create SessionUpdateRateHzEditFieldLabel
             app.SessionUpdateRateHzEditFieldLabel = uilabel(app.SettingsTab);
@@ -2822,7 +2861,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
             % Create AnalogChannelInputDropDown
             app.AnalogChannelInputDropDown = uidropdown(app.FirstChannelSettingsPanel);
-            app.AnalogChannelInputDropDown.Items = {'ai0', 'ai1', 'ai2', 'ai3'};
+            app.AnalogChannelInputDropDown.Items = {'ai0', 'ai1', 'ai2', 'ai3', 'ai4', 'ai5', 'ai6'};
+            app.AnalogChannelInputDropDown.ItemsData = {'ai0', 'ai1', 'ai2', 'ai3', 'ai4', 'ai5', 'ai6'};
             app.AnalogChannelInputDropDown.Enable = 'off';
             app.AnalogChannelInputDropDown.Position = [140 5 100 22];
             app.AnalogChannelInputDropDown.Value = 'ai0';
@@ -2934,7 +2974,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
             % Create AnalogChannelInputDropDown_2
             app.AnalogChannelInputDropDown_2 = uidropdown(app.SecondChannelSettingsPanel);
-            app.AnalogChannelInputDropDown_2.Items = {'ai0', 'ai1', 'ai2', 'ai3'};
+            app.AnalogChannelInputDropDown_2.Items = {'ai0', 'ai1', 'ai2', 'ai3', 'ai4', 'ai5', 'ai6'};
+            app.AnalogChannelInputDropDown_2.ItemsData = {'ai0', 'ai1', 'ai2', 'ai3', 'ai4', 'ai5', 'ai6'};
             app.AnalogChannelInputDropDown_2.Enable = 'off';
             app.AnalogChannelInputDropDown_2.Position = [140 5 100 22];
             app.AnalogChannelInputDropDown_2.Value = 'ai1';
@@ -3031,7 +3072,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
             % Create AnalogChannelInputDropDown_3
             app.AnalogChannelInputDropDown_3 = uidropdown(app.ThirdChannelSettingsPanel);
-            app.AnalogChannelInputDropDown_3.Items = {'ai0', 'ai1', 'ai2', 'ai3'};
+            app.AnalogChannelInputDropDown_3.Items = {'ai0', 'ai1', 'ai2', 'ai3', 'ai4', 'ai5', 'ai6'};
+            app.AnalogChannelInputDropDown_3.ItemsData = {'ai0', 'ai1', 'ai2', 'ai3', 'ai4', 'ai5', 'ai6'};
             app.AnalogChannelInputDropDown_3.Enable = 'off';
             app.AnalogChannelInputDropDown_3.Position = [138 5 100 22];
             app.AnalogChannelInputDropDown_3.Value = 'ai2';
@@ -3128,7 +3170,8 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
             % Create AnalogChannelInputDropDown_4
             app.AnalogChannelInputDropDown_4 = uidropdown(app.FourthChannelSettingsPanel);
-            app.AnalogChannelInputDropDown_4.Items = {'ai0', 'ai1', 'ai2', 'ai3'};
+            app.AnalogChannelInputDropDown_4.Items = {'ai0', 'ai1', 'ai2', 'ai3', 'ai4', 'ai5', 'ai6'};
+            app.AnalogChannelInputDropDown_4.ItemsData = {'ai0', 'ai1', 'ai2', 'ai3', 'ai4', 'ai5', 'ai6'};
             app.AnalogChannelInputDropDown_4.Enable = 'off';
             app.AnalogChannelInputDropDown_4.Position = [138 5 100 22];
             app.AnalogChannelInputDropDown_4.Value = 'ai3';
@@ -3255,13 +3298,15 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             % Create CounterGenerationChannelEditFieldLabel
             app.CounterGenerationChannelEditFieldLabel = uilabel(app.SettingsTab);
             app.CounterGenerationChannelEditFieldLabel.HorizontalAlignment = 'right';
+            app.CounterGenerationChannelEditFieldLabel.Enable = 'off';
             app.CounterGenerationChannelEditFieldLabel.Position = [828 293 65 42];
             app.CounterGenerationChannelEditFieldLabel.Text = {'Counter '; 'Generation'; 'Channel'};
 
             % Create CounterGenerationChannelEditField
             app.CounterGenerationChannelEditField = uieditfield(app.SettingsTab, 'text');
+            app.CounterGenerationChannelEditField.Enable = 'off';
             app.CounterGenerationChannelEditField.Position = [908 313 39 22];
-            app.CounterGenerationChannelEditField.Value = 'ctr0';
+            app.CounterGenerationChannelEditField.Value = 'ctr3';
 
             % Create DeviceNameLabel
             app.DeviceNameLabel = uilabel(app.SettingsTab);
@@ -3327,11 +3372,13 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             % Create DeviceNameEditField_5Label
             app.DeviceNameEditField_5Label = uilabel(app.SettingsTab);
             app.DeviceNameEditField_5Label.HorizontalAlignment = 'right';
+            app.DeviceNameEditField_5Label.Enable = 'off';
             app.DeviceNameEditField_5Label.Position = [703 303 78 22];
             app.DeviceNameEditField_5Label.Text = 'Device Name';
 
             % Create DeviceNameEditField_5
             app.DeviceNameEditField_5 = uieditfield(app.SettingsTab, 'text');
+            app.DeviceNameEditField_5.Enable = 'off';
             app.DeviceNameEditField_5.Position = [787 303 38 22];
             app.DeviceNameEditField_5.Value = 'Dev1';
 
@@ -3410,6 +3457,7 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
             ylabel(app.UIAxes2, 'Intensity')
             app.UIAxes2.XTick = 1;
             app.UIAxes2.XTickLabel = {'app.Offset'};
+            app.UIAxes2.FontSize = 16;
             app.UIAxes2.Position = [439 28 568 423];
 
             % Create DelayLineConnectionPanel
@@ -3631,38 +3679,32 @@ classdef microMOSAICdotNET < matlab.apps.AppBase
 
             % Create microMOSAICLabel_2
             app.microMOSAICLabel_2 = uilabel(app.AboutTab);
-            app.microMOSAICLabel_2.WordWrap = 'on';
             app.microMOSAICLabel_2.Position = [117 128 225 238];
             app.microMOSAICLabel_2.Text = {'Raster scan microscope control software that uses NI DAQ acquisition card to control galvanometric scanners and acquire data form detectors via analog or counter channels. '; ''; 'Polarimetric data is acquierd by rotating a halfwave plate at the excitation path by a Newport SMC100 motor.'; ''; 'Z position is controlled by a Physik Instrumente Piezomotor.'; ''; 'MATLAB 2021b is used for the developement.'; ''; 'Driver version DAQmx 18.0.0f0'};
 
             % Create microMOSAICLabel_3
             app.microMOSAICLabel_3 = uilabel(app.AboutTab);
-            app.microMOSAICLabel_3.WordWrap = 'on';
             app.microMOSAICLabel_3.FontSize = 24;
             app.microMOSAICLabel_3.Position = [607 220 306 54];
             app.microMOSAICLabel_3.Text = {'Dmitry NUZHDIN, PhD'; ''};
 
             % Create microMOSAICLabel_4
             app.microMOSAICLabel_4 = uilabel(app.AboutTab);
-            app.microMOSAICLabel_4.WordWrap = 'on';
             app.microMOSAICLabel_4.Position = [117 374 225 22];
             app.microMOSAICLabel_4.Text = {'2019-2022'; ''};
 
             % Create microMOSAICLabel_5
             app.microMOSAICLabel_5 = uilabel(app.AboutTab);
-            app.microMOSAICLabel_5.WordWrap = 'on';
             app.microMOSAICLabel_5.Position = [610 199 225 28];
             app.microMOSAICLabel_5.Text = 'Specially for MOSAIC research group, Institut Fresnel, 13013 - Marseille,  France';
 
             % Create microMOSAICLabel_6
             app.microMOSAICLabel_6 = uilabel(app.AboutTab);
-            app.microMOSAICLabel_6.WordWrap = 'on';
             app.microMOSAICLabel_6.Position = [610 155 225 28];
             app.microMOSAICLabel_6.Text = 'Specially for MOSAIC research group, Institut Fresnel, 13013 - Marseille,  France';
 
             % Create microMOSAICLabel_7
             app.microMOSAICLabel_7 = uilabel(app.AboutTab);
-            app.microMOSAICLabel_7.WordWrap = 'on';
             app.microMOSAICLabel_7.Position = [611 45 225 70];
             app.microMOSAICLabel_7.Text = {'Contact information:'; ''; 'github.com/WYXUS'; ''; 'dmitry.s.nuzhdin@gmail.com'};
 
